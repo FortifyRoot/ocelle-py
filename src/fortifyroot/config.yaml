@@ -5,12 +5,12 @@ settings:
   # Redaction template: {type} is replaced with "-GROUP.TYPE" if suffix_type is true
   redaction_template: "[REDACTED{type}]"
   suffix_type: true
-  
+
   # Actions for input (prompt) and output (completion)
   # Options: allow, redact, block
   input_action: redact
   output_action: allow
-  
+
   # Always block jailbreak attempts regardless of input_action
   block_on_jailbreak: true
 
@@ -18,7 +18,7 @@ rules:
   # ============================================================================
   # PII - Personally Identifiable Information
   # ============================================================================
-  
+
   # Email addresses
   - group: PII
     type: EMAIL
@@ -99,13 +99,6 @@ rules:
     type: MAC_ADDRESS
     mode: regex
     pattern: '\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b'
-    enabled: true
-
-  # Date of Birth patterns
-  - group: PII
-    type: DOB
-    mode: regex
-    pattern: '\b(?:0[1-9]|1[0-2])[/-](?:0[1-9]|[12]\d|3[01])[/-](?:19|20)\d{2}\b|\b(?:19|20)\d{2}[/-](?:0[1-9]|1[0-2])[/-](?:0[1-9]|[12]\d|3[01])\b'
     enabled: true
 
   # PIN/ZIP codes (US)

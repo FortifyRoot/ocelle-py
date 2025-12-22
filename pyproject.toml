@@ -1,42 +1,106 @@
+# --------------------------------------------------------------------
+# Build system configuration (PEP 517 / 518)
+# Tells pip how to build this project in an isolated environment
+# --------------------------------------------------------------------
 [build-system]
+# Build-time dependencies required to produce a wheel
 requires = ["setuptools>=68", "wheel"]
+
+# Use setuptools' modern PEP-517 backend (no setup.py execution)
 build-backend = "setuptools.build_meta"
 
+# --------------------------------------------------------------------
+# Project metadata (PEP 621)
+# Defines the public identity of the package on PyPI / pip
+# --------------------------------------------------------------------
 [project]
+# Name used by pip: `pip install fortifyroot-sdk`
 name = "fortifyroot-sdk"
+
+# Semantic version of the SDK
 version = "0.1.0"
-description = "FortifyRoot SDK for LLM observability."
+
+# Short description shown in PyPI and pip metadata
+description = "FortifyRoot SDK for LLM safety and observability."
+
+# Long description source (rendered on PyPI)
 readme = "README.md"
+
+# Enforced by pip; prevents install on unsupported Python versions
 requires-python = ">=3.10,<4"
+
+# Package authorship metadata (non-functional)
 authors = [
-  { name = "FortifyRoot", email = "founders@fortifyroot.com" }
+  { name = "FortifyRoot", email = "sdk@fortifyroot.com" }
 ]
 
+# Runtime dependencies installed automatically with this SDK
 dependencies = [
+  # OpenTelemetry-based LLM tracing dependency
   "traceloop-sdk>=0.50.1,<51"
 ]
 
-# ------------------
-# setuptools config
-# ------------------
+[project.optional-dependencies]
+dev = [
+  "black",
+  "ruff",
+  "pytest",
+  "build",
+  "twine",
+  "pytest-cov"
+]
+
+# --------------------------------------------------------------------
+# setuptools configuration
+# Controls how Python packages and data files are discovered
+# --------------------------------------------------------------------
 
 [tool.setuptools.packages.find]
-where = ["."]
+# Look for Python packages under the src/ directory
+where = ["src"]
+
+# Only include fortifyroot and its subpackages
+# (prevents accidental packaging of unrelated directories)
 include = ["fortifyroot*"]
 
-# ------------------
-# Tooling config
-# ------------------
+[tool.setuptools.package-data]
+# Non-Python files to bundle inside the fortifyroot package
+# These files are installed into site-packages and must be accessed
+# via importlib.resources at runtime
+fortifyroot = ["config.yaml"]
+
+
+# --------------------------------------------------------------------
+# Tooling configuration (development-only)
+# These settings do NOT affect runtime behavior
+# --------------------------------------------------------------------
 
 [tool.black]
+# Black formatter settings
+# 88 is Black's default line length
 line-length = 88
+
+# Target Python syntax version for formatting
 target-version = ["py310"]
 
+
 [tool.ruff]
+# Ruff is a fast linter + import checker
 line-length = 88
 target-version = "py310"
+
+# Lint rule categories enabled:
+# E → pycodestyle errors (PEP8 violations)
+# F → Pyflakes (unused imports, undefined names, logic errors)
+# I → Import sorting (isort-compatible rules)
 select = ["E", "F", "I"]
+
+# Explicitly ignored rules (empty = ignore nothing)
 ignore = []
 
+
 [tool.ruff.isort]
+# Declare fortifyroot as a first-party package
+# Ensures imports are grouped correctly:
+# stdlib → third-party → fortifyroot
 known-first-party = ["fortifyroot"]

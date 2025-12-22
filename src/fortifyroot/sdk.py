@@ -864,7 +864,8 @@ def enforce(
     elif config_dict:
         _state.safety_engine = SafetyEngine(config_dict=config_dict)
     else:
-        raise FortifyRootConfigError("Must provide config_path or config_dict")
+        #raise FortifyRootConfigError("Must provide config_path or config_dict")
+        _state.safety_engine = SafetyEngine()
 
     # 2. Set policies
     if policies:

@@ -3,38 +3,33 @@ FortifyRoot SDK Tests
 Comprehensive unit tests for safety detection, redaction, and SDK functionality.
 """
 
-import os
 import sys
 import unittest
-from pathlib import Path
-from typing import List, Optional
-from unittest.mock import MagicMock, patch
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from fortifyroot import (
+from fortifyroot.safety import (
     Action,
     Detection,
     DetectionMode,
-    FortifyRootBlocked,
-    FortifyRootConfigError,
     HybridRule,
     ListRule,
     RegexRule,
     SafetyEngine,
     SafetyResult,
-    extract_messages_text,
-    extract_text_from_content,
 )
+
 from fortifyroot import validators
+
 from fortifyroot.sdk import (
+    FortifyRootBlocked,
+    FortifyRootConfigError,
     _extract_input_openai,
     _extract_output_openai,
     _extract_input_anthropic,
     _extract_output_anthropic,
     _extract_input_generic,
     _extract_output_generic,
+    extract_messages_text,
+    extract_text_from_content,
 )
 
 

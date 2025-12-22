@@ -3,17 +3,28 @@
         "editor.defaultFormatter": "ms-python.python",
         "editor.formatOnSave": true
     },
+
+    // -----------------------------
+    // Python analysis / IntelliSense
+    // -----------------------------
     "python.analysis.typeCheckingMode": "basic",
     "python.analysis.autoImportCompletions": true,
-    "python.testing.pytestEnabled": false,
+
+    // -----------------------------
+    // Testing configuration (pytest)
+    // -----------------------------
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+
+    // Tell VS Code exactly where tests live
+    "python.testing.pytestArgs": ["tests"],
+
+    // Auto-discover tests on save
+    "python.testing.autoTestDiscoverOnSaveEnabled": true,
+
+    // -----------------------------
+    // Editor hygiene
+    // -----------------------------
     "files.trimTrailingWhitespace": true,
-    "files.insertFinalNewline": true,
-    "python.testing.unittestArgs": [
-        "-v",
-        "-s",
-        ".",
-        "-p",
-        "*test*.py"
-    ],
-    "python.testing.unittestEnabled": true
+    "files.insertFinalNewline": true
 }
