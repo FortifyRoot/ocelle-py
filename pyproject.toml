@@ -13,14 +13,16 @@ authors = [
 ]
 
 dependencies = [
-  "traceloop-sdk==0.50.1"
+  "traceloop-sdk>=0.50.1,<51"
 ]
 
-[tool.setuptools]
-package-dir = { "" = "src" }
+# ------------------
+# setuptools config
+# ------------------
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["fortifyroot*"]
 
 # ------------------
 # Tooling config
