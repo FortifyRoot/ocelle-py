@@ -3,8 +3,10 @@ FortifyRoot SDK
 LLM observability via OpenLLMetry + safety guardrails for PII/PCI/PHI/Secrets.
 """
 
+import json
 import logging
 import os
+import re
 import threading
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -18,6 +20,7 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    Union,
 )
 
 from wrapt import wrap_function_wrapper
@@ -25,6 +28,219 @@ from wrapt import wrap_function_wrapper
 from fortifyroot.safety import Action, Detection, SafetyEngine, SafetyResult
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# Span Exporter Wrapper for Rebranding and PII Redaction
+# ============================================================================
+
+class FortifyRootSpanExporter:
+    """
+    OpenTelemetry SpanExporter wrapper that:
+    1. Rebrands 'traceloop.*' attribute keys to 'fortifyroot.*'
+    2. Recursively rebrands keys (not values) in JSON string attributes
+    3. Redacts PII from sensitive attributes (gen_ai.prompt.*, entity.input, etc.)
+
+    Wraps the actual exporter and processes spans before export.
+    """
+
+    # Attributes that may contain sensitive data requiring PII redaction
+    PII_SENSITIVE_PATTERNS = [
+        re.compile(r'^gen_ai\.prompt\.\d+\.content$'),
+        re.compile(r'^gen_ai\.completion\.\d+\.content$'),
+        re.compile(r'^fortifyroot\.entity\.input$'),
+        re.compile(r'^fortifyroot\.entity\.output$'),
+        re.compile(r'^traceloop\.entity\.input$'),
+        re.compile(r'^traceloop\.entity\.output$'),
+    ]
+
+    def __init__(self, wrapped_exporter: Any):
+        self._wrapped_exporter = wrapped_exporter
+        self._safety_engine: Optional[SafetyEngine] = None
+        self._policies: List[str] = []
+
+    def set_safety_engine(self, engine: SafetyEngine, policies: List[str]) -> None:
+        """Set or update the safety engine and policies."""
+        self._safety_engine = engine
+        self._policies = policies
+
+    def export(self, spans: Any) -> Any:
+        """Process spans and delegate to wrapped exporter."""
+        processed_spans = [self._process_span(span) for span in spans]
+        return self._wrapped_exporter.export(processed_spans)
+
+    def shutdown(self) -> None:
+        """Shutdown the wrapped exporter."""
+        if hasattr(self._wrapped_exporter, 'shutdown'):
+            self._wrapped_exporter.shutdown()
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        """Force flush the wrapped exporter."""
+        if hasattr(self._wrapped_exporter, 'force_flush'):
+            return self._wrapped_exporter.force_flush(timeout_millis)
+        return True
+
+    def _process_span(self, span: Any) -> Any:
+        """Process a single span: rebrand attributes and redact PII."""
+        try:
+            # Create a modified copy of the span with processed attributes
+            if hasattr(span, '_attributes') and span._attributes:
+                new_attrs = {}
+                for key, value in span._attributes.items():
+                    new_key = self._rebrand_key(key)
+                    new_value = self._process_value(new_key, value)
+                    new_attrs[new_key] = new_value
+
+                # Create a new span-like object with modified attributes
+                return _ProcessedSpan(span, new_attrs)
+        except Exception as e:
+            logger.debug(f"FortifyRootSpanExporter processing error: {e}")
+
+        return span
+
+    def _rebrand_key(self, key: str) -> str:
+        """Rebrand attribute key from traceloop.* to fortifyroot.*"""
+        if key.startswith('traceloop.'):
+            return 'fortifyroot.' + key[len('traceloop.'):]
+        return key
+
+    def _process_value(self, key: str, value: Any) -> Any:
+        """Process attribute value: rebrand JSON keys and redact PII if needed."""
+        if isinstance(value, str):
+            # Try to parse as JSON and rebrand keys
+            rebranded_value = self._rebrand_json_keys(value)
+
+            # Check if this attribute needs PII redaction
+            if self._should_redact_pii(key):
+                return self._redact_pii(rebranded_value)
+
+            return rebranded_value
+
+        return value
+
+    def _rebrand_json_keys(self, value: str) -> str:
+        """
+        If value is a JSON string, parse it, recursively rebrand keys
+        containing 'traceloop' to 'fortifyroot', and re-serialize.
+        """
+        if 'traceloop' not in value:
+            return value
+
+        try:
+            parsed = json.loads(value)
+            rebranded = self._rebrand_keys_recursive(parsed)
+            return json.dumps(rebranded, ensure_ascii=False)
+        except (json.JSONDecodeError, TypeError):
+            return value
+
+    def _rebrand_keys_recursive(self, obj: Any) -> Any:
+        """Recursively rebrand dictionary keys containing 'traceloop' to 'fortifyroot'."""
+        if isinstance(obj, dict):
+            new_dict = {}
+            for k, v in obj.items():
+                new_key = k.replace('traceloop', 'fortifyroot') if isinstance(k, str) and 'traceloop' in k else k
+                new_dict[new_key] = self._rebrand_keys_recursive(v)
+            return new_dict
+        elif isinstance(obj, list):
+            return [self._rebrand_keys_recursive(item) for item in obj]
+        else:
+            return obj
+
+    def _should_redact_pii(self, key: str) -> bool:
+        """Check if attribute key matches patterns requiring PII redaction."""
+        for pattern in self.PII_SENSITIVE_PATTERNS:
+            if pattern.match(key):
+                return True
+        return False
+
+    def _redact_pii(self, value: str) -> str:
+        """Redact PII from a string value using the safety engine."""
+        if not self._safety_engine or not self._policies:
+            return value
+
+        try:
+            detections = self._safety_engine.detect(value, self._policies)
+            if detections:
+                return self._safety_engine.redact(value, detections)
+        except Exception as e:
+            logger.debug(f"PII redaction error: {e}")
+
+        return value
+
+
+class _ProcessedSpan:
+    """
+    Wrapper around a span that substitutes processed attributes.
+    Delegates all other attribute access to the original span.
+    """
+
+    def __init__(self, original_span: Any, processed_attributes: Dict[str, Any]):
+        self._original = original_span
+        self._processed_attributes = processed_attributes
+
+    @property
+    def _attributes(self) -> Dict[str, Any]:
+        return self._processed_attributes
+
+    @property
+    def attributes(self) -> Dict[str, Any]:
+        return self._processed_attributes
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._original, name)
+
+
+# Global exporter wrapper instance
+_exporter_wrapper: Optional[FortifyRootSpanExporter] = None
+
+
+def _get_exporter_wrapper() -> Optional[FortifyRootSpanExporter]:
+    """Get the global exporter wrapper instance."""
+    return _exporter_wrapper
+
+
+def _wrap_span_exporter() -> None:
+    """Wrap the OpenTelemetry span exporter with FortifyRoot processing."""
+    global _exporter_wrapper
+
+    try:
+        from opentelemetry import trace
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
+
+        provider = trace.get_tracer_provider()
+        if not isinstance(provider, TracerProvider):
+            logger.debug("TracerProvider not available for exporter wrapping")
+            return
+
+        # Find and wrap existing span processors' exporters
+        if hasattr(provider, '_active_span_processor'):
+            processor = provider._active_span_processor
+
+            # Handle composite processor (multiple processors)
+            if hasattr(processor, '_span_processors'):
+                for sp in processor._span_processors:
+                    _wrap_processor_exporter(sp)
+            else:
+                _wrap_processor_exporter(processor)
+
+        logger.debug("FortifyRoot span exporter wrapper installed")
+
+    except ImportError:
+        logger.debug("OpenTelemetry SDK not available")
+    except Exception as e:
+        logger.debug(f"Failed to wrap span exporter: {e}")
+
+
+def _wrap_processor_exporter(processor: Any) -> None:
+    """Wrap the exporter within a span processor."""
+    global _exporter_wrapper
+
+    if hasattr(processor, 'span_exporter'):
+        original_exporter = processor.span_exporter
+        _exporter_wrapper = FortifyRootSpanExporter(original_exporter)
+        processor.span_exporter = _exporter_wrapper
+        logger.debug(f"Wrapped exporter in {type(processor).__name__}")
 
 
 # ============================================================================
@@ -806,6 +1022,9 @@ def observe(
         # Initialize Traceloop (which initializes all OpenLLMetry instrumentors)
         Traceloop.init(**traceloop_kwargs)
 
+        # Wrap the span exporter for rebranding and PII redaction
+        _wrap_span_exporter()
+
         _state.observing = True
         logger.info(f"FortifyRoot observability enabled for app: {traceloop_kwargs['app_name']}")
 
@@ -911,6 +1130,11 @@ def enforce(
         disable_batch=disable_batch,
         **kwargs
     )
+
+    # 5. Configure exporter wrapper with safety engine for PII redaction
+    exporter_wrapper = _get_exporter_wrapper()
+    if exporter_wrapper:
+        exporter_wrapper.set_safety_engine(_state.safety_engine, _state.policies)
 
     logger.info(
         f"FortifyRoot enforcement enabled. "
