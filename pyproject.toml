@@ -1,106 +1,93 @@
-# --------------------------------------------------------------------
-# Build system configuration (PEP 517 / 518)
-# Tells pip how to build this project in an isolated environment
-# --------------------------------------------------------------------
 [build-system]
-# Build-time dependencies required to produce a wheel
-requires = ["setuptools>=68", "wheel"]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-# Use setuptools' modern PEP-517 backend (no setup.py execution)
-build-backend = "setuptools.build_meta"
-
-# --------------------------------------------------------------------
-# Project metadata (PEP 621)
-# Defines the public identity of the package on PyPI / pip
-# --------------------------------------------------------------------
 [project]
-# Name used by pip: `pip install fortifyroot-sdk`
 name = "fortifyroot-sdk"
-
-# Semantic version of the SDK
-version = "0.1.0"
-
-# Short description shown in PyPI and pip metadata
-description = "FortifyRoot SDK for LLM safety and observability."
-
-# Long description source (rendered on PyPI)
+dynamic = ["version"]
+description = "FortifyRoot SDK for LLM Observability"
 readme = "README.md"
-
-# Enforced by pip; prevents install on unsupported Python versions
-requires-python = ">=3.10,<4"
-
-# Package authorship metadata (non-functional)
+license = "Apache-2.0"
+requires-python = ">=3.10"
 authors = [
-  { name = "FortifyRoot", email = "sdk@fortifyroot.com" }
+    { name = "FortifyRoot", email = "sdk@fortifyroot.com" },
 ]
-
-# Runtime dependencies installed automatically with this SDK
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Monitoring",
+]
+keywords = [
+    "llm",
+    "genai",
+    "observability",
+    "tracing",
+    "opentelemetry",
+    "langchain",
+    "openai",
+    "anthropic",
+]
 dependencies = [
-  # OpenTelemetry-based LLM tracing dependency
-  "traceloop-sdk>=0.50.1,<51"
+    "traceloop-sdk>=0.50.0,<0.51.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "black",
-  "ruff",
-  "pytest",
-  "build",
-  "twine",
-  "pytest-cov"
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
 ]
 
-# --------------------------------------------------------------------
-# setuptools configuration
-# Controls how Python packages and data files are discovered
-# --------------------------------------------------------------------
+[project.urls]
+Homepage = "https://fortifyroot.com"
+Documentation = "https://docs.fortifyroot.com"
+Repository = "https://github.com/fortifyroot/fortifyroot-sdk"
+Changelog = "https://github.com/fortifyroot/fortifyroot-sdk/blob/main/CHANGELOG.md"
 
-[tool.setuptools.packages.find]
-# Look for Python packages under the src/ directory
-where = ["src"]
+[tool.hatch.version]
+path = "src/fortifyroot/version.py"
 
-# Only include fortifyroot and its subpackages
-# (prevents accidental packaging of unrelated directories)
-include = ["fortifyroot*"]
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+]
 
-[tool.setuptools.package-data]
-# Non-Python files to bundle inside the fortifyroot package
-# These files are installed into site-packages and must be accessed
-# via importlib.resources at runtime
-fortifyroot = ["config.yaml"]
-
-
-# --------------------------------------------------------------------
-# Tooling configuration (development-only)
-# These settings do NOT affect runtime behavior
-# --------------------------------------------------------------------
+[tool.hatch.build.targets.wheel]
+packages = ["src/fortifyroot"]
 
 [tool.black]
-# Black formatter settings
-# 88 is Black's default line length
 line-length = 88
+target-version = ["py39", "py310", "py311", "py312"]
 
-# Target Python syntax version for formatting
-target-version = ["py310"]
-
+[tool.isort]
+profile = "black"
+line_length = 88
 
 [tool.ruff]
-# Ruff is a fast linter + import checker
 line-length = 88
-target-version = "py310"
+target-version = "py39"
 
-# Lint rule categories enabled:
-# E → pycodestyle errors (PEP8 violations)
-# F → Pyflakes (unused imports, undefined names, logic errors)
-# I → Import sorting (isort-compatible rules)
-select = ["E", "F", "I"]
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
+ignore = ["E501"]
 
-# Explicitly ignored rules (empty = ignore nothing)
-ignore = []
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
 
-
-[tool.ruff.isort]
-# Declare fortifyroot as a first-party package
-# Ensures imports are grouped correctly:
-# stdlib → third-party → fortifyroot
-known-first-party = ["fortifyroot"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

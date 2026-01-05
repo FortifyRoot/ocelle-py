@@ -1,15 +1,11 @@
 # FortifyRoot SDK
 
-**LLM observability + safety guardrails in one SDK.**
-
-FortifyRoot provides:
-1. **Observability** - Traces and metrics for all LLM calls via OpenLLMetry
-2. **Safety** - Detect and redact PII, PCI, PHI, Secrets, and block jailbreak attempts
+FortifyRoot SDK provides automatic instrumentation and observability for LLM applications. With a single line of code, get complete visibility into your LLM calls, including prompts, responses, token usage, and latency.
 
 ## Installation
 
 ```bash
-pip install pyyaml wrapt traceloop-sdk
+pip install fortifyroot-sdk
 ```
 
 ## Quick Start
@@ -17,175 +13,127 @@ pip install pyyaml wrapt traceloop-sdk
 ```python
 import fortifyroot
 
-# Option 1: Observability only (traces/metrics via OpenLLMetry)
-fortifyroot.observe(
-    api_key="fr-xxx",           # or FORTIFYROOT_API_KEY env var
-    app_name="my-app",
-    base_url="https://...",     # or FORTIFYROOT_BASE_URL env var
+# Initialize FortifyRoot - that's it!
+fortifyroot.init(
+    app_name="my-llm-app",
+    api_key="fr-xxx",  # Get your API key from https://app.fortifyroot.com
 )
 
-# Option 2: Safety enforcement (includes observability automatically)
-fortifyroot.enforce(
-    config_path="config.yaml",
-    policies=["PII", "PCI", "SECRET", "JAILBREAK"],
-    providers=["openai", "anthropic"],
-    api_key="fr-xxx",           # Telemetry API key
-    app_name="my-app",
-)
-
-# Set context for tracing
-fortifyroot.set_context(user_id="user-123", session_id="sess-456")
-
-# All LLM calls are now protected and traced automatically!
+# Your LLM calls are now automatically traced
 import openai
-client = openai.OpenAI()
-response = client.chat.completions.create(
+
+response = openai.chat.completions.create(
     model="gpt-4",
-    messages=[{"role": "user", "content": "My email is test@example.com"}]
+    messages=[{"role": "user", "content": "Hello!"}]
 )
-# - Input is checked and redacted before sending to OpenAI
-# - Trace spans are emitted with safety events attached
 ```
 
-## How It Works
+## Supported LLM Libraries
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Your Application                         │
-├─────────────────────────────────────────────────────────────┤
-│                  FortifyRoot SDK                            │
-│  ┌─────────────────────┐    ┌─────────────────────────────┐ │
-│  │   Safety Wrapper    │    │   OpenLLMetry (traceloop)   │ │
-│  │  - Input check      │    │  - Traces                   │ │
-│  │  - Redact/Block     │    │  - Metrics                  │ │
-│  │  - Output check     │    │  - Span events              │ │
-│  └─────────────────────┘    └─────────────────────────────┘ │
-├─────────────────────────────────────────────────────────────┤
-│              LLM Providers (OpenAI, Anthropic, etc.)        │
-└─────────────────────────────────────────────────────────────┘
-```
+FortifyRoot automatically instruments the following libraries when they are installed:
 
-When you call `enforce()`:
-1. Safety wrappers are applied to LLM provider methods
-2. OpenLLMetry is initialized (via traceloop-sdk)
-3. On each LLM call:
-   - Input is checked for sensitive content
-   - Safety span events are attached to the OpenLLMetry trace
-   - Content is redacted/blocked per policy
-   - LLM is called
-   - Output is checked
-   - Results are traced
+- **LLM Providers**: OpenAI, Anthropic, Cohere, Google Generative AI, Mistral AI, Groq, Ollama, AWS Bedrock, Azure OpenAI, Vertex AI, Replicate, Together AI, Watsonx
+- **Frameworks**: LangChain, LlamaIndex, Haystack, CrewAI, OpenAI Agents
+- **Vector Databases**: Pinecone, Chroma, Milvus, Qdrant, Weaviate, LanceDB, Marqo
 
-## Configuration (config.yaml)
+## Configuration
 
-```yaml
-settings:
-  redaction_template: "[REDACTED{type}]"
-  suffix_type: true
-  input_action: redact    # Action for input: allow, redact, block
-  output_action: allow    # Action for output: allow, redact, block
-  block_on_jailbreak: true
+### Environment Variables
 
-rules:
-  # Regex mode
-  - group: PII
-    type: EMAIL
-    mode: regex
-    pattern: '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+You can configure FortifyRoot using environment variables:
 
-  # List mode
-  - group: PHI
-    type: BLOOD_GROUP
-    mode: list
-    values: ["A+", "A-", "B+", "B-", "O+", "O-"]
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `FORTIFYROOT_API_KEY` | Your FortifyRoot API key | None |
+| `FORTIFYROOT_BASE_URL` | API endpoint URL | `https://api.fortifyroot.com` |
+| `FORTIFYROOT_TRACE_CONTENT` | Capture prompt/response content | `true` |
+| `FORTIFYROOT_TRACING_ENABLED` | Enable/disable tracing | `true` |
+| `FORTIFYROOT_METRICS_ENABLED` | Enable/disable metrics | `true` |
 
-  # Hybrid mode (with validator)
-  - group: PCI
-    type: CREDIT_CARD
-    mode: hybrid
-    pattern: '\b\d{16}\b'
-    validator: fortifyroot.validators.luhn
-```
-
-## Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `FORTIFYROOT_API_KEY` | API key for telemetry endpoint |
-| `FORTIFYROOT_BASE_URL` | Telemetry endpoint URL |
-| `FORTIFYROOT_HEADERS` | Extra headers (format: `key1=val1,key2=val2`) |
-| `FORTIFYROOT_APP_NAME` | Application name |
-
-## Supported Providers
-
-**Direct LLM Providers:**
-- OpenAI (chat, completions)
-- Anthropic (messages)
-- Google Gemini
-- Cohere
-- Mistral AI
-- Ollama
-- Groq
-- Together AI
-- AWS Bedrock
-
-## Manual Checking
+### Programmatic Configuration
 
 ```python
-# Check text manually
-result = fortifyroot.check_text("My SSN is 123-45-6789", direction="input")
-print(result.action)       # Action.REDACT
-print(result.detections)   # List of Detection objects
+import fortifyroot
+from fortifyroot import Instruments
 
-# Redact text
-clean = fortifyroot.redact_text("Card: 4532015112830366")
-print(clean)  # "Card: [REDACTED-PCI.CREDIT_CARD]"
+fortifyroot.init(
+    app_name="my-llm-app",
+    api_key="fr-xxx",
+    api_endpoint="https://api.fortifyroot.com",
+    trace_content=True,  # Set to False to disable content capture
+    instruments={Instruments.OPENAI, Instruments.LANGCHAIN},  # Only instrument specific libraries
+)
 ```
 
-## Span Events
+## Decorators
 
-Safety events are attached to OpenLLMetry spans:
-
-```
-Span: "openai.chat"
-  ├─ Event: "fortifyroot.safety.input"
-  │    - fortifyroot.action: "redact"
-  │    - fortifyroot.detections.count: 2
-  │    - fortifyroot.detections.types: "PII.EMAIL,PCI.CREDIT_CARD"
-  │
-  └─ Event: "fortifyroot.safety.output"
-       - fortifyroot.action: "allow"
-       - fortifyroot.detections.count: 0
-```
-
-## Exception Handling
+Use decorators to trace custom functions and create hierarchical traces:
 
 ```python
-try:
-    response = client.chat.completions.create(...)
-except fortifyroot.FortifyRootBlocked as e:
-    print(f"Blocked: {e.message}")
-    print(f"Direction: {e.direction}")  # "input" or "output"
-    print(f"Detections: {e.detections}")
+from fortifyroot import workflow, task, agent, tool
+
+@workflow(name="document_qa")
+def answer_question(document: str, question: str):
+    chunks = split_document(document)
+    relevant = find_relevant_chunks(chunks, question)
+    return generate_answer(relevant, question)
+
+@task(name="split_document")
+def split_document(document: str):
+    # Your logic here
+    return chunks
+
+@task(name="find_relevant")
+def find_relevant_chunks(chunks, question):
+    # Your logic here
+    return relevant_chunks
+
+@task(name="generate_answer")
+def generate_answer(context, question):
+    # LLM call here
+    return answer
 ```
 
-## Running Tests
+## Association Properties
 
-```bash
-python -m fortifyroot.tests
+Attach custom properties to traces for filtering and correlation:
+
+```python
+import fortifyroot
+
+fortifyroot.init(app_name="my-app", api_key="fr-xxx")
+
+# Set properties that will be attached to all subsequent spans
+fortifyroot.set_association_properties({
+    "user_id": "user_12345",
+    "session_id": "sess_abc",
+    "conversation_id": "conv_xyz",
+})
+
+# Now make LLM calls - they will have these properties attached
+response = openai.chat.completions.create(...)
 ```
 
-## Files
+## Privacy & Content Tracing
 
-| File | Description |
-|------|-------------|
-| `__init__.py` | Public API exports |
-| `safety.py` | Rule engine, detection, redaction |
-| `sdk.py` | Provider wrappers, traceloop integration |
-| `validators.py` | Built-in validators (Luhn, IBAN, etc.) |
-| `config.yaml` | Default rule definitions (54 rules) |
-| `tests.py` | Unit tests (44 tests) |
+To disable capturing of prompt and response content (for privacy compliance):
+
+```python
+# Via environment variable
+# export FORTIFYROOT_TRACE_CONTENT=false
+
+# Or programmatically
+fortifyroot.init(
+    app_name="my-app",
+    api_key="fr-xxx",
+    trace_content=False,  # Only metadata, no content
+)
+```
+
+## Attribution
+
+This SDK is built on top of [OpenLLMetry](https://github.com/traceloop/openllmetry) by Traceloop, licensed under Apache 2.0.
 
 ## License
 
-MIT
+Apache 2.0

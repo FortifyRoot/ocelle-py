@@ -1,37 +1,70 @@
 """
-FortifyRoot SDK
-LLM observability + safety guardrails.
+FortifyRoot SDK for LLM Observability.
 
-Usage:
-    import fortifyroot
+FortifyRoot provides automatic instrumentation and observability for LLM applications.
+Simply call `fortifyroot.init()` to start capturing traces from supported LLM libraries
+including OpenAI, Anthropic, LangChain, LlamaIndex, and more.
 
-    fortifyroot.enforce(
-        config_path="config.yaml",
-        policies=["PII", "PCI", "SECRET", "JAILBREAK"],
-    )
+Example:
+    Basic usage::
 
-    # All LLM calls are now protected automatically
+        import fortifyroot
+
+        fortifyroot.init(
+            app_name="my-llm-app",
+            api_key="fr-xxx",
+        )
+
+        # Your LLM calls are now automatically traced
+        import openai
+        response = openai.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": "Hello!"}]
+        )
+
+    Using decorators to trace custom functions::
+
+        from fortifyroot import workflow, task
+
+        @workflow(name="my_pipeline")
+        def run_pipeline(input_text):
+            result = process_step(input_text)
+            return result
+
+        @task(name="process_step")
+        def process_step(text):
+            # Your processing logic
+            return processed_text
+
+Attribution:
+    This SDK is built on top of OpenLLMetry by Traceloop, licensed under Apache 2.0.
+    https://github.com/traceloop/openllmetry
 """
 
-__version__ = "0.1.0"
+# Apply environment variable mapping BEFORE importing anything from traceloop
+# This ensures FORTIFYROOT_* env vars are mapped to TRACELOOP_* equivalents
+# before any traceloop modules read them at import time.
+from fortifyroot._internal.env_mapping import apply_env_var_mapping
 
-from fortifyroot.sdk import (
-    observe,
-    enforce,
-    set_context,
-    get_context,
-    clear_context,
-    scoped_context,
-    FortifyRootBlocked,
-)
+apply_env_var_mapping()
+
+# Now import and expose public API
+from fortifyroot.core import init, set_association_properties
+from fortifyroot.decorators import agent, task, tool, workflow
+from fortifyroot.instruments import Instruments
+from fortifyroot.version import __version__
 
 __all__ = [
+    # Core functions
+    "init",
+    "set_association_properties",
+    # Decorators
+    "task",
+    "workflow",
+    "agent",
+    "tool",
+    # Enums
+    "Instruments",
+    # Version
     "__version__",
-    "observe",
-    "enforce",
-    "set_context",
-    "get_context",
-    "clear_context",
-    "scoped_context",
-    "FortifyRootBlocked",
 ]
