@@ -27,7 +27,7 @@ Example:
 from enum import Enum
 from typing import Optional, Set
 
-from traceloop.sdk.instruments import Instruments as _TLInstruments
+from fortifyroot._vendor.traceloop.sdk.instruments import Instruments as _TLInstruments
 
 
 class Instruments(Enum):

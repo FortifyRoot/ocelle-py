@@ -1,30 +1,26 @@
 {
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.python",
-        "editor.formatOnSave": true
-    },
-
-    // -----------------------------
-    // Python analysis / IntelliSense
-    // -----------------------------
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/src"
+    ],
+    "python.analysis.exclude": [
+        "**/src/fortifyroot/_vendor/**"
+    ],
+    "python.analysis.ignore": [
+        "**/src/fortifyroot/_vendor/**"
+    ],
     "python.analysis.typeCheckingMode": "basic",
-    "python.analysis.autoImportCompletions": true,
-
-    // -----------------------------
-    // Testing configuration (pytest)
-    // -----------------------------
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportMissingImports": "error",
+        "reportMissingTypeStubs": "none",
+        "reportUnusedImport": "warning"
+    },
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
     "python.testing.pytestEnabled": true,
     "python.testing.unittestEnabled": false,
-
-    // Tell VS Code exactly where tests live
     "python.testing.pytestArgs": ["tests"],
-
-    // Auto-discover tests on save
     "python.testing.autoTestDiscoverOnSaveEnabled": true,
+    "python.testing.cwd": "${workspaceFolder}",
 
-    // -----------------------------
-    // Editor hygiene
-    // -----------------------------
     "files.trimTrailingWhitespace": true,
     "files.insertFinalNewline": true
 }

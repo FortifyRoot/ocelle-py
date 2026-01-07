@@ -3,7 +3,7 @@
 import sys
 from typing import Optional, Set
 
-from traceloop.sdk import Traceloop
+from fortifyroot._vendor.traceloop.sdk import Traceloop
 
 from fortifyroot._internal.constants import FORTIFYROOT_SDK_VERSION_ATTRIBUTE
 from fortifyroot.instruments import Instruments, _convert_to_tl_instruments

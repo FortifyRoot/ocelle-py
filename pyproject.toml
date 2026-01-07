@@ -34,11 +34,67 @@ keywords = [
     "openai",
     "anthropic",
 ]
+
+# =============================================================================
+# DEPENDENCIES
+# =============================================================================
+# These dependencies are carefully curated to match what the vendored
+# OpenLLMetry packages require. When upgrading the vendored version,
+# check packages/traceloop-sdk/pyproject.toml for any dependency changes.
+#
+# IMPORTANT: We DO NOT vendor the core OpenTelemetry packages.
+# We only vendor:
+#   - traceloop-sdk
+#   - opentelemetry-instrumentation-* (LLM provider instrumentations from OL)
+#   - opentelemetry-semantic-conventions-ai
+#
+# The core OpenTelemetry packages below come from PyPI and are NOT modified.
+# =============================================================================
+
 dependencies = [
-    "traceloop-sdk>=0.50.0,<0.51.0",
+    # -------------------------------------------------------------------------
+    # Core OpenTelemetry (FROM PyPI - NOT vendored)
+    # These versions are pinned to match OpenLLMetry v0.50.1 requirements
+    # -------------------------------------------------------------------------
+    "opentelemetry-api>=1.38.0,<2.0.0",
+    "opentelemetry-sdk>=1.38.0,<2.0.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.38.0,<2.0.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.38.0,<2.0.0",
+    
+    # -------------------------------------------------------------------------
+    # OpenTelemetry Instrumentation - Base (FROM PyPI - NOT vendored)
+    # These provide base classes and utilities used by vendored instrumentations
+    # -------------------------------------------------------------------------
+    "opentelemetry-instrumentation>=0.59b0",
+    "opentelemetry-semantic-conventions>=0.59b0",
+    
+    # -------------------------------------------------------------------------
+    # OpenTelemetry Instrumentation - Standard Libraries (FROM PyPI - NOT vendored)
+    # These instrument standard Python libraries and are used by traceloop-sdk
+    # -------------------------------------------------------------------------
+    "opentelemetry-instrumentation-logging>=0.59b0",
+    "opentelemetry-instrumentation-requests>=0.59b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.59b0",
+    "opentelemetry-instrumentation-urllib3>=0.59b0",
+    "opentelemetry-instrumentation-threading>=0.59b0",
+    "opentelemetry-instrumentation-redis>=0.59b0",
+    
+    # -------------------------------------------------------------------------
+    # Runtime utilities (FROM PyPI - required by vendored packages)
+    # These are direct dependencies of traceloop-sdk and instrumentations
+    # -------------------------------------------------------------------------
+    "colorama>=0.4.6",
+    "tenacity>=8.2.3,<10.0",
+    "pydantic>=1",
+    "jinja2>=3.1.5",
+    "deprecated>=1.2.14",
+    "aiohttp>=3.11.11",
+    "cuid>=0.4",
+    "wrapt>=1.14.0",  # Required by OTel instrumentations for function wrapping
 ]
 
 [project.optional-dependencies]
+# Development dependencies
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
@@ -49,11 +105,28 @@ dev = [
     "ruff>=0.1.0",
 ]
 
+# For testing with specific LLM libraries
+test = [
+    "openai>=1.31.1",
+    "anthropic>=0.25.2",
+    "langchain>=0.2.5",
+    "langchain-openai>=0.1.15",
+]
+
+# For dataset features
+datasets = [
+    "pandas>=1.0.0",
+]
+
 [project.urls]
 Homepage = "https://fortifyroot.com"
 Documentation = "https://docs.fortifyroot.com"
-Repository = "https://github.com/fortifyroot/fortifyroot-sdk"
-Changelog = "https://github.com/fortifyroot/fortifyroot-sdk/blob/main/CHANGELOG.md"
+Repository = "https://github.com/fortifyroot/fortifyroot-sdk-py"
+Changelog = "https://github.com/fortifyroot/fortifyroot-sdk-py/blob/main/CHANGELOG.md"
+
+# =============================================================================
+# BUILD CONFIGURATION
+# =============================================================================
 
 [tool.hatch.version]
 path = "src/fortifyroot/version.py"
@@ -61,22 +134,35 @@ path = "src/fortifyroot/version.py"
 [tool.hatch.build.targets.sdist]
 include = [
     "/src",
+    "/scripts",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fortifyroot"]
 
+# Include metadata files in the wheel
+[tool.hatch.build.targets.wheel.force-include]
+"src/fortifyroot/OPENLLMETRY_VERSION" = "fortifyroot/OPENLLMETRY_VERSION"
+
+# =============================================================================
+# TOOL CONFIGURATION
+# =============================================================================
+
 [tool.black]
 line-length = 88
-target-version = ["py39", "py310", "py311", "py312"]
+target-version = ["py310", "py311", "py312"]
 
 [tool.isort]
 profile = "black"
 line_length = 88
+# Don't sort imports in vendored code
+skip = ["src/fortifyroot/_vendor"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py39"
+target-version = "py310"
+# Exclude vendored code from linting
+exclude = ["src/fortifyroot/_vendor"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
@@ -87,7 +173,20 @@ python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+# Exclude vendored code from type checking
+exclude = ["src/fortifyroot/_vendor"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src/fortifyroot"]
+omit = ["src/fortifyroot/_vendor/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
