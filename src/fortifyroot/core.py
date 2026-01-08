@@ -227,9 +227,9 @@ def init(
 
     class _TraceloopOptionalInitKwargs(TypedDict, total=False):
         metrics_exporter: MetricExporter
-        metrics_headers: dict[str, str]
+        metrics_headers: Dict[str, str]
         logging_exporter: LogExporter
-        logging_headers: dict[str, str]
+        logging_headers: Dict[str, str]
         propagator: TextMapPropagator
 
     tl_kwargs: _TraceloopOptionalInitKwargs = {}
@@ -341,30 +341,33 @@ class FortifyRootConfig:
             )
     """
 
+    class _FortifyRootInitKwargs(TypedDict, total=False):
+        app_name: str
+        api_endpoint: str
+        api_key: Optional[str]
+        enabled: bool
+        headers: Optional[Dict[str, str]]
+        disable_batch: bool
+        trace_content: bool
+        exporter: Optional[SpanExporter]
+        metrics_exporter: Optional[MetricExporter]
+        metrics_headers: Optional[Dict[str, str]]
+        logging_exporter: Optional[LogExporter]
+        logging_headers: Optional[Dict[str, str]]
+        processor: Optional[Union[SpanProcessor, List[SpanProcessor]]]
+        propagator: Optional[TextMapPropagator]
+        sampler: Optional[Sampler]
+        should_enrich_metrics: bool
+        resource_attributes: Optional[Dict]
+        instruments: Optional[Set[Instruments]]
+        block_instruments: Optional[Set[Instruments]]
+        span_postprocess_callback: Optional[Callable[[ReadableSpan], None]]
+
     def __init__(self) -> None:
         """Initialize with default configuration."""
-        self._config: Dict = {
-            "app_name": sys.argv[0],
-            "api_endpoint": DEFAULT_API_ENDPOINT,
-            "api_key": None,
-            "enabled": True,
-            "headers": None,
-            "disable_batch": False,
-            "trace_content": True,
-            "exporter": None,
-            "metrics_exporter": None,
-            "metrics_headers": None,
-            "logging_exporter": None,
-            "logging_headers": None,
-            "processor": None,
-            "propagator": None,
-            "sampler": None,
-            "should_enrich_metrics": True,
-            "resource_attributes": None,
-            "instruments": None,
-            "block_instruments": None,
-            "span_postprocess_callback": None,
-        }
+        self._config: FortifyRootConfig._FortifyRootInitKwargs = {}
+        self._config["app_name"] = sys.argv[0]
+        self._config["api_endpoint"] = DEFAULT_API_ENDPOINT
 
     def app_name(self, name: str) -> "FortifyRootConfig":
         """Set the application name."""
