@@ -9,7 +9,7 @@ for the FortifyRoot SDK, including:
 
 import os
 import sys
-from typing import Callable, Dict, List, Optional, Set, Union
+from typing import Callable, Dict, List, Optional, Set, Union, TypedDict
 
 from opentelemetry.sdk.trace import SpanProcessor, ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter
@@ -225,6 +225,26 @@ def init(
         )
         final_processor = AttributeRenamingProcessor(default_processor)
 
+    class _TraceloopOptionalInitKwargs(TypedDict, total=False):
+        metrics_exporter: MetricExporter
+        metrics_headers: dict[str, str]
+        logging_exporter: LogExporter
+        logging_headers: dict[str, str]
+        propagator: TextMapPropagator
+
+    tl_kwargs: _TraceloopOptionalInitKwargs = {}
+
+    if metrics_exporter is not None:
+        tl_kwargs["metrics_exporter"] = metrics_exporter
+    if metrics_headers is not None:
+        tl_kwargs["metrics_headers"] = metrics_headers
+    if logging_exporter is not None:
+        tl_kwargs["logging_exporter"] = logging_exporter
+    if logging_headers is not None:
+        tl_kwargs["logging_headers"] = logging_headers
+    if propagator is not None:
+        tl_kwargs["propagator"] = propagator
+
     # Initialize Traceloop with our configuration
     Traceloop.init(
         app_name=app_name,
@@ -234,12 +254,7 @@ def init(
         headers=headers or {},
         disable_batch=disable_batch,
         exporter=exporter,
-        metrics_exporter=metrics_exporter,
-        metrics_headers=metrics_headers,
-        logging_exporter=logging_exporter,
-        logging_headers=logging_headers,
         processor=final_processor,
-        propagator=propagator,
         sampler=sampler,
         should_enrich_metrics=should_enrich_metrics,
         resource_attributes=resource_attributes,
@@ -248,6 +263,13 @@ def init(
         span_postprocess_callback=span_postprocess_callback,
         # Disable Traceloop-specific sync features
         traceloop_sync_enabled=False,
+        # Instead of following direct assignments, using **tl_kwargs to "fix" Pylance errors!
+        # metrics_exporter=metrics_exporter,
+        # metrics_headers=metrics_headers,
+        # logging_exporter=logging_exporter,
+        # logging_headers=logging_headers,
+        # propagator=propagator,
+        **tl_kwargs,
     )
 
 

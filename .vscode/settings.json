@@ -22,6 +22,5 @@
     "python.testing.cwd": "${workspaceFolder}",
 
     "files.trimTrailingWhitespace": true,
-    "files.insertFinalNewline": true,
-    "python-envs.pythonProjects": []
+    "files.insertFinalNewline": true
 }
