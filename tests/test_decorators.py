@@ -33,7 +33,7 @@ class TestDecoratorWrappers:
     def test_decorators_are_fr_functions_not_tl(self) -> None:
         """Test that decorators are FR's own functions, not TL re-exports."""
         from fortifyroot import task, workflow, agent, tool
-        from traceloop.sdk.decorators import (
+        from fortifyroot._vendor.traceloop.sdk.decorators import (
             task as tl_task,
             workflow as tl_workflow,
             agent as tl_agent,
@@ -135,7 +135,7 @@ class TestInstrumentsEnum:
     def test_instruments_is_fr_enum_not_tl(self) -> None:
         """Test that Instruments is FR's own enum, not TL re-export."""
         from fortifyroot import Instruments
-        from traceloop.sdk.instruments import Instruments as TLInstruments
+        from fortifyroot._vendor.traceloop.sdk.instruments import Instruments as TLInstruments
 
         # FR Instruments should NOT be the same class as TL Instruments
         assert Instruments is not TLInstruments
@@ -185,7 +185,7 @@ class TestInstrumentsEnum:
     def test_instruments_values_match_tl(self) -> None:
         """Test that FR Instruments values match TL Instruments values."""
         from fortifyroot import Instruments
-        from traceloop.sdk.instruments import Instruments as TLInstruments
+        from fortifyroot._vendor.traceloop.sdk.instruments import Instruments as TLInstruments
 
         # Check that string values match for common instruments
         assert Instruments.OPENAI.value == TLInstruments.OPENAI.value
@@ -232,7 +232,7 @@ class TestInstrumentsConversion:
         """Test converting a single instrument."""
         from fortifyroot import Instruments
         from fortifyroot.instruments import _convert_to_tl_instruments
-        from traceloop.sdk.instruments import Instruments as TLInstruments
+        from fortifyroot._vendor.traceloop.sdk.instruments import Instruments as TLInstruments
 
         fr_set = {Instruments.OPENAI}
         tl_set = _convert_to_tl_instruments(fr_set)
@@ -245,7 +245,7 @@ class TestInstrumentsConversion:
         """Test converting multiple instruments."""
         from fortifyroot import Instruments
         from fortifyroot.instruments import _convert_to_tl_instruments
-        from traceloop.sdk.instruments import Instruments as TLInstruments
+        from fortifyroot._vendor.traceloop.sdk.instruments import Instruments as TLInstruments
 
         fr_set = {Instruments.OPENAI, Instruments.LANGCHAIN, Instruments.PINECONE}
         tl_set = _convert_to_tl_instruments(fr_set)

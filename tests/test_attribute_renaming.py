@@ -3,8 +3,6 @@
 from typing import Any, Dict, Optional
 from unittest import mock
 
-import pytest
-
 
 class TestRenameAttributes:
     """Tests for the rename_attributes function."""
