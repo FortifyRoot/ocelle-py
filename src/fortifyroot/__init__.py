@@ -36,20 +36,29 @@ Example:
             # Your processing logic
             return processed_text
 
-Attribution:
-    This SDK is built on top of OpenLLMetry by Traceloop, licensed under Apache 2.0.
-    https://github.com/traceloop/openllmetry
+    Using the fluent configuration API::
+
+        fortifyroot.configure() \\
+            .app_name("my-app") \\
+            .api_key("fr-xxx") \\
+            .trace_content(False) \\
+            .init()
 """
 
-# Apply environment variable mapping BEFORE importing anything from traceloop
+# Apply environment variable mapping BEFORE importing anything from _vendor
 # This ensures FORTIFYROOT_* env vars are mapped to TRACELOOP_* equivalents
-# before any traceloop modules read them at import time.
+# before any vendor modules read them at import time.
 from fortifyroot._internal.env_mapping import apply_env_var_mapping
 
 apply_env_var_mapping()
 
 # Now import and expose public API
-from fortifyroot.core import init, set_association_properties
+from fortifyroot.core import (
+    init,
+    set_association_properties,
+    configure,
+    FortifyRootConfig,
+)
 from fortifyroot.decorators import agent, task, tool, workflow
 from fortifyroot.instruments import Instruments
 from fortifyroot.version import __version__
@@ -58,6 +67,9 @@ __all__ = [
     # Core functions
     "init",
     "set_association_properties",
+    # Fluent API
+    "configure",
+    "FortifyRootConfig",
     # Decorators
     "task",
     "workflow",

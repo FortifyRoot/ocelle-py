@@ -1,6 +1,13 @@
 """Test that vendored imports work correctly."""
 
+import importlib.util
 import pytest
+
+
+def _is_package_installed(package_name: str) -> bool:
+    """Check if a package is installed."""
+    return importlib.util.find_spec(package_name) is not None
+
 
 class TestVendoredImports:
     """Test vendored package imports."""
@@ -22,18 +29,30 @@ class TestVendoredImports:
         from fortifyroot._vendor.opentelemetry.semconv_ai import SpanAttributes
         assert SpanAttributes is not None
 
+    @pytest.mark.skipif(
+        not _is_package_installed("openai"),
+        reason="openai package not installed"
+    )
     def test_openai_instrumentation_import(self):
-        """Test that OpenAI instrumentation can be imported."""
+        """Test that OpenAI instrumentation can be imported when openai is installed."""
         from fortifyroot._vendor.opentelemetry.instrumentation.openai import OpenAIInstrumentor
         assert OpenAIInstrumentor is not None
 
+    @pytest.mark.skipif(
+        not _is_package_installed("anthropic"),
+        reason="anthropic package not installed"
+    )
     def test_anthropic_instrumentation_import(self):
-        """Test that Anthropic instrumentation can be imported."""
+        """Test that Anthropic instrumentation can be imported when anthropic is installed."""
         from fortifyroot._vendor.opentelemetry.instrumentation.anthropic import AnthropicInstrumentor
         assert AnthropicInstrumentor is not None
 
+    @pytest.mark.skipif(
+        not _is_package_installed("langchain_core"),
+        reason="langchain_core package not installed"
+    )
     def test_langchain_instrumentation_import(self):
-        """Test that LangChain instrumentation can be imported."""
+        """Test that LangChain instrumentation can be imported when langchain is installed."""
         from fortifyroot._vendor.opentelemetry.instrumentation.langchain import LangchainInstrumentor
         assert LangchainInstrumentor is not None
 
@@ -51,7 +70,7 @@ class TestVendoredImports:
         """Test that 'traceloop' is not importable as top-level package."""
         # This should fail - traceloop should only be available under _vendor
         with pytest.raises(ModuleNotFoundError):
-            import traceloop
+            import traceloop  # noqa: F401
 
 
 class TestFortifyrootApi:
@@ -68,6 +87,12 @@ class TestFortifyrootApi:
         assert hasattr(fortifyroot, "init")
         assert callable(fortifyroot.init)
 
+    def test_fortifyroot_configure_exists(self):
+        """Test that fortifyroot.configure exists (fluent API)."""
+        import fortifyroot
+        assert hasattr(fortifyroot, "configure")
+        assert callable(fortifyroot.configure)
+
     def test_fortifyroot_instruments_enum(self):
         """Test that Instruments enum is available."""
         from fortifyroot import Instruments
@@ -83,15 +108,28 @@ class TestFortifyrootApi:
 
 
 class TestNoLeakedBranding:
-    """Test that 'traceloop' branding doesn't leak."""
+    """Test that 'traceloop' branding doesn't leak in public API."""
 
     def test_no_traceloop_in_public_api(self):
-        """Test that traceloop name doesn't appear in public API."""
+        """Test that traceloop name doesn't appear in public API docstrings."""
         import fortifyroot
 
         # Check module docstring
         if fortifyroot.__doc__:
-            assert "traceloop" not in fortifyroot.__doc__.lower()
+            assert "traceloop" not in fortifyroot.__doc__.lower(), \
+                "Module docstring should not mention 'traceloop'"
+
+    def test_no_traceloop_in_init_docstring(self):
+        """Test that init() docstring doesn't mention traceloop."""
+        import fortifyroot
+
+        if fortifyroot.init.__doc__:
+            # Allow technical references but not branding
+            doc_lower = fortifyroot.init.__doc__.lower()
+            # "traceloop" as a brand should not appear
+            # But internal references like "_vendor.traceloop" are OK
+            assert "traceloop sdk" not in doc_lower
+            assert "traceloop api" not in doc_lower
 
     def test_vendor_manifest_exists(self):
         """Test that vendor manifest is created."""
@@ -103,3 +141,121 @@ class TestNoLeakedBranding:
             manifest = json.loads(manifest_path.read_text())
             assert "openllmetry_version" in manifest
             assert "packages" in manifest
+
+
+class TestFluentApi:
+    """Test the fluent configuration API."""
+
+    def test_configure_returns_config_object(self):
+        """Test that configure() returns a FortifyRootConfig object."""
+        import fortifyroot
+
+        config = fortifyroot.configure()
+        assert config is not None
+        assert isinstance(config, fortifyroot.FortifyRootConfig)
+
+    def test_fluent_methods_return_self(self):
+        """Test that fluent methods return self for chaining."""
+        import fortifyroot
+
+        config = fortifyroot.configure()
+
+        # Each method should return the same config object
+        result = config.app_name("test")
+        assert result is config
+
+        result = config.api_key("test-key")
+        assert result is config
+
+        result = config.trace_content(False)
+        assert result is config
+
+    def test_fluent_config_has_init(self):
+        """Test that FortifyRootConfig has init() method."""
+        import fortifyroot
+
+        config = fortifyroot.configure()
+        assert hasattr(config, "init")
+        assert callable(config.init)
+
+
+class TestInitParameters:
+    """Test that init() has all expected parameters."""
+
+    def test_init_has_basic_parameters(self):
+        """Test init() has basic parameters."""
+        import inspect
+        import fortifyroot
+
+        sig = inspect.signature(fortifyroot.init)
+        params = sig.parameters
+
+        # Basic parameters
+        assert "app_name" in params
+        assert "api_endpoint" in params
+        assert "api_key" in params
+        assert "enabled" in params
+
+    def test_init_has_tracing_parameters(self):
+        """Test init() has tracing configuration parameters."""
+        import inspect
+        import fortifyroot
+
+        sig = inspect.signature(fortifyroot.init)
+        params = sig.parameters
+
+        # Tracing parameters
+        assert "trace_content" in params
+        assert "disable_batch" in params
+        assert "exporter" in params
+        assert "processor" in params
+        assert "sampler" in params
+        assert "propagator" in params
+
+    def test_init_has_metrics_parameters(self):
+        """Test init() has metrics configuration parameters."""
+        import inspect
+        import fortifyroot
+
+        sig = inspect.signature(fortifyroot.init)
+        params = sig.parameters
+
+        # Metrics parameters
+        assert "metrics_exporter" in params
+        assert "metrics_headers" in params
+        assert "should_enrich_metrics" in params
+
+    def test_init_has_logging_parameters(self):
+        """Test init() has logging configuration parameters."""
+        import inspect
+        import fortifyroot
+
+        sig = inspect.signature(fortifyroot.init)
+        params = sig.parameters
+
+        # Logging parameters
+        assert "logging_exporter" in params
+        assert "logging_headers" in params
+
+    def test_init_has_instrumentation_parameters(self):
+        """Test init() has instrumentation parameters."""
+        import inspect
+        import fortifyroot
+
+        sig = inspect.signature(fortifyroot.init)
+        params = sig.parameters
+
+        # Instrumentation parameters
+        assert "instruments" in params
+        assert "block_instruments" in params
+        assert "resource_attributes" in params
+
+    def test_init_has_callback_parameter(self):
+        """Test init() has span_postprocess_callback parameter."""
+        import inspect
+        import fortifyroot
+
+        sig = inspect.signature(fortifyroot.init)
+        params = sig.parameters
+
+        assert "span_postprocess_callback" in params

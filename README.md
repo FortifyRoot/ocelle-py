@@ -65,6 +65,54 @@ fortifyroot.init(
 )
 ```
 
+### Fluent API
+
+For more complex configurations, use the fluent API:
+
+```python
+import fortifyroot
+from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
+
+fortifyroot.configure() \
+    .app_name("my-llm-app") \
+    .api_key("fr-xxx") \
+    .trace_content(False) \
+    .sampler(TraceIdRatioBased(0.1)) \
+    .init()
+```
+
+### Advanced Configuration
+
+```python
+import fortifyroot
+from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
+
+# Custom sampling (10% of traces)
+fortifyroot.init(
+    app_name="my-app",
+    api_key="fr-xxx",
+    sampler=TraceIdRatioBased(0.1),
+)
+
+# Custom exporter
+fortifyroot.init(
+    app_name="my-app",
+    processor=SimpleSpanProcessor(ConsoleSpanExporter()),
+)
+
+# Span postprocess callback (for safety/PII detection)
+def safety_callback(span):
+    # Inspect span attributes for PII, log alerts, etc.
+    pass
+
+fortifyroot.init(
+    app_name="my-app",
+    api_key="fr-xxx",
+    span_postprocess_callback=safety_callback,
+)
+```
+
 ## Decorators
 
 Use decorators to trace custom functions and create hierarchical traces:

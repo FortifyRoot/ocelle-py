@@ -79,6 +79,8 @@ class TestPublicAPI:
         expected_exports = [
             "init",
             "set_association_properties",
+            "configure",
+            "FortifyRootConfig",
             "task",
             "workflow",
             "agent",

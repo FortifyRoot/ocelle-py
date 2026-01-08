@@ -11,7 +11,8 @@ Usage:
 The script will:
 1. Copy traceloop-sdk and all instrumentation packages to _vendor/
 2. Rewrite imports to use fortifyroot._vendor.* prefix where appropriate
-3. Generate a manifest file for tracking vendored versions
+3. Extract dependencies from vendored packages
+4. Generate a manifest file for tracking vendored versions
 
 IMPORTANT: Only OpenLLMetry-specific packages are vendored. External OpenTelemetry
 packages (opentelemetry-api, opentelemetry-sdk, etc.) are NOT vendored and must
@@ -24,7 +25,7 @@ import re
 import shutil
 import sys
 from pathlib import Path
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict, Set
 import json
 from datetime import datetime
 
@@ -40,15 +41,22 @@ OL_INSTRUMENTATION_PACKAGES = {
 }
 
 # Package directory name to Python module name mapping
-# (handles cases like google-generativeai -> google_generativeai)
 PKG_DIR_TO_MODULE = {
     "google-generativeai": "google_generativeai",
     "openai-agents": "openai_agents",
 }
 
-# Import patterns that need rewriting
-# Format: (regex_pattern, replacement_template)
-# The replacement uses {vendor_prefix} placeholder
+# Dependencies that should NOT be added (they are vendored or internal)
+SKIP_DEPS = {
+    "traceloop-sdk",
+    "opentelemetry-semantic-conventions-ai",
+    "python",
+}
+
+# Add prefix for all OL instrumentation packages
+for pkg in OL_INSTRUMENTATION_PACKAGES:
+    SKIP_DEPS.add(f"opentelemetry-instrumentation-{pkg}")
+    SKIP_DEPS.add(f"opentelemetry-instrumentation-{pkg.replace('_', '-')}")
 
 
 def get_import_rewrite_rules(vendor_prefix: str) -> List[Tuple[re.Pattern, str]]:
@@ -69,7 +77,6 @@ def get_import_rewrite_rules(vendor_prefix: str) -> List[Tuple[re.Pattern, str]]
     ))
     
     # Rule 3: Rewrite OpenLLMetry instrumentation imports
-    # Build a pattern for all OL instrumentation packages
     ol_packages_pattern = '|'.join(sorted(OL_INSTRUMENTATION_PACKAGES))
     rules.append((
         re.compile(rf'^(\s*)(from|import)\s+opentelemetry\.instrumentation\.({ol_packages_pattern})'),
@@ -80,11 +87,7 @@ def get_import_rewrite_rules(vendor_prefix: str) -> List[Tuple[re.Pattern, str]]
 
 
 def rewrite_imports_in_file(filepath: Path, rules: List[Tuple[re.Pattern, str]]) -> bool:
-    """
-    Rewrite imports in a single Python file.
-    
-    Returns True if any changes were made.
-    """
+    """Rewrite imports in a single Python file. Returns True if changes were made."""
     try:
         content = filepath.read_text(encoding='utf-8')
     except UnicodeDecodeError:
@@ -120,7 +123,6 @@ def copy_package(src: Path, dest: Path, exclude_patterns: Optional[List[str]] = 
         ignored = set()
         for f in files:
             full_path = os.path.join(directory, f)
-            # Skip __pycache__, .pyc, tests, etc.
             if f == '__pycache__' or f.endswith('.pyc'):
                 ignored.add(f)
             elif f == 'tests' and os.path.isdir(full_path):
@@ -136,12 +138,124 @@ def create_namespace_init(path: Path) -> None:
     """Create a namespace package __init__.py file."""
     init_file = path / '__init__.py'
     if not init_file.exists():
-        # Use pkgutil-style namespace package for compatibility
         init_file.write_text(
             '# Namespace package - see PEP 420\n'
-            '# This file intentionally left minimal for namespace package support\n'
             '__path__ = __import__("pkgutil").extend_path(__path__, __name__)\n'
         )
+
+
+def parse_poetry_deps(pyproject_path: Path) -> Dict[str, Dict]:
+    """
+    Parse dependencies from a Poetry pyproject.toml file.
+    
+    Returns dict with keys: 'main', 'dev', 'test'
+    Each value is a dict of {package_name: version_spec}
+    """
+    deps = {'main': {}, 'dev': {}, 'test': {}}
+    
+    if not pyproject_path.exists():
+        return deps
+    
+    content = pyproject_path.read_text()
+    
+    # Parse main dependencies
+    main_match = re.search(
+        r'\[tool\.poetry\.dependencies\](.*?)(?=\[tool\.|$)',
+        content, re.DOTALL
+    )
+    if main_match:
+        deps['main'] = _parse_deps_section(main_match.group(1))
+    
+    # Parse dev dependencies
+    dev_match = re.search(
+        r'\[tool\.poetry\.group\.dev\.dependencies\](.*?)(?=\[tool\.|$)',
+        content, re.DOTALL
+    )
+    if dev_match:
+        deps['dev'] = _parse_deps_section(dev_match.group(1))
+    
+    # Parse test dependencies
+    test_match = re.search(
+        r'\[tool\.poetry\.group\.test\.dependencies\](.*?)(?=\[tool\.|$)',
+        content, re.DOTALL
+    )
+    if test_match:
+        deps['test'] = _parse_deps_section(test_match.group(1))
+    
+    return deps
+
+
+def _parse_deps_section(section: str) -> Dict[str, str]:
+    """Parse a dependencies section from pyproject.toml."""
+    deps = {}
+    
+    for line in section.split('\n'):
+        line = line.strip()
+        if not line or line.startswith('#') or line.startswith('['):
+            continue
+        
+        # Skip path dependencies (local packages)
+        if 'path =' in line:
+            continue
+        
+        # Parse simple deps: package = "version" or package = "^version"
+        match = re.match(r'^([a-zA-Z0-9_-]+)\s*=\s*"([^"]+)"', line)
+        if match:
+            pkg, version = match.groups()
+            deps[pkg.lower()] = version
+            continue
+        
+        # Parse complex deps: package = { version = "x", ... }
+        match = re.match(r'^([a-zA-Z0-9_-]+)\s*=\s*\{.*version\s*=\s*"([^"]+)"', line)
+        if match:
+            pkg, version = match.groups()
+            deps[pkg.lower()] = version
+    
+    return deps
+
+
+def extract_all_deps(ol_repo: Path) -> Dict[str, Dict[str, str]]:
+    """
+    Extract all dependencies from all vendored packages.
+    
+    Returns merged dependencies for main, dev, and test.
+    """
+    all_deps = {'main': {}, 'dev': {}, 'test': {}}
+    packages_dir = ol_repo / 'packages'
+    
+    # List of packages to scan
+    packages_to_scan = ['traceloop-sdk', 'opentelemetry-semantic-conventions-ai']
+    packages_to_scan.extend(
+        f"opentelemetry-instrumentation-{pkg.replace('_', '-')}" 
+        for pkg in OL_INSTRUMENTATION_PACKAGES
+    )
+    
+    for pkg_name in packages_to_scan:
+        pyproject = packages_dir / pkg_name / 'pyproject.toml'
+        if not pyproject.exists():
+            continue
+        
+        pkg_deps = parse_poetry_deps(pyproject)
+        
+        for dep_type in ['main', 'dev', 'test']:
+            for pkg, version in pkg_deps[dep_type].items():
+                # Skip vendored/internal packages
+                if pkg in SKIP_DEPS or pkg.lower() in SKIP_DEPS:
+                    continue
+                
+                # Merge: keep most restrictive version (simplistic approach)
+                if pkg not in all_deps[dep_type]:
+                    all_deps[dep_type][pkg] = version
+                # Could add more sophisticated version merging here
+    
+    return all_deps
+
+
+def write_deps_manifest(vendor_root: Path, deps: Dict[str, Dict[str, str]]) -> None:
+    """Write extracted dependencies to a manifest file."""
+    manifest_file = vendor_root / 'VENDOR_DEPENDENCIES.json'
+    manifest_file.write_text(json.dumps(deps, indent=2, sort_keys=True))
+    print(f"    Dependencies manifest written to: {manifest_file}")
 
 
 def vendor_traceloop_sdk(ol_repo: Path, vendor_root: Path) -> None:
@@ -211,7 +325,6 @@ def create_vendor_init_files(vendor_root: Path) -> None:
     """Create necessary __init__.py files for the vendor namespace."""
     print("==> Creating namespace __init__.py files")
     
-    # Create root _vendor __init__.py
     vendor_init = vendor_root / '__init__.py'
     vendor_init.write_text(
         '"""Vendored dependencies for FortifyRoot SDK."""\n'
@@ -219,12 +332,10 @@ def create_vendor_init_files(vendor_root: Path) -> None:
         '# Do not modify these files directly - they are generated by vendor_openllmetry.py\n'
     )
     
-    # Create opentelemetry namespace package
     otel_dir = vendor_root / 'opentelemetry'
     if otel_dir.exists():
         create_namespace_init(otel_dir)
         
-        # Create instrumentation namespace
         instr_dir = otel_dir / 'instrumentation'
         if instr_dir.exists():
             create_namespace_init(instr_dir)
@@ -240,7 +351,6 @@ def rewrite_all_imports(vendor_root: Path, vendor_prefix: str) -> int:
     for py_file in vendor_root.rglob('*.py'):
         if rewrite_imports_in_file(py_file, rules):
             modified_count += 1
-            print(f"    Modified: {py_file.relative_to(vendor_root)}")
     
     print(f"    Total files modified: {modified_count}")
     return modified_count
@@ -285,7 +395,7 @@ def get_git_info(ol_repo: Path) -> dict:
         if result.returncode == 0:
             info["tag"] = result.stdout.strip()
     except FileNotFoundError:
-        pass  # git not available
+        pass
     
     return info
 
@@ -314,7 +424,6 @@ def write_manifest(vendor_root: Path, ol_repo: Path, vendored_packages: List[str
     manifest_file = vendor_root / 'VENDOR_MANIFEST.json'
     manifest_file.write_text(json.dumps(manifest, indent=2))
     
-    # Also write a simple version file
     version_file = vendor_root.parent / 'OPENLLMETRY_VERSION'
     version_file.write_text(
         f"# Vendored OpenLLMetry Version\n"
@@ -325,8 +434,8 @@ def write_manifest(vendor_root: Path, ol_repo: Path, vendored_packages: List[str
         f"VENDORED_AT={datetime.now().isoformat()}\n"
     )
     
-    print(f"    Manifest written to: {manifest_file}")
-    print(f"    Version file written to: {version_file}")
+    print(f"    Manifest: {manifest_file}")
+    print(f"    Version: {version_file}")
 
 
 def main():
@@ -345,17 +454,29 @@ def main():
         '--fr-sdk',
         type=Path,
         default=None,
-        help='Path to FortifyRoot SDK (default: auto-detect from script location)'
+        help='Path to FortifyRoot SDK (default: auto-detect)'
     )
     parser.add_argument(
         '--vendor-prefix',
         default='fortifyroot._vendor',
-        help='Import prefix for vendored packages (default: fortifyroot._vendor)'
+        help='Import prefix for vendored packages'
+    )
+    parser.add_argument(
+        '--tag',
+        type=str,
+        default=None,
+        help='Git tag to checkout in OL repo before vendoring'
     )
     parser.add_argument(
         '--clean',
         action='store_true',
         help='Clean vendor directory before vendoring'
+    )
+    parser.add_argument(
+        '--extract-deps',
+        action='store_true',
+        default=True,
+        help='Extract and output dependencies from vendored packages'
     )
     parser.add_argument(
         '--dry-run',
@@ -365,13 +486,11 @@ def main():
     
     args = parser.parse_args()
     
-    # Resolve paths
     ol_repo = args.ol_repo.resolve()
     
     if args.fr_sdk:
         fr_sdk = args.fr_sdk.resolve()
     else:
-        # Auto-detect: assume script is in scripts/ or scripts/
         script_dir = Path(__file__).resolve().parent
         fr_sdk = script_dir.parent
         if not (fr_sdk / 'src' / 'fortifyroot').exists():
@@ -385,7 +504,7 @@ def main():
         sys.exit(1)
     
     if not (ol_repo / 'packages').exists():
-        print(f"ERROR: Invalid OpenLLMetry repo (no packages/ dir): {ol_repo}")
+        print(f"ERROR: Invalid OpenLLMetry repo: {ol_repo}")
         sys.exit(1)
     
     if not (fr_sdk / 'src' / 'fortifyroot').exists():
@@ -395,18 +514,23 @@ def main():
     print(f"OpenLLMetry repo: {ol_repo}")
     print(f"FortifyRoot SDK: {fr_sdk}")
     print(f"Vendor directory: {vendor_root}")
-    print(f"Vendor prefix: {args.vendor_prefix}")
     print()
+    
+    # Checkout tag if specified
+    if args.tag:
+        import subprocess
+        print(f"==> Checking out tag: {args.tag}")
+        result = subprocess.run(
+            ['git', 'checkout', args.tag],
+            cwd=ol_repo, capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            print(f"ERROR: Failed to checkout {args.tag}: {result.stderr}")
+            sys.exit(1)
+        print(f"    Checked out: {args.tag}")
     
     if args.dry_run:
         print("=== DRY RUN MODE ===")
-        print("Would perform the following actions:")
-        print(f"  1. Clean {vendor_root}" if args.clean else "  1. (Skip clean)")
-        print(f"  2. Copy traceloop-sdk to {vendor_root / 'traceloop'}")
-        print(f"  3. Copy instrumentation packages to {vendor_root / 'opentelemetry' / 'instrumentation'}")
-        print(f"  4. Copy semconv_ai to {vendor_root / 'opentelemetry' / 'semconv_ai'}")
-        print(f"  5. Rewrite imports with prefix: {args.vendor_prefix}")
-        print(f"  6. Write manifest files")
         return
     
     # Clean if requested
@@ -427,6 +551,16 @@ def main():
     # Rewrite imports
     rewrite_all_imports(vendor_root, args.vendor_prefix)
     
+    # Extract dependencies
+    if args.extract_deps:
+        print("==> Extracting dependencies")
+        deps = extract_all_deps(ol_repo)
+        write_deps_manifest(vendor_root, deps)
+        
+        print("\n    Main dependencies found:")
+        for pkg, ver in sorted(deps['main'].items()):
+            print(f"      {pkg} = \"{ver}\"")
+    
     # Write manifest
     write_manifest(vendor_root, ol_repo, vendored_packages)
     
@@ -434,9 +568,10 @@ def main():
     print("==> Vendoring complete!")
     print()
     print("Next steps:")
-    print("  1. Review the changes in src/fortifyroot/_vendor/")
-    print("  2. Run tests to verify imports work correctly")
-    print("  3. Commit the vendored files")
+    print("  1. Review VENDOR_DEPENDENCIES.json for any new dependencies")
+    print("  2. Update pyproject.toml if needed")
+    print("  3. Run: poetry install && poetry run pytest")
+    print("  4. Commit the changes")
 
 
 if __name__ == '__main__':
