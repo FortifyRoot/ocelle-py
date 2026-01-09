@@ -209,8 +209,8 @@ This software includes code derived from OpenLLMetry by Traceloop
 (https://github.com/traceloop/openllmetry), which is licensed under the
 Apache License, Version 2.0.
 
-Copyright 2023-2024 Traceloop
+Copyright Traceloop
 
 The FortifyRoot SDK is a wrapper around the traceloop-sdk package, providing
-a rebranded interface for LLM observability. We gratefully acknowledge the
-Traceloop team for their excellent work on OpenLLMetry.
+a rebranded interface/enhancements for LLM observability. We gratefully
+acknowledge the Traceloop team for their excellent work on OpenLLMetry.

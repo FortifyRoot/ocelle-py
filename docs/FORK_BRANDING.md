@@ -109,7 +109,6 @@ print(Fore.GREEN + f"FortifyRoot exporting traces to {api_endpoint}")
 
 **File:** `packages/traceloop-sdk/traceloop/sdk/__init__.py`
 
-**Lines ~37-40:**
 ```python
 # Before
 AUTO_CREATED_KEY_PATH = str(Path.home() / ".cache" / "traceloop" / "auto_created_key")
@@ -121,6 +120,16 @@ AUTO_CREATED_URL = str(Path.home() / ".cache" / "fortifyroot" / "auto_created_ur
 ```
 
 ---
+
+### 7. [IMPORTANT] Apache 2.0 License Requirement
+
+In each of the modified files (in the forked repo) add following at the top of the file:
+
+```
+# NOTE:
+# This file has been modified by FortifyRoot.
+# Original source: https://github.com/traceloop/openllmetry
+```
 
 ## Changes NOT Required
 

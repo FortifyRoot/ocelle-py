@@ -3,21 +3,26 @@
 OpenLLMetry Vendoring Script for FortifyRoot SDK
 
 This script vendors a forked OpenLLMetry repository into the FortifyRoot SDK,
-rewriting imports to work under the _vendor namespace.
+rewriting imports to work under the fortifyroot._vendor namespace.
 
 Usage:
     python scripts/vendor_openllmetry.py --ol-repo /path/to/fr-openllmetry-py
 
 The script will:
-1. Copy traceloop-sdk and all instrumentation packages to _vendor/
-2. Rewrite imports to use fortifyroot._vendor.* prefix where appropriate
-3. Extract dependencies from vendored packages
-4. Generate a manifest file for tracking vendored versions
+1. Copy traceloop-sdk and OpenLLMetry instrumentation packages into _vendor/
+2. Rewrite import paths for namespace isolation (mechanical, non-functional)
+3. Extract and mirror required runtime dependencies
+4. Generate a manifest file for tracking vendored OpenLLMetry versions
 
-IMPORTANT: Only OpenLLMetry-specific packages are vendored. External OpenTelemetry
-packages (opentelemetry-api, opentelemetry-sdk, etc.) are NOT vendored and must
-be listed as dependencies in pyproject.toml.
+IMPORTANT:
+- Import rewrites performed by this script are mechanical and packaging-related.
+- Substantive source modifications, if any, are made only in the OpenLLMetry fork
+  (fr-openllmetry) and are marked at the file level there, in accordance with
+  the Apache License, Version 2.0.
+- CNCF OpenTelemetry core packages (opentelemetry-api, opentelemetry-sdk, exporters)
+  are NOT vendored and must be declared as dependencies in pyproject.toml.
 """
+
 
 import argparse
 import os
