@@ -98,18 +98,18 @@ fortifyroot.init(
 # Custom exporter
 fortifyroot.init(
     app_name="my-app",
-    processor=SimpleSpanProcessor(ConsoleSpanExporter()),
+    processors=[SimpleSpanProcessor(ConsoleSpanExporter())],
 )
 
-# Span postprocess callback (for safety/PII detection)
-def safety_callback(span):
-    # Inspect span attributes for PII, log alerts, etc.
+# Span postprocess callback
+def span_callback(span):
+    # Inspect span attributes, log alerts, etc.
     pass
 
 fortifyroot.init(
     app_name="my-app",
     api_key="fr-xxx",
-    span_postprocess_callback=safety_callback,
+    span_postprocess_callback=span_callback,
 )
 ```
 
