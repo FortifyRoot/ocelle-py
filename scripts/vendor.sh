@@ -30,10 +30,19 @@ if [[ ! -d "$OL_REPO/packages" ]]; then
 fi
 
 echo "==> Running vendoring script..."
-python3 "$SCRIPT_DIR/vendor_openllmetry.py" \
-    --ol-repo "$OL_REPO" \
-    --fr-sdk "$PROJECT_ROOT" \
-    --clean
+if [[ $# -gt 1 ]]; then
+    OL_TAG="$2"
+    python3 "$SCRIPT_DIR/vendor_openllmetry.py" \
+        --ol-repo "$OL_REPO" \
+        --fr-sdk "$PROJECT_ROOT" \
+        --tag "$OL_TAG" \
+        --clean
+else
+    python3 "$SCRIPT_DIR/vendor_openllmetry.py" \
+        --ol-repo "$OL_REPO" \
+        --fr-sdk "$PROJECT_ROOT" \
+        --clean
+fi
 
 echo ""
 echo "==> Vendoring complete!"

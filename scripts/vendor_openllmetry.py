@@ -25,7 +25,7 @@ import re
 import shutil
 import sys
 from pathlib import Path
-from typing import Optional, List, Tuple, Dict, Set
+from typing import Optional, List, Tuple, Dict
 import json
 from datetime import datetime
 
@@ -61,28 +61,28 @@ for pkg in OL_INSTRUMENTATION_PACKAGES:
 
 def get_import_rewrite_rules(vendor_prefix: str) -> List[Tuple[re.Pattern, str]]:
     """Generate import rewrite rules based on vendor prefix."""
-    
+
     rules = []
-    
+
     # Rule 1: Rewrite traceloop imports
     rules.append((
         re.compile(r'^(\s*)(from|import)\s+traceloop\.'),
         rf'\1\2 {vendor_prefix}.traceloop.'
     ))
-    
+
     # Rule 2: Rewrite opentelemetry.semconv_ai imports (OL package)
     rules.append((
         re.compile(r'^(\s*)(from|import)\s+opentelemetry\.semconv_ai'),
         rf'\1\2 {vendor_prefix}.opentelemetry.semconv_ai'
     ))
-    
+
     # Rule 3: Rewrite OpenLLMetry instrumentation imports
     ol_packages_pattern = '|'.join(sorted(OL_INSTRUMENTATION_PACKAGES))
     rules.append((
         re.compile(rf'^(\s*)(from|import)\s+opentelemetry\.instrumentation\.({ol_packages_pattern})'),
         rf'\1\2 {vendor_prefix}.opentelemetry.instrumentation.\3'
     ))
-    
+
     return rules
 
 
@@ -93,19 +93,19 @@ def rewrite_imports_in_file(filepath: Path, rules: List[Tuple[re.Pattern, str]])
     except UnicodeDecodeError:
         print(f"  Warning: Skipping non-UTF8 file: {filepath}")
         return False
-    
+
     original_content = content
     lines = content.split('\n')
     modified_lines = []
-    
+
     for line in lines:
         modified_line = line
         for pattern, replacement in rules:
             modified_line = pattern.sub(replacement, modified_line)
         modified_lines.append(modified_line)
-    
+
     new_content = '\n'.join(modified_lines)
-    
+
     if new_content != original_content:
         filepath.write_text(new_content, encoding='utf-8')
         return True
@@ -115,10 +115,10 @@ def rewrite_imports_in_file(filepath: Path, rules: List[Tuple[re.Pattern, str]])
 def copy_package(src: Path, dest: Path, exclude_patterns: Optional[List[str]] = None) -> None:
     """Copy a package directory, excluding specified patterns."""
     exclude_patterns = exclude_patterns or []
-    
+
     if dest.exists():
         shutil.rmtree(dest)
-    
+
     def ignore_patterns(directory, files):
         ignored = set()
         for f in files:
@@ -130,7 +130,7 @@ def copy_package(src: Path, dest: Path, exclude_patterns: Optional[List[str]] = 
             elif any(re.match(p, f) for p in exclude_patterns):
                 ignored.add(f)
         return ignored
-    
+
     shutil.copytree(src, dest, ignore=ignore_patterns)
 
 
@@ -147,17 +147,17 @@ def create_namespace_init(path: Path) -> None:
 def parse_poetry_deps(pyproject_path: Path) -> Dict[str, Dict]:
     """
     Parse dependencies from a Poetry pyproject.toml file.
-    
+
     Returns dict with keys: 'main', 'dev', 'test'
     Each value is a dict of {package_name: version_spec}
     """
     deps = {'main': {}, 'dev': {}, 'test': {}}
-    
+
     if not pyproject_path.exists():
         return deps
-    
+
     content = pyproject_path.read_text()
-    
+
     # Parse main dependencies
     main_match = re.search(
         r'\[tool\.poetry\.dependencies\](.*?)(?=\[tool\.|$)',
@@ -165,7 +165,7 @@ def parse_poetry_deps(pyproject_path: Path) -> Dict[str, Dict]:
     )
     if main_match:
         deps['main'] = _parse_deps_section(main_match.group(1))
-    
+
     # Parse dev dependencies
     dev_match = re.search(
         r'\[tool\.poetry\.group\.dev\.dependencies\](.*?)(?=\[tool\.|$)',
@@ -173,7 +173,7 @@ def parse_poetry_deps(pyproject_path: Path) -> Dict[str, Dict]:
     )
     if dev_match:
         deps['dev'] = _parse_deps_section(dev_match.group(1))
-    
+
     # Parse test dependencies
     test_match = re.search(
         r'\[tool\.poetry\.group\.test\.dependencies\](.*?)(?=\[tool\.|$)',
@@ -181,73 +181,73 @@ def parse_poetry_deps(pyproject_path: Path) -> Dict[str, Dict]:
     )
     if test_match:
         deps['test'] = _parse_deps_section(test_match.group(1))
-    
+
     return deps
 
 
 def _parse_deps_section(section: str) -> Dict[str, str]:
     """Parse a dependencies section from pyproject.toml."""
     deps = {}
-    
+
     for line in section.split('\n'):
         line = line.strip()
         if not line or line.startswith('#') or line.startswith('['):
             continue
-        
+
         # Skip path dependencies (local packages)
         if 'path =' in line:
             continue
-        
+
         # Parse simple deps: package = "version" or package = "^version"
         match = re.match(r'^([a-zA-Z0-9_-]+)\s*=\s*"([^"]+)"', line)
         if match:
             pkg, version = match.groups()
             deps[pkg.lower()] = version
             continue
-        
+
         # Parse complex deps: package = { version = "x", ... }
         match = re.match(r'^([a-zA-Z0-9_-]+)\s*=\s*\{.*version\s*=\s*"([^"]+)"', line)
         if match:
             pkg, version = match.groups()
             deps[pkg.lower()] = version
-    
+
     return deps
 
 
 def extract_all_deps(ol_repo: Path) -> Dict[str, Dict[str, str]]:
     """
     Extract all dependencies from all vendored packages.
-    
+
     Returns merged dependencies for main, dev, and test.
     """
     all_deps = {'main': {}, 'dev': {}, 'test': {}}
     packages_dir = ol_repo / 'packages'
-    
+
     # List of packages to scan
     packages_to_scan = ['traceloop-sdk', 'opentelemetry-semantic-conventions-ai']
     packages_to_scan.extend(
-        f"opentelemetry-instrumentation-{pkg.replace('_', '-')}" 
+        f"opentelemetry-instrumentation-{pkg.replace('_', '-')}"
         for pkg in OL_INSTRUMENTATION_PACKAGES
     )
-    
+
     for pkg_name in packages_to_scan:
         pyproject = packages_dir / pkg_name / 'pyproject.toml'
         if not pyproject.exists():
             continue
-        
+
         pkg_deps = parse_poetry_deps(pyproject)
-        
+
         for dep_type in ['main', 'dev', 'test']:
             for pkg, version in pkg_deps[dep_type].items():
                 # Skip vendored/internal packages
                 if pkg in SKIP_DEPS or pkg.lower() in SKIP_DEPS:
                     continue
-                
+
                 # Merge: keep most restrictive version (simplistic approach)
                 if pkg not in all_deps[dep_type]:
                     all_deps[dep_type][pkg] = version
                 # Could add more sophisticated version merging here
-    
+
     return all_deps
 
 
@@ -261,13 +261,13 @@ def write_deps_manifest(vendor_root: Path, deps: Dict[str, Dict[str, str]]) -> N
 def vendor_traceloop_sdk(ol_repo: Path, vendor_root: Path) -> None:
     """Vendor the traceloop-sdk package."""
     print("==> Vendoring traceloop-sdk")
-    
+
     src = ol_repo / 'packages' / 'traceloop-sdk' / 'traceloop'
     dest = vendor_root / 'traceloop'
-    
+
     if not src.exists():
         raise FileNotFoundError(f"traceloop-sdk not found at {src}")
-    
+
     copy_package(src, dest)
     print(f"    Copied: {src} -> {dest}")
 
@@ -275,48 +275,48 @@ def vendor_traceloop_sdk(ol_repo: Path, vendor_root: Path) -> None:
 def vendor_instrumentation_packages(ol_repo: Path, vendor_root: Path) -> List[str]:
     """Vendor all OpenLLMetry instrumentation packages."""
     print("==> Vendoring OpenTelemetry instrumentation packages")
-    
+
     vendored = []
     otel_dest = vendor_root / 'opentelemetry' / 'instrumentation'
     otel_dest.mkdir(parents=True, exist_ok=True)
-    
+
     packages_dir = ol_repo / 'packages'
-    
+
     for pkg_dir in sorted(packages_dir.iterdir()):
         if not pkg_dir.name.startswith('opentelemetry-instrumentation-'):
             continue
-        
+
         pkg_name = pkg_dir.name.replace('opentelemetry-instrumentation-', '')
         module_name = PKG_DIR_TO_MODULE.get(pkg_name, pkg_name.replace('-', '_'))
-        
+
         if module_name not in OL_INSTRUMENTATION_PACKAGES:
             print(f"    Skipping unknown package: {pkg_name}")
             continue
-        
+
         src = pkg_dir / 'opentelemetry' / 'instrumentation' / module_name
         if not src.exists():
             print(f"    Warning: Source not found: {src}")
             continue
-        
+
         dest = otel_dest / module_name
         copy_package(src, dest)
         vendored.append(pkg_name)
         print(f"    Vendored: {pkg_name}")
-    
+
     return vendored
 
 
 def vendor_semconv_ai(ol_repo: Path, vendor_root: Path) -> None:
     """Vendor the semantic conventions AI package."""
     print("==> Vendoring opentelemetry-semantic-conventions-ai")
-    
+
     src = ol_repo / 'packages' / 'opentelemetry-semantic-conventions-ai' / 'opentelemetry' / 'semconv_ai'
     dest = vendor_root / 'opentelemetry' / 'semconv_ai'
-    
+
     if not src.exists():
         print(f"    Warning: semconv_ai not found at {src}")
         return
-    
+
     copy_package(src, dest)
     print(f"    Copied: {src} -> {dest}")
 
@@ -324,18 +324,18 @@ def vendor_semconv_ai(ol_repo: Path, vendor_root: Path) -> None:
 def create_vendor_init_files(vendor_root: Path) -> None:
     """Create necessary __init__.py files for the vendor namespace."""
     print("==> Creating namespace __init__.py files")
-    
+
     vendor_init = vendor_root / '__init__.py'
     vendor_init.write_text(
         '"""Vendored dependencies for FortifyRoot SDK."""\n'
         '# This package contains vendored copies of OpenLLMetry components.\n'
         '# Do not modify these files directly - they are generated by vendor_openllmetry.py\n'
     )
-    
+
     otel_dir = vendor_root / 'opentelemetry'
     if otel_dir.exists():
         create_namespace_init(otel_dir)
-        
+
         instr_dir = otel_dir / 'instrumentation'
         if instr_dir.exists():
             create_namespace_init(instr_dir)
@@ -344,14 +344,14 @@ def create_vendor_init_files(vendor_root: Path) -> None:
 def rewrite_all_imports(vendor_root: Path, vendor_prefix: str) -> int:
     """Rewrite imports in all vendored Python files."""
     print("==> Rewriting imports")
-    
+
     rules = get_import_rewrite_rules(vendor_prefix)
     modified_count = 0
-    
+
     for py_file in vendor_root.rglob('*.py'):
         if rewrite_imports_in_file(py_file, rules):
             modified_count += 1
-    
+
     print(f"    Total files modified: {modified_count}")
     return modified_count
 
@@ -370,9 +370,9 @@ def get_ol_version(ol_repo: Path) -> str:
 def get_git_info(ol_repo: Path) -> dict:
     """Get git commit info from OpenLLMetry repository."""
     import subprocess
-    
+
     info = {"commit": "unknown", "branch": "unknown", "tag": "unknown"}
-    
+
     try:
         result = subprocess.run(
             ['git', 'rev-parse', 'HEAD'],
@@ -380,14 +380,14 @@ def get_git_info(ol_repo: Path) -> dict:
         )
         if result.returncode == 0:
             info["commit"] = result.stdout.strip()[:12]
-        
+
         result = subprocess.run(
             ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
             cwd=ol_repo, capture_output=True, text=True
         )
         if result.returncode == 0:
             info["branch"] = result.stdout.strip()
-        
+
         result = subprocess.run(
             ['git', 'describe', '--tags', '--exact-match'],
             cwd=ol_repo, capture_output=True, text=True
@@ -396,17 +396,17 @@ def get_git_info(ol_repo: Path) -> dict:
             info["tag"] = result.stdout.strip()
     except FileNotFoundError:
         pass
-    
+
     return info
 
 
 def write_manifest(vendor_root: Path, ol_repo: Path, vendored_packages: List[str]) -> None:
     """Write a manifest file documenting what was vendored."""
     print("==> Writing manifest")
-    
+
     version = get_ol_version(ol_repo)
     git_info = get_git_info(ol_repo)
-    
+
     manifest = {
         "vendored_at": datetime.now().isoformat(),
         "openllmetry_version": version,
@@ -420,10 +420,10 @@ def write_manifest(vendor_root: Path, ol_repo: Path, vendored_packages: List[str
             **{f"opentelemetry-instrumentation-{p}": version for p in vendored_packages}
         }
     }
-    
+
     manifest_file = vendor_root / 'VENDOR_MANIFEST.json'
     manifest_file.write_text(json.dumps(manifest, indent=2))
-    
+
     version_file = vendor_root.parent / 'OPENLLMETRY_VERSION'
     version_file.write_text(
         f"# Vendored OpenLLMetry Version\n"
@@ -433,7 +433,7 @@ def write_manifest(vendor_root: Path, ol_repo: Path, vendored_packages: List[str
         f"TAG={git_info['tag']}\n"
         f"VENDORED_AT={datetime.now().isoformat()}\n"
     )
-    
+
     print(f"    Manifest: {manifest_file}")
     print(f"    Version: {version_file}")
 
@@ -465,7 +465,7 @@ def main():
         '--tag',
         type=str,
         default=None,
-        help='Git tag to checkout in OL repo before vendoring'
+        help='Git tag to checkout in OpenLLMetry repo before vendoring'
     )
     parser.add_argument(
         '--clean',
@@ -483,11 +483,11 @@ def main():
         action='store_true',
         help='Show what would be done without making changes'
     )
-    
+
     args = parser.parse_args()
-    
+
     ol_repo = args.ol_repo.resolve()
-    
+
     if args.fr_sdk:
         fr_sdk = args.fr_sdk.resolve()
     else:
@@ -495,75 +495,75 @@ def main():
         fr_sdk = script_dir.parent
         if not (fr_sdk / 'src' / 'fortifyroot').exists():
             fr_sdk = script_dir.parent.parent
-    
+
     vendor_root = fr_sdk / 'src' / 'fortifyroot' / '_vendor'
-    
+
     # Validate paths
     if not ol_repo.exists():
         print(f"ERROR: OpenLLMetry repo not found: {ol_repo}")
         sys.exit(1)
-    
+
     if not (ol_repo / 'packages').exists():
         print(f"ERROR: Invalid OpenLLMetry repo: {ol_repo}")
         sys.exit(1)
-    
+
     if not (fr_sdk / 'src' / 'fortifyroot').exists():
         print(f"ERROR: FortifyRoot SDK not found: {fr_sdk}")
         sys.exit(1)
-    
+
     print(f"OpenLLMetry repo: {ol_repo}")
     print(f"FortifyRoot SDK: {fr_sdk}")
     print(f"Vendor directory: {vendor_root}")
     print()
-    
+
     # Checkout tag if specified
     if args.tag:
         import subprocess
         print(f"==> Checking out tag: {args.tag}")
         result = subprocess.run(
-            ['git', 'checkout', args.tag],
+            ['git', 'checkout', 'tags/' + args.tag],
             cwd=ol_repo, capture_output=True, text=True
         )
         if result.returncode != 0:
             print(f"ERROR: Failed to checkout {args.tag}: {result.stderr}")
             sys.exit(1)
         print(f"    Checked out: {args.tag}")
-    
+
     if args.dry_run:
         print("=== DRY RUN MODE ===")
         return
-    
+
     # Clean if requested
     if args.clean and vendor_root.exists():
         print("==> Cleaning vendor directory")
         shutil.rmtree(vendor_root)
-    
+
     vendor_root.mkdir(parents=True, exist_ok=True)
-    
+
     # Vendor packages
     vendor_traceloop_sdk(ol_repo, vendor_root)
     vendored_packages = vendor_instrumentation_packages(ol_repo, vendor_root)
     vendor_semconv_ai(ol_repo, vendor_root)
-    
+
     # Create __init__.py files
     create_vendor_init_files(vendor_root)
-    
+
     # Rewrite imports
     rewrite_all_imports(vendor_root, args.vendor_prefix)
-    
+
     # Extract dependencies
     if args.extract_deps:
         print("==> Extracting dependencies")
         deps = extract_all_deps(ol_repo)
         write_deps_manifest(vendor_root, deps)
-        
+
         print("\n    Main dependencies found:")
         for pkg, ver in sorted(deps['main'].items()):
             print(f"      {pkg} = \"{ver}\"")
-    
+
     # Write manifest
     write_manifest(vendor_root, ol_repo, vendored_packages)
-    
+
     print()
     print("==> Vendoring complete!")
     print()

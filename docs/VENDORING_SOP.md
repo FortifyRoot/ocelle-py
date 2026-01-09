@@ -50,7 +50,7 @@ fortifyroot-sdk-py/
 ### NOT Vendored (PyPI dependencies)
 These are listed in `pyproject.toml` and installed from PyPI:
 - `opentelemetry-api` - Core OTel API
-- `opentelemetry-sdk` - Core OTel SDK  
+- `opentelemetry-sdk` - Core OTel SDK
 - `opentelemetry-exporter-otlp-proto-http` - OTLP exporter
 - `opentelemetry-exporter-otlp-proto-grpc` - OTLP exporter
 - `opentelemetry-instrumentation` - Base instrumentation classes
@@ -93,12 +93,21 @@ fr-v0.50.1.2    # Another bug fix (still based on TL OL v0.50.1)
 ### Example Workflow
 
 ```bash
-# Initial setup for v0.50.1
+# Initial (one time) setup for the forked OpenLLMetry repo
+git clone git@github.com:FortifyRoot/openllmetry-py.git fr-openllmetry-py
+cd fr-openllmetry-py
+git remote add upstream https://github.com/traceloop/openllmetry.git
+git remote -v
+
+# Setup for v0.50.1 release of OpenLLMetry
+git fetch upstream --tags
 git checkout tags/v0.50.1
 git checkout -b fr-v0.50.1.x
+
 # Make FR modifications...
 git commit -m "FR: Rebrand tracer and logging"
 git push -u origin fr-v0.50.1.x
+# Cut a new version v0.50.1.0
 git tag fr-v0.50.1.0
 git push origin fr-v0.50.1.0
 
@@ -119,78 +128,6 @@ git cherry-pick <commits from fr-v0.50.1.x>
 git push -u origin fr-v0.50.2.x
 git tag fr-v0.50.2.0
 git push origin fr-v0.50.2.0
-```
-
-## Repository Setup
-
-### 1. Fork OpenLLMetry
-
-```bash
-# Fork https://github.com/traceloop/openllmetry to fortifyroot org
-# Then clone locally:
-git clone git@github.com:fortifyroot/fr-openllmetry-py.git
-cd fr-openllmetry-py
-
-# Add upstream remote
-git remote add upstream https://github.com/traceloop/openllmetry.git
-git fetch upstream --tags
-```
-
-### 2. Create FortifyRoot Branch from Tag
-
-```bash
-# Checkout the latest stable tag
-git checkout tags/v0.50.1
-
-# Create FR development branch (note the .x suffix)
-git checkout -b fr-v0.50.1.x
-
-# Push the branch
-git push -u origin fr-v0.50.1.x
-```
-
-### 3. Make FortifyRoot-specific Modifications
-
-In the `fr-v0.50.1.x` branch, make these changes. See `docs/FORK_BRANDING.md` for the complete list.
-
-Key modifications:
-
-#### a) Rebrand Tracer Name (required)
-Edit `packages/traceloop-sdk/traceloop/sdk/tracing/tracing.py`:
-```python
-# Line 43: Change tracer name
-TRACER_NAME = "fortifyroot.tracer"  # was "traceloop.tracer"
-```
-
-#### b) Rebrand Warning Messages (required)
-Edit `packages/traceloop-sdk/traceloop/sdk/tracing/tracing.py`:
-```python
-# Line ~210: Change warning message
-print(
-    Fore.RED
-    + "Warning: FortifyRoot not initialized, make sure you call fortifyroot.init()"
-)
-```
-
-#### c) Update Default Endpoint (recommended)
-Edit `packages/traceloop-sdk/traceloop/sdk/__init__.py`:
-```python
-# Change default endpoint
-api_endpoint: str = "https://api.fortifyroot.com",  # was "https://api.traceloop.com"
-```
-
-#### d) Commit Changes
-```bash
-git add -A
-git commit -m "FR: Rebrand tracer, logging, and endpoints"
-git push
-```
-
-### 4. Tag the Release
-
-```bash
-git tag fr-v0.50.1.0
-git push origin fr-v0.50.1.0
 ```
 
 ## Vendoring Process
@@ -221,58 +158,6 @@ poetry run pytest tests/
 git add src/fortifyroot/_vendor/ src/fortifyroot/OPENLLMETRY_VERSION
 git commit -m "Vendor OpenLLMetry v0.50.1 (fr-v0.50.1.0)"
 ```
-
-### Version Bump Procedure
-
-When upgrading from v0.50.1 to v0.50.2:
-
-#### Step 1: Update Fork
-```bash
-cd /path/to/fr-openllmetry-py
-
-# Fetch upstream changes
-git fetch upstream --tags
-
-# Create new branch from new tag
-git checkout tags/v0.50.2
-git checkout -b fr-v0.50.2.x
-
-# Cherry-pick FR modifications from previous branch
-git cherry-pick <commit-hash-of-FR-changes>
-
-# Resolve any conflicts
-# ... edit files as needed ...
-git add -A
-git commit -m "FR: Rebrand and callback hooks (rebased on v0.50.2)"
-
-# Push
-git push -u origin fr-v0.50.2.x
-
-# Tag the release
-git tag fr-v0.50.2.0
-git push origin fr-v0.50.2.0
-```
-
-#### Step 2: Re-vendor in FR SDK
-```bash
-cd /path/to/fortifyroot-sdk-py
-
-# Run vendoring script with new tag
-./scripts/vendor.sh /path/to/fr-openllmetry-py fr-v0.50.2.0
-
-# Test thoroughly
-poetry install
-poetry run pytest tests/
-
-# Commit
-git add .
-git commit -m "Upgrade vendored OpenLLMetry to v0.50.2 (fr-v0.50.2.0)"
-```
-
-#### Step 3: Dependencies Update
-
-The vendoring script now automatically extracts and updates dependencies from
-all vendored packages. After vendoring, review `pyproject.toml` for any changes.
 
 ## Import Rewriting Details
 
@@ -316,7 +201,7 @@ The vendoring script automatically rewrites imports:
 
 **Symptom:** Features missing or different behavior
 
-**Solution:** 
+**Solution:**
 1. Check `OPENLLMETRY_VERSION` file
 2. Verify the correct tag is checked out in the fork
 3. Re-run vendoring script with explicit `--tag` argument
@@ -340,6 +225,7 @@ After vendoring, verify:
 - [ ] OpenAI instrumentation works
 - [ ] Anthropic instrumentation works
 - [ ] LangChain instrumentation works
+- [ ] LangGraph instrumentation works
 - [ ] Log messages show "fortifyroot" not "traceloop"
 - [ ] Traces show `otel.scope.name: fortifyroot.tracer` not `traceloop.tracer`
 - [ ] Spans are exported correctly
@@ -347,12 +233,11 @@ After vendoring, verify:
 
 ## Best Practices
 
-1. **Always branch from tags**, not `main`
+1. **Always branch from tags**, not `main` (w.r.t forked OpenLLMetry repo)
 2. **Use the `.x` branch naming** for development branches
-3. **Tag releases** before vendoring (use `fr-vX.Y.Z.N` format)
+3. **Tag releases** before vendoring (use `fr-vX.Y.Z.N` format where X.Y.Z is Traceloop specific and N is FortifyRoot specific)
 4. **Minimize changes** in the fork for easier rebasing
 5. **Document all FR-specific changes** in commit messages
 6. **Test after every vendoring** operation
-7. **Keep OPENLLMETRY_VERSION** updated
+7. **Keep OPENLLMETRY_VERSION** updated (vendoring script takes care of it)
 8. **Review upstream changelog** before upgrading
-9. **Run the import test** to verify no brand leakage
