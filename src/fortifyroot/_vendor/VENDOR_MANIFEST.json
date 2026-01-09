@@ -1,10 +1,9 @@
 {
-  "vendored_at": "2026-01-09T13:28:41.377239",
+  "vendored_at": "2026-01-09T13:50:27.212442",
   "openllmetry_version": "0.50.1",
   "git_commit": "07c0c945e1e7",
   "git_branch": "HEAD",
   "git_tag": "fr-v0.50.1.0",
-  "source_repo": "/Users/msharma/Documents/git/fr-openllmetry-py",
   "packages": {
     "traceloop-sdk": "0.50.1",
     "opentelemetry-semantic-conventions-ai": "0.50.1",

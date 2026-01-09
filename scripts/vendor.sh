@@ -3,7 +3,7 @@
 # Vendor OpenLLMetry into FortifyRoot SDK
 #
 # Usage:
-#   ./scripts/vendor.sh /path/to/fr-openllmetry-py
+#   ./scripts/vendor.sh <path to openllmetry fork> <path to FR SDK> [<git tag of fork>]
 #
 # This is a convenience wrapper around vendor_openllmetry.py
 #
@@ -11,17 +11,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-if [[ $# -lt 1 ]]; then
-    echo "Usage: $0 <openllmetry-repo-path>"
-    echo ""
-    echo "Example:"
-    echo "  $0 /path/to/fr-openllmetry-py"
+if [[ $# -lt 2 ]]; then
+    echo "Usage: $0 <openllmetry-forked-repo-path> <fr-sdk-repo-path>"
     exit 1
 fi
 
 OL_REPO="$1"
+FR_SDK_REPO="$2"
 
 if [[ ! -d "$OL_REPO/packages" ]]; then
     echo "ERROR: Invalid OpenLLMetry repo path: $OL_REPO"
@@ -29,18 +26,24 @@ if [[ ! -d "$OL_REPO/packages" ]]; then
     exit 1
 fi
 
+if [[ ! -d "$FR_SDK_REPO/src/fortifyroot" ]]; then
+    echo "ERROR: Invalid FortifyRoot SDK repo path: $FR_SDK_REPO"
+    echo "       Expected to find src/fortifyroot/ directory"
+    exit 1
+fi
+
 echo "==> Running vendoring script..."
-if [[ $# -gt 1 ]]; then
-    OL_TAG="$2"
+if [[ $# -gt 2 ]]; then
+    OL_TAG="$3"
     python3 "$SCRIPT_DIR/vendor_openllmetry.py" \
         --ol-repo "$OL_REPO" \
-        --fr-sdk "$PROJECT_ROOT" \
+        --fr-sdk "$FR_SDK_REPO" \
         --tag "$OL_TAG" \
         --clean
 else
     python3 "$SCRIPT_DIR/vendor_openllmetry.py" \
         --ol-repo "$OL_REPO" \
-        --fr-sdk "$PROJECT_ROOT" \
+        --fr-sdk "$FR_SDK_REPO" \
         --clean
 fi
 

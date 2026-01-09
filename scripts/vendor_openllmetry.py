@@ -413,7 +413,6 @@ def write_manifest(vendor_root: Path, ol_repo: Path, vendored_packages: List[str
         "git_commit": git_info["commit"],
         "git_branch": git_info["branch"],
         "git_tag": git_info["tag"],
-        "source_repo": str(ol_repo),
         "packages": {
             "traceloop-sdk": version,
             "opentelemetry-semantic-conventions-ai": version,
