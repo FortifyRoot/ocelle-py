@@ -9,7 +9,7 @@ for the FortifyRoot SDK, including:
 
 import os
 import sys
-from typing import Callable, Dict, List, Optional, Set, Union, TypedDict
+from typing import Callable, Dict, List, Optional, Set, TypedDict
 
 from opentelemetry.sdk.trace import SpanProcessor, ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter
@@ -43,7 +43,7 @@ def init(
     metrics_headers: Optional[Dict[str, str]] = None,
     logging_exporter: Optional[LogExporter] = None,
     logging_headers: Optional[Dict[str, str]] = None,
-    processor: Optional[Union[SpanProcessor, List[SpanProcessor]]] = None,
+    processors: Optional[List[SpanProcessor]] = None,
     propagator: Optional[TextMapPropagator] = None,
     sampler: Optional[Sampler] = None,
     should_enrich_metrics: bool = True,
@@ -120,8 +120,7 @@ def init(
             exclude specific libraries from instrumentation.
 
         span_postprocess_callback: Optional callback function called on each span
-            before export. Useful for custom span processing, filtering, or
-            adding safety callbacks (e.g., PII detection).
+            before export. Useful for custom span processing, filtering.
 
     Example:
         Basic usage::
@@ -161,7 +160,7 @@ def init(
                 sampler=TraceIdRatioBased(0.1),  # Sample 10% of traces
             )
 
-        With custom span processor::
+        With custom span processors::
 
             from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
 
@@ -170,19 +169,19 @@ def init(
             fortifyroot.init(
                 app_name="my-llm-app",
                 api_key="fr-xxx",
-                processor=console_processor,
+                processors=[console_processor],
             )
 
-        With span postprocess callback for safety::
+        With span postprocess callback::
 
-            def safety_callback(span):
-                # Inspect span for PII, log alerts, etc.
+            def span_callback(span):
+                # Inspect span, log alerts, etc.
                 pass
 
             fortifyroot.init(
                 app_name="my-llm-app",
                 api_key="fr-xxx",
-                span_postprocess_callback=safety_callback,
+                span_postprocess_callback=span_callback,
             )
     """
     # Set TRACELOOP_TRACE_CONTENT based on trace_content parameter
@@ -204,17 +203,17 @@ def init(
     tl_block_instruments = _convert_to_tl_instruments(block_instruments)
 
     # Determine if we need to wrap the processor with attribute renaming
-    final_processor: Optional[Union[SpanProcessor, List[SpanProcessor]]] = None
+    final_processors: Optional[List[SpanProcessor]] = None
 
-    if processor is not None:
+    if processors is not None:
         # User provided custom processor(s)
-        if isinstance(processor, list):
+        if isinstance(processors, list):
             # Wrap each processor
-            final_processor = [
-                AttributeRenamingProcessor(p) for p in processor
+            final_processors = [
+                AttributeRenamingProcessor(p) for p in processors
             ]
         else:
-            final_processor = AttributeRenamingProcessor(processor)
+            final_processors = AttributeRenamingProcessor(processors)
     elif exporter is None:
         # No custom processor or exporter, use default with renaming
         default_processor = Traceloop.get_default_span_processor(
@@ -223,7 +222,7 @@ def init(
             api_key=api_key,
             headers=headers,
         )
-        final_processor = AttributeRenamingProcessor(default_processor)
+        final_processors = [AttributeRenamingProcessor(default_processor)]
 
     class _TraceloopOptionalInitKwargs(TypedDict, total=False):
         metrics_exporter: MetricExporter
@@ -254,7 +253,7 @@ def init(
         headers=headers or {},
         disable_batch=disable_batch,
         exporter=exporter,
-        processor=final_processor,
+        processor=final_processors,
         sampler=sampler,
         should_enrich_metrics=should_enrich_metrics,
         resource_attributes=resource_attributes,
@@ -354,7 +353,7 @@ class FortifyRootConfig:
         metrics_headers: Optional[Dict[str, str]]
         logging_exporter: Optional[LogExporter]
         logging_headers: Optional[Dict[str, str]]
-        processor: Optional[Union[SpanProcessor, List[SpanProcessor]]]
+        processors: Optional[List[SpanProcessor]]
         propagator: Optional[TextMapPropagator]
         sampler: Optional[Sampler]
         should_enrich_metrics: bool
@@ -429,11 +428,11 @@ class FortifyRootConfig:
         self._config["logging_headers"] = headers
         return self
 
-    def processor(
-        self, processor: Union[SpanProcessor, List[SpanProcessor]]
+    def processors(
+        self, processors: List[SpanProcessor]
     ) -> "FortifyRootConfig":
-        """Set custom span processor(s)."""
-        self._config["processor"] = processor
+        """Set custom span processors."""
+        self._config["processors"] = processors
         return self
 
     def propagator(self, propagator: TextMapPropagator) -> "FortifyRootConfig":

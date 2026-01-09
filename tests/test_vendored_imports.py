@@ -208,7 +208,7 @@ class TestInitParameters:
         assert "trace_content" in params
         assert "disable_batch" in params
         assert "exporter" in params
-        assert "processor" in params
+        assert "processors" in params
         assert "sampler" in params
         assert "propagator" in params
 
