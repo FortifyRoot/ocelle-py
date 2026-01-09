@@ -428,18 +428,7 @@ def write_manifest(vendor_root: Path, ol_repo: Path, vendored_packages: List[str
     manifest_file = vendor_root / 'VENDOR_MANIFEST.json'
     manifest_file.write_text(json.dumps(manifest, indent=2))
 
-    version_file = vendor_root.parent / 'OPENLLMETRY_VERSION'
-    version_file.write_text(
-        f"# Vendored OpenLLMetry Version\n"
-        f"VERSION={version}\n"
-        f"COMMIT={git_info['commit']}\n"
-        f"BRANCH={git_info['branch']}\n"
-        f"TAG={git_info['tag']}\n"
-        f"VENDORED_AT={datetime.now().isoformat()}\n"
-    )
-
     print(f"    Manifest: {manifest_file}")
-    print(f"    Version: {version_file}")
 
 
 def main():
@@ -457,8 +446,8 @@ def main():
     parser.add_argument(
         '--fr-sdk',
         type=Path,
-        default=None,
-        help='Path to FortifyRoot SDK (default: auto-detect)'
+        required=True,
+        help='Path to FortifyRoot SDK'
     )
     parser.add_argument(
         '--vendor-prefix',
