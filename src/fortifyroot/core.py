@@ -184,6 +184,10 @@ def init(
                 span_postprocess_callback=span_callback,
             )
     """
+    api_endpoint_via_env = os.getenv("FORTIFYROOT_BASE_URL", "")
+    if api_endpoint == DEFAULT_API_ENDPOINT and api_endpoint_via_env:
+        api_endpoint = api_endpoint_via_env
+
     # Set TRACELOOP_TRACE_CONTENT based on trace_content parameter
     # This needs to be set before Traceloop.init() is called
     if not trace_content:
