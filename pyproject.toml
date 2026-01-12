@@ -1,40 +1,182 @@
-[build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
+[tool.poetry]
 name = "fortifyroot-sdk"
 version = "0.1.0"
-description = "FortifyRoot SDK for LLM observability."
+description = "FortifyRoot SDK for LLM Observability"
+authors = ["FortifyRoot <sdk@fortifyroot.com>"]
+license = "Apache-2.0"
 readme = "README.md"
-requires-python = ">=3.10,<4"
-authors = [
-  { name = "FortifyRoot", email = "founders@fortifyroot.com" }
+repository = "https://github.com/fortifyroot/fortifyroot-sdk-py"
+documentation = "https://docs.fortifyroot.com"
+keywords = ["llm", "genai", "observability", "tracing", "opentelemetry", "langchain", "openai", "anthropic"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Monitoring",
 ]
-
-dependencies = [
-  "traceloop-sdk==0.50.1"
+include = [
+    { path = "README.md", format = "sdist" },
+    { path = "CHANGELOG.md", format = "sdist" },
+    { path = "LICENSE", format = "sdist" },
 ]
+packages = [{ include = "fortifyroot", from = "src" }]
 
-[tool.setuptools]
-package-dir = { "" = "src" }
+# =============================================================================
+# PRODUCTION DEPENDENCIES
+# =============================================================================
+# These dependencies are merged from all vendored OpenLLMetry packages.
+# When upgrading the vendored version, run: ./scripts/vendor.sh <path-to-fork>
+# The vendor script will update these dependencies automatically.
+#
+# IMPORTANT: We DO NOT vendor the core OpenTelemetry packages.
+# We only vendor:
+#   - traceloop-sdk
+#   - opentelemetry-instrumentation-* (LLM provider instrumentations)
+#   - opentelemetry-semantic-conventions-ai
+#
+# The core OpenTelemetry packages below come from PyPI and are NOT modified.
+# =============================================================================
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.poetry.dependencies]
+python = ">=3.10,<4"
 
-# ------------------
-# Tooling config
-# ------------------
+# -------------------------------------------------------------------------
+# Core OpenTelemetry (FROM PyPI - NOT vendored)
+# -------------------------------------------------------------------------
+opentelemetry-api = "^1.38.0"
+opentelemetry-sdk = "^1.38.0"
+opentelemetry-exporter-otlp-proto-http = "^1.38.0"
+opentelemetry-exporter-otlp-proto-grpc = "^1.38.0"
+
+# -------------------------------------------------------------------------
+# OpenTelemetry Instrumentation - Base (FROM PyPI - NOT vendored)
+# -------------------------------------------------------------------------
+opentelemetry-instrumentation = ">=0.59b0"
+opentelemetry-semantic-conventions = ">=0.59b0"
+
+# -------------------------------------------------------------------------
+# OpenTelemetry Instrumentation - Standard Libraries (FROM PyPI - NOT vendored)
+# These instrument standard Python libraries and are used by traceloop-sdk
+# -------------------------------------------------------------------------
+opentelemetry-instrumentation-logging = ">=0.59b0"
+opentelemetry-instrumentation-requests = ">=0.59b0"
+opentelemetry-instrumentation-sqlalchemy = ">=0.59b0"
+opentelemetry-instrumentation-urllib3 = ">=0.59b0"
+opentelemetry-instrumentation-threading = ">=0.59b0"
+opentelemetry-instrumentation-redis = ">=0.59b0"
+
+# -------------------------------------------------------------------------
+# Runtime utilities (FROM PyPI - required by vendored packages)
+# These are direct dependencies of traceloop-sdk and instrumentations
+# -------------------------------------------------------------------------
+colorama = "^0.4.6"
+tenacity = ">=8.2.3,<10.0"
+pydantic = ">=1,<3"
+jinja2 = "^3.1.5"
+deprecated = "^1.2.14"
+aiohttp = "^3.11.11"
+cuid = "^0.4"
+wrapt = "^1.14.0"
+
+# =============================================================================
+# DEVELOPMENT DEPENDENCIES
+# =============================================================================
+
+[tool.poetry.group.dev.dependencies]
+autopep8 = "^2.2.0"
+flake8 = "7.0.0"
+pytest = "^8.2.2"
+pytest-sugar = "1.0.0"
+pytest-cov = "^4.0.0"
+pytest-asyncio = "^0.23.7"
+mypy = "^1.18.2"
+types-requests = "^2.31.0"
+types-colorama = "^0.4.15"
+black = ">=23.0.0"
+isort = ">=5.12.0"
+ruff = ">=0.1.0"
+
+# =============================================================================
+# TEST DEPENDENCIES
+# =============================================================================
+
+[tool.poetry.group.test.dependencies]
+openai = "^1.31.1"
+anthropic = "^0.25.2"
+langchain = "^0.2.5"
+langchain-openai = "^0.1.15"
+langchain-core = ">=0.2.0"
+vcrpy = "^7.0.0"
+pytest-recording = "^0.13.1"
+pandas = ">=1.0.0"
+
+# =============================================================================
+# OPTIONAL EXTRAS
+# =============================================================================
+
+[tool.poetry.extras]
+datasets = ["pandas"]
+
+# =============================================================================
+# BUILD SYSTEM
+# =============================================================================
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+# =============================================================================
+# TOOL CONFIGURATION
+# =============================================================================
 
 [tool.black]
 line-length = 88
-target-version = ["py310"]
+target-version = ["py310", "py311", "py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+skip = ["src/fortifyroot/_vendor"]
 
 [tool.ruff]
 line-length = 88
 target-version = "py310"
-select = ["E", "F", "I"]
-ignore = []
+exclude = ["src/fortifyroot/_vendor"]
 
-[tool.ruff.isort]
-known-first-party = ["fortifyroot"]
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+exclude = ["src/fortifyroot/_vendor"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning:fortifyroot._vendor.*",
+    "ignore::PendingDeprecationWarning:fortifyroot._vendor.*",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["src/fortifyroot"]
+omit = ["src/fortifyroot/_vendor/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+show_missing = true

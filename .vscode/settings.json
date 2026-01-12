@@ -1,11 +1,26 @@
 {
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.python",
-        "editor.formatOnSave": true
-    },
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/src"
+    ],
+    "python.analysis.exclude": [
+        "**/src/fortifyroot/_vendor/**"
+    ],
+    "python.analysis.ignore": [
+        "**/src/fortifyroot/_vendor/**"
+    ],
     "python.analysis.typeCheckingMode": "basic",
-    "python.analysis.autoImportCompletions": true,
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportMissingImports": "error",
+        "reportMissingTypeStubs": "none",
+        "reportUnusedImport": "warning"
+    },
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
     "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestArgs": ["tests"],
+    "python.testing.autoTestDiscoverOnSaveEnabled": true,
+    "python.testing.cwd": "${workspaceFolder}",
+
     "files.trimTrailingWhitespace": true,
     "files.insertFinalNewline": true
 }

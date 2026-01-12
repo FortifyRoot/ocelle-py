@@ -1,0 +1,212 @@
+#!/usr/bin/env python3
+"""
+Test script to verify all FortifyRoot SDK imports work correctly.
+
+Run this AFTER pip install -e . to verify everything is set up correctly.
+
+Usage:
+    python scripts/test_imports.py
+"""
+
+import sys
+
+def test_imports():
+    """Test all critical imports."""
+    errors = []
+    
+    print("=" * 60)
+    print("FortifyRoot SDK Import Test")
+    print("=" * 60)
+    print(f"Python: {sys.executable}")
+    print(f"Version: {sys.version}")
+    print()
+    
+    # Test 1: Core OpenTelemetry packages (from PyPI)
+    print("Testing Core OpenTelemetry packages...")
+    
+    try:
+        from opentelemetry import trace
+        print("  ✓ opentelemetry.trace")
+    except ImportError as e:
+        errors.append(f"opentelemetry.trace: {e}")
+        print(f"  ✗ opentelemetry.trace: {e}")
+    
+    try:
+        from opentelemetry.context import Context
+        print("  ✓ opentelemetry.context.Context")
+    except ImportError as e:
+        errors.append(f"opentelemetry.context: {e}")
+        print(f"  ✗ opentelemetry.context: {e}")
+    
+    try:
+        from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
+        print("  ✓ opentelemetry.sdk.trace (ReadableSpan, Span, SpanProcessor)")
+    except ImportError as e:
+        errors.append(f"opentelemetry.sdk.trace: {e}")
+        print(f"  ✗ opentelemetry.sdk.trace: {e}")
+    
+    try:
+        from opentelemetry.trace import get_tracer, SpanKind
+        print("  ✓ opentelemetry.trace (get_tracer, SpanKind)")
+    except ImportError as e:
+        errors.append(f"opentelemetry.trace: {e}")
+        print(f"  ✗ opentelemetry.trace: {e}")
+    
+    try:
+        from opentelemetry.trace.status import Status, StatusCode
+        print("  ✓ opentelemetry.trace.status (Status, StatusCode)")
+    except ImportError as e:
+        errors.append(f"opentelemetry.trace.status: {e}")
+        print(f"  ✗ opentelemetry.trace.status: {e}")
+    
+    try:
+        from opentelemetry.trace.propagation import set_span_in_context
+        print("  ✓ opentelemetry.trace.propagation")
+    except ImportError as e:
+        errors.append(f"opentelemetry.trace.propagation: {e}")
+        print(f"  ✗ opentelemetry.trace.propagation: {e}")
+    
+    try:
+        from opentelemetry.metrics import get_meter
+        print("  ✓ opentelemetry.metrics.get_meter")
+    except ImportError as e:
+        errors.append(f"opentelemetry.metrics: {e}")
+        print(f"  ✗ opentelemetry.metrics: {e}")
+    
+    try:
+        from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
+        print("  ✓ opentelemetry.instrumentation.instrumentor.BaseInstrumentor")
+    except ImportError as e:
+        errors.append(f"opentelemetry.instrumentation.instrumentor: {e}")
+        print(f"  ✗ opentelemetry.instrumentation.instrumentor: {e}")
+    
+    try:
+        from opentelemetry.instrumentation.utils import unwrap
+        print("  ✓ opentelemetry.instrumentation.utils.unwrap")
+    except ImportError as e:
+        errors.append(f"opentelemetry.instrumentation.utils: {e}")
+        print(f"  ✗ opentelemetry.instrumentation.utils: {e}")
+    
+    # Note: opentelemetry.util.types may not exist in all versions
+    try:
+        from opentelemetry.util.types import Attributes
+        print("  ✓ opentelemetry.util.types.Attributes")
+    except ImportError:
+        # Try alternative import
+        try:
+            from typing import Mapping
+            Attributes = Mapping[str, any]
+            print("  ⚠ opentelemetry.util.types.Attributes (using typing.Mapping fallback)")
+        except Exception as e:
+            errors.append(f"opentelemetry.util.types: {e}")
+            print(f"  ✗ opentelemetry.util.types: {e}")
+    
+    # Incubating semconv (may not be available)
+    try:
+        from opentelemetry.semconv._incubating.attributes import gen_ai_attributes
+        print("  ✓ opentelemetry.semconv._incubating.attributes")
+    except ImportError:
+        print("  ⚠ opentelemetry.semconv._incubating.attributes (optional, may not exist)")
+    
+    print()
+    
+    # Test 2: Third-party dependencies
+    print("Testing third-party dependencies...")
+    
+    try:
+        import pydantic
+        print(f"  ✓ pydantic ({pydantic.VERSION})")
+    except ImportError as e:
+        errors.append(f"pydantic: {e}")
+        print(f"  ✗ pydantic: {e}")
+    
+    try:
+        import wrapt
+        print("  ✓ wrapt")
+    except ImportError as e:
+        errors.append(f"wrapt: {e}")
+        print(f"  ✗ wrapt: {e}")
+    
+    try:
+        import colorama
+        print("  ✓ colorama")
+    except ImportError as e:
+        errors.append(f"colorama: {e}")
+        print(f"  ✗ colorama: {e}")
+    
+    try:
+        import aiohttp
+        print("  ✓ aiohttp")
+    except ImportError as e:
+        errors.append(f"aiohttp: {e}")
+        print(f"  ✗ aiohttp: {e}")
+    
+    try:
+        import jinja2
+        print("  ✓ jinja2")
+    except ImportError as e:
+        errors.append(f"jinja2: {e}")
+        print(f"  ✗ jinja2: {e}")
+    
+    print()
+    
+    # Test 3: Vendored packages
+    print("Testing vendored packages...")
+    
+    try:
+        from fortifyroot._vendor.traceloop.sdk import Traceloop
+        print("  ✓ fortifyroot._vendor.traceloop.sdk.Traceloop")
+    except ImportError as e:
+        errors.append(f"vendored traceloop: {e}")
+        print(f"  ✗ fortifyroot._vendor.traceloop.sdk: {e}")
+    
+    try:
+        from fortifyroot._vendor.opentelemetry.semconv_ai import SpanAttributes
+        print("  ✓ fortifyroot._vendor.opentelemetry.semconv_ai.SpanAttributes")
+    except ImportError as e:
+        errors.append(f"vendored semconv_ai: {e}")
+        print(f"  ✗ fortifyroot._vendor.opentelemetry.semconv_ai: {e}")
+    
+    try:
+        from fortifyroot._vendor.opentelemetry.instrumentation.openai import OpenAIInstrumentor
+        print("  ✓ fortifyroot._vendor.opentelemetry.instrumentation.openai")
+    except ImportError as e:
+        errors.append(f"vendored openai instrumentation: {e}")
+        print(f"  ✗ fortifyroot._vendor.opentelemetry.instrumentation.openai: {e}")
+    
+    print()
+    
+    # Test 4: FortifyRoot public API
+    print("Testing FortifyRoot public API...")
+    
+    try:
+        import fortifyroot
+        print("  ✓ import fortifyroot")
+    except ImportError as e:
+        errors.append(f"fortifyroot: {e}")
+        print(f"  ✗ import fortifyroot: {e}")
+    
+    try:
+        from fortifyroot import init, Instruments, task, workflow
+        print("  ✓ fortifyroot.init, Instruments, task, workflow")
+    except ImportError as e:
+        errors.append(f"fortifyroot API: {e}")
+        print(f"  ✗ fortifyroot public API: {e}")
+    
+    print()
+    print("=" * 60)
+    
+    if errors:
+        print(f"FAILED: {len(errors)} import(s) failed")
+        print()
+        print("Missing packages. Run:")
+        print("  pip install -e .")
+        print()
+        return 1
+    else:
+        print("SUCCESS: All imports working!")
+        return 0
+
+
+if __name__ == "__main__":
+    sys.exit(test_imports())
