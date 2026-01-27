@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Metrics initialization bug**: Fixed an issue where metrics were unintentionally
+  disabled when using the default span processor. The SDK now automatically creates
+  a default `OTLPMetricExporter` when a processor is configured but no explicit
+  `metrics_exporter` is provided. This ensures metrics work out-of-the-box with
+  `FORTIFYROOT_METRICS_ENABLED=true`.
+
+---
+
 ## [0.1.0] - 2026-01-DD
 
 ### Added
