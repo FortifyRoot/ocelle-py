@@ -228,6 +228,26 @@ def init(
         )
         final_processors = [AttributeRenamingProcessor(default_processor)]
 
+    # FIX: When we create a default processor (final_processors), Traceloop interprets
+    # this as a "custom pipeline" and requires a matching metrics_exporter.
+    # If metrics are enabled but no metrics_exporter is provided, create a default one.
+    if final_processors is not None and metrics_exporter is None:
+        # Check if metrics are enabled via environment variable
+        # Note: We read FORTIFYROOT_* vars directly for consistency; env_mapping.py
+        # handles translation to TRACELOOP_* for the vendored SDK internals.
+        metrics_enabled = (os.environ.get("FORTIFYROOT_METRICS_ENABLED") or "true").lower() == "true"
+        if metrics_enabled:
+            from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+            # Use the same endpoint pattern as traces
+            metrics_endpoint = os.environ.get("FORTIFYROOT_METRICS_ENDPOINT") or api_endpoint
+            # Ensure the endpoint includes /v1/metrics path for OTLP HTTP
+            if not metrics_endpoint.endswith("/v1/metrics"):
+                metrics_endpoint = f"{metrics_endpoint.rstrip('/')}/v1/metrics"
+            metrics_exporter = OTLPMetricExporter(
+                endpoint=metrics_endpoint,
+                headers=metrics_headers or headers or {},
+            )
+
     class _TraceloopOptionalInitKwargs(TypedDict, total=False):
         metrics_exporter: MetricExporter
         metrics_headers: Dict[str, str]
