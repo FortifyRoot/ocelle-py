@@ -163,6 +163,10 @@ exclude = ["src/fortifyroot/_vendor"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "vcr: tests using pytest-recording VCR cassettes",
+    "default_cassette(name): override cassette path/name for a VCR test",
+]
 filterwarnings = [
     "ignore::DeprecationWarning:fortifyroot._vendor.*",
     "ignore::PendingDeprecationWarning:fortifyroot._vendor.*",
