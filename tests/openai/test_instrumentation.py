@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import openai
 import pytest
 from opentelemetry.semconv._incubating.attributes import gen_ai_attributes as GenAI
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
 from fortifyroot import Instruments, init
 from fortifyroot._internal.constants import FORTIFYROOT_SDK_VERSION_ATTRIBUTE
@@ -120,6 +121,29 @@ def _assert_token_usage_attributes(span) -> None:
     assert span.attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 5
 
 
+def _prompt_attr_keys() -> set[str]:
+    return {
+        f"{GenAI.GEN_AI_PROMPT}.0.content",
+        "llm.prompts.0.content",
+        "llm.prompts.0.user",
+    }
+
+
+def _completion_attr_keys() -> set[str]:
+    return {
+        f"{GenAI.GEN_AI_COMPLETION}.0.content",
+        "llm.completions.0.content",
+    }
+
+
+def _content_attr_keys() -> set[str]:
+    return _prompt_attr_keys() | _completion_attr_keys()
+
+
+def _assert_no_content_attrs(span) -> None:
+    assert all(key not in span.attributes for key in _content_attr_keys())
+
+
 def test_chat_completion_creates_span(init_openai_sdk, span_exporter):
     with patch(
         "openai.resources.chat.completions.Completions.create",
@@ -200,6 +224,8 @@ def test_disabled_sdk_creates_no_spans(span_exporter):
     init(
         app_name="fortifyroot-test",
         enabled=False,
+        disable_batch=True,
+        processors=[SimpleSpanProcessor(span_exporter)],
         instruments={Instruments.OPENAI},
     )
     with patch(
@@ -219,8 +245,9 @@ def test_trace_content_true_captures_prompts(init_openai_sdk, span_exporter):
         init_openai_sdk(trace_content=True)
         _run_chat_create()
 
-    _single_span(span_exporter)
+    span = _single_span(span_exporter)
     assert bool(should_send_prompts()) is True
+    assert span.attributes[GenAI.GEN_AI_RESPONSE_MODEL] == "gpt-4o-mini"
 
 
 def test_trace_content_false_hides_prompts(init_openai_sdk, span_exporter):
@@ -231,8 +258,9 @@ def test_trace_content_false_hides_prompts(init_openai_sdk, span_exporter):
         init_openai_sdk(trace_content=False)
         _run_chat_create()
 
-    _single_span(span_exporter)
+    span = _single_span(span_exporter)
     assert bool(should_send_prompts()) is False
+    _assert_no_content_attrs(span)
 
 
 def test_enrich_metrics_true_sets_openai_enrichment(init_openai_sdk, span_exporter):

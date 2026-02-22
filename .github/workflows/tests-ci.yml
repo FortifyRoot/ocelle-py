@@ -1,0 +1,55 @@
+name: Tests CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    name: Secret Policy Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fail on hardcoded provider API keys
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          regex='(sk-(proj-)?[A-Za-z0-9_-]{20,}|sk-or-v1-[A-Za-z0-9]{20,}|sk-ant-[A-Za-z0-9_-]{20,}|gsk_[A-Za-z0-9_-]{20,}|OPENAI_API_KEY[[:space:]]*[:=][[:space:]]*["'"'"']?sk-|OPENROUTER_API_KEY[[:space:]]*[:=][[:space:]]*["'"'"']?sk-or-|ANTHROPIC_API_KEY[[:space:]]*[:=][[:space:]]*["'"'"']?sk-ant-)'
+
+          if git grep -nI -E "$regex" -- . ':(exclude)poetry.lock'; then
+            echo "::error::Potential hardcoded provider key detected. Remove it and use placeholders or GitHub Secrets."
+            exit 1
+          fi
+
+          echo "No hardcoded provider key patterns detected."
+
+  tests:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --with test --no-interaction
+
+      - name: Run tests
+        env:
+          OPENAI_BASE_URL: https://api.openai.com/v1
+          OPENAI_TEST_MODEL: gpt-4.1
+        run: poetry run pytest tests -q
