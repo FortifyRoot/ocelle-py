@@ -1,0 +1,117 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"user","content":[{"type":"text","text":"What is shown
+      in this image?"},{"type":"image_url","image_url":{"url":"https://placehold.co/600x400/EEE/31343C.png"}}]}],"model":"gpt-4.1","max_tokens":40}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '217'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      traceparent:
+      - 00-21685d7a666fa7bfb1508895b69bf55f-2875a0289c7776f1-01
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.0
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/41TTW/bMAy951cQOieBnbpJu502DBt62Qasw7CthaFItK1VlgxR7poV+e+l7aR2
+        9gHsYlh85NMjH/U4AxBGixcgVCWjqhu7ePO6erf5+h7NN3WvPr890/rLpw/Xr67iR3m3FfOuwm9/
+        oIrHqqXyXIfReDfAKqCM2LGmm026vkhW600P1F6j7crKJi6yZbpYJavzRZIt0uxQWXmjkDjlOx8B
+        Hvtvp9FpfOBwMj9GaiSSJXLsmMTB4G0XEZLIUJQuivkIKu8iul72dWUITM31wD8SGisVVt5qDFAG
+        2VRGQeTWQBtibEd8Qj7U6IjbJLgR6ySBB8iSZHkj4IozPRI4H4Eq/xOk2wFPwcLhUvABSKHDl2A4
+        xfDAdsBNGcWTGthNl6hRM/oLwRfMAVLFlkkGpb2g2pRVhC0OkvW0v4BFS7Kbr2utnQDSsS7Z+dNP
+        9vaA7J9naX3ZBL+l30pFYZyhKudGiL3luVl0ZaxEj+/5e9u71p4YIZiqbmIe/R32F2ZnlwOjGBdl
+        gh4sFZE12kl8c6w64cs1RmksTXwXSqoK9Vg6LolstfETYDbp+081f+Meejeu/B/6EVAKG34CeROQ
+        PT7teEwL2L2jf6U9T7kXLAjDPT+OPBoMnRcaC9naYcMF7ShinbNhJYYmmGHNiyYvLrerTKcX56mY
+        7WdPC3coQfADAAA=
+    headers:
+      CF-RAY:
+      - 9d16905e896afc4c-DEL
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 21 Feb 2026 13:24:28 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - personal-test-clou2a
+      openai-processing-ms:
+      - '1951'
+      openai-project:
+      - proj_5zhcB7xbj7xhoXUDTAPm4WiB
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - __cf_bm=QcDq2FEDasdUPFQQ_qaSfMEqvFFhFhHs7I85Ya1QLtY-1771680266.0055754-1.0.1.1-md05umTkL1xIwB3yzvFS3BY4wXt4Scr1ypLHssNK7Lh9_cD8n1l25qNCjovGlhRjEaZKNDxzrZYyEq7CrfDRBhPmcHxvwWFlcxot9xJHwVr0avJQlVSzbW.B1sfGGd19;
+        HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Sat, 21 Feb 2026
+        13:54:28 GMT
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-input-images:
+      - '50000'
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-input-images:
+      - '49999'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29226'
+      x-ratelimit-reset-input-images:
+      - 1ms
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 1.548s
+      x-request-id:
+      - req_7105f88c92354a08951cc6e2964429c5
+    status:
+      code: 200
+      message: OK
+version: 1
