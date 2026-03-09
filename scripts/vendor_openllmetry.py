@@ -30,9 +30,14 @@ import re
 import shutil
 import sys
 from pathlib import Path
-from typing import Optional, List, Tuple, Dict
+from typing import Any, Optional, List, Tuple, Dict
 import json
 from datetime import datetime
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib  # type: ignore[import-not-found]
 
 
 # OpenLLMetry instrumentation packages (these will be vendored)
@@ -151,7 +156,11 @@ def create_namespace_init(path: Path) -> None:
 
 def parse_poetry_deps(pyproject_path: Path) -> Dict[str, Dict]:
     """
-    Parse dependencies from a Poetry pyproject.toml file.
+    Parse dependencies from pyproject.toml.
+
+    Supports both legacy Poetry tables and modern PEP621/PEP735 layout:
+    - [tool.poetry.dependencies], [tool.poetry.group.*.dependencies]
+    - [project].dependencies, [dependency-groups]
 
     Returns dict with keys: 'main', 'dev', 'test'
     Each value is a dict of {package_name: version_spec}
@@ -161,38 +170,142 @@ def parse_poetry_deps(pyproject_path: Path) -> Dict[str, Dict]:
     if not pyproject_path.exists():
         return deps
 
-    content = pyproject_path.read_text()
+    content = pyproject_path.read_text(encoding='utf-8')
 
-    # Parse main dependencies
+    try:
+        parsed = tomllib.loads(content)
+    except Exception:
+        return _parse_deps_legacy_regex(content)
+
+    project = parsed.get('project', {})
+    if isinstance(project, dict):
+        deps['main'].update(_parse_dependency_list(project.get('dependencies', [])))
+
+    dependency_groups = parsed.get('dependency-groups', {})
+    if isinstance(dependency_groups, dict):
+        deps['dev'].update(_parse_dependency_list(dependency_groups.get('dev', [])))
+        deps['test'].update(_parse_dependency_list(dependency_groups.get('test', [])))
+
+    tool = parsed.get('tool', {})
+    if isinstance(tool, dict):
+        poetry = tool.get('poetry', {})
+        if isinstance(poetry, dict):
+            deps['main'].update(_parse_poetry_dep_table(poetry.get('dependencies', {})))
+            groups = poetry.get('group', {})
+            if isinstance(groups, dict):
+                dev_group = groups.get('dev', {})
+                if isinstance(dev_group, dict):
+                    deps['dev'].update(_parse_poetry_dep_table(dev_group.get('dependencies', {})))
+                test_group = groups.get('test', {})
+                if isinstance(test_group, dict):
+                    deps['test'].update(_parse_poetry_dep_table(test_group.get('dependencies', {})))
+
+    return deps
+
+
+def _parse_poetry_dep_table(dep_table: Any) -> Dict[str, str]:
+    """Parse [tool.poetry.*.dependencies] mapping format."""
+    deps = {}
+    if not isinstance(dep_table, dict):
+        return deps
+
+    for pkg, spec in dep_table.items():
+        pkg_name = str(pkg).lower()
+
+        if isinstance(spec, str):
+            deps[pkg_name] = spec
+            continue
+
+        if isinstance(spec, dict):
+            # Skip path-based local deps.
+            if 'path' in spec:
+                continue
+            version = spec.get('version')
+            if isinstance(version, str):
+                deps[pkg_name] = version
+                continue
+
+    return deps
+
+
+def _parse_dependency_list(dep_entries: Any) -> Dict[str, str]:
+    """Parse [project].dependencies or [dependency-groups].<group> list format."""
+    deps = {}
+    if not isinstance(dep_entries, list):
+        return deps
+
+    for entry in dep_entries:
+        if isinstance(entry, str):
+            parsed = _parse_pep508_dependency(entry)
+            if parsed:
+                pkg_name, version = parsed
+                deps[pkg_name] = version
+            continue
+
+        # PEP735 allows table entries like { include-group = "dev" }.
+        if isinstance(entry, dict) and 'include-group' in entry:
+            continue
+
+    return deps
+
+
+def _parse_pep508_dependency(dep: str) -> Optional[Tuple[str, str]]:
+    """Extract package name + spec from a PEP508 dependency string."""
+    raw = dep.strip()
+    if not raw:
+        return None
+
+    match = re.match(r'^([A-Za-z0-9][A-Za-z0-9._-]*)', raw)
+    if not match:
+        return None
+
+    pkg_name = match.group(1).lower()
+    remainder = raw[match.end():].strip()
+
+    # Drop extras when present, keep only version/direct-reference segment.
+    if remainder.startswith('['):
+        closing = remainder.find(']')
+        if closing != -1:
+            remainder = remainder[closing + 1:].strip()
+
+    # Drop environment markers for dependency manifest readability.
+    if ';' in remainder:
+        remainder = remainder.split(';', 1)[0].strip()
+
+    return pkg_name, remainder or "*"
+
+
+def _parse_deps_legacy_regex(content: str) -> Dict[str, Dict[str, str]]:
+    """Fallback parser for older Poetry-only pyproject.toml files."""
+    deps: Dict[str, Dict[str, str]] = {'main': {}, 'dev': {}, 'test': {}}
+
     main_match = re.search(
         r'\[tool\.poetry\.dependencies\](.*?)(?=\[tool\.|$)',
         content, re.DOTALL
     )
     if main_match:
-        deps['main'] = _parse_deps_section(main_match.group(1))
+        deps['main'] = _parse_legacy_dep_section(main_match.group(1))
 
-    # Parse dev dependencies
     dev_match = re.search(
         r'\[tool\.poetry\.group\.dev\.dependencies\](.*?)(?=\[tool\.|$)',
         content, re.DOTALL
     )
     if dev_match:
-        deps['dev'] = _parse_deps_section(dev_match.group(1))
+        deps['dev'] = _parse_legacy_dep_section(dev_match.group(1))
 
-    # Parse test dependencies
     test_match = re.search(
         r'\[tool\.poetry\.group\.test\.dependencies\](.*?)(?=\[tool\.|$)',
         content, re.DOTALL
     )
     if test_match:
-        deps['test'] = _parse_deps_section(test_match.group(1))
+        deps['test'] = _parse_legacy_dep_section(test_match.group(1))
 
     return deps
 
 
-def _parse_deps_section(section: str) -> Dict[str, str]:
-    """Parse a dependencies section from pyproject.toml."""
-    deps = {}
+def _parse_legacy_dep_section(section: str) -> Dict[str, str]:
+    """Parse a legacy Poetry dependency section with regexes."""
+    deps: Dict[str, str] = {}
 
     for line in section.split('\n'):
         line = line.strip()
@@ -563,7 +676,7 @@ def main():
     print("Next steps:")
     print("  1. Review VENDOR_DEPENDENCIES.json for any new dependencies")
     print("  2. Update pyproject.toml if needed")
-    print("  3. Run: poetry install && poetry run pytest")
+    print("  3. Run: poetry install && poetry run pytest tests/")
     print("  4. Commit the changes")
 
 
