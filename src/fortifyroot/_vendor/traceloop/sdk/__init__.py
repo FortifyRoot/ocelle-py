@@ -35,6 +35,7 @@ from fortifyroot._vendor.traceloop.sdk.tracing.tracing import (
 )
 from typing import Dict
 from fortifyroot._vendor.traceloop.sdk.client.client import Client
+from fortifyroot._vendor.traceloop.sdk.associations.associations import AssociationProperty as AssociationProperty
 
 
 class Traceloop:
@@ -72,6 +73,7 @@ class Traceloop:
         block_instruments: Optional[Set[Instruments]] = None,
         image_uploader: Optional[ImageUploader] = None,
         span_postprocess_callback: Optional[Callable[[ReadableSpan], None]] = None,
+        endpoint_is_traceloop: Optional[bool] = False,
     ) -> Optional[Client]:
         if not enabled:
             TracerWrapper.set_disabled(True)
@@ -183,7 +185,7 @@ class Traceloop:
             Traceloop.__logger_wrapper = LoggerWrapper(exporter=logging_exporter)
 
         if (
-            api_endpoint.find("traceloop.com") != -1
+            (api_endpoint.find("fortifyroot.com") != -1 or endpoint_is_traceloop)
             and api_key
             and (exporter is None)
             and (processor is None)
@@ -217,9 +219,9 @@ class Traceloop:
         exporter: Optional[SpanExporter] = None
     ) -> SpanProcessor:
         """
-        Creates and returns the default Traceloop span processor.
+        Creates and returns the default FortifyRoot span processor.
 
-        This function allows users to get the default Traceloop span processor
+        This function allows users to get the default FortifyRoot span processor
         to combine it with their custom processors when using the processors parameter.
 
         Args:
@@ -229,7 +231,7 @@ class Traceloop:
             exporter: Custom exporter to use (creates default if None)
 
         Returns:
-            SpanProcessor: The default Traceloop span processor
+            SpanProcessor: The default FortifyRoot span processor
 
         Example:
             # Get the default processor and combine with custom one
@@ -265,7 +267,7 @@ class Traceloop:
         """
         if not Traceloop.__client:
             raise Exception(
-                "Client not initialized, you should call Traceloop.init() first. "
+                "Client not initialized, you should call fortifyroot.init() first. "
                 "If you are still getting this error - you are missing the api key"
             )
         return Traceloop.__client
