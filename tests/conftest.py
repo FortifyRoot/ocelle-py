@@ -19,6 +19,7 @@ from fortifyroot._vendor.opentelemetry.instrumentation.openai import OpenAIInstr
 from fortifyroot._vendor.opentelemetry.instrumentation.openai.shared.config import (
     Config as OpenAIConfig,
 )
+from fortifyroot._internal.safety.runtime import shutdown_global_safety_runtime
 from fortifyroot._vendor.traceloop.sdk.logging.logging import LoggerWrapper
 from fortifyroot._vendor.traceloop.sdk.metrics.metrics import MetricsWrapper
 from fortifyroot._vendor.traceloop.sdk.tracing.tracing import TracerWrapper
@@ -70,6 +71,8 @@ def _reset_singletons() -> None:
         OpenAIInstrumentor().uninstrument()
     except Exception:
         pass
+
+    shutdown_global_safety_runtime()
 
     for wrapper_cls in (TracerWrapper, MetricsWrapper, LoggerWrapper):
         if hasattr(wrapper_cls, "instance"):

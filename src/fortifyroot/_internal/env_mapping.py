@@ -1,10 +1,12 @@
 """Environment variable mapping from FORTIFYROOT_* to TRACELOOP_*."""
 
 import os
-from typing import Dict
+
+FORTIFYROOT_CONFIG_PROFILE_ID = "FORTIFYROOT_CONFIG_PROFILE_ID"
+FORTIFYROOT_CONFIG_POLL_INTERVAL_SECONDS = "FORTIFYROOT_CONFIG_POLL_INTERVAL_SECONDS"
 
 # Mapping of FortifyRoot environment variables to Traceloop equivalents
-ENV_VAR_MAPPING: Dict[str, str] = {
+ENV_VAR_MAPPING: dict[str, str] = {
     # Core configuration
     "FORTIFYROOT_BASE_URL": "TRACELOOP_BASE_URL",
     "FORTIFYROOT_API_KEY": "TRACELOOP_API_KEY",

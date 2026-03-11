@@ -12,6 +12,10 @@ from fortifyroot._vendor.opentelemetry.instrumentation.anthropic.event_emitter i
     emit_input_events,
     emit_response_events,
 )
+from fortifyroot._vendor.opentelemetry.instrumentation.anthropic.safety import (
+    _apply_completion_safety,
+    _apply_prompt_safety,
+)
 from fortifyroot._vendor.opentelemetry.instrumentation.anthropic.span_utils import (
     aset_input_attributes,
     set_response_attributes,
@@ -540,8 +544,8 @@ def _wrap(
         },
     )
 
+    kwargs = _apply_prompt_safety(span, kwargs, name)
     _handle_input(span, event_logger, kwargs)
-
     start_time = time.time()
     try:
         response = wrapped(*args, **kwargs)
@@ -611,6 +615,7 @@ def _wrap(
                     attributes=metric_attributes,
                 )
 
+            _apply_completion_safety(span, response, name)
             _handle_response(span, event_logger, response)
             if span.is_recording():
                 _set_token_usage(
@@ -663,8 +668,8 @@ async def _awrap(
             SpanAttributes.LLM_REQUEST_TYPE: LLMRequestTypeValues.COMPLETION.value,
         },
     )
+    kwargs = _apply_prompt_safety(span, kwargs, name)
     await _ahandle_input(span, event_logger, kwargs)
-
     start_time = time.time()
     try:
         response = await wrapped(*args, **kwargs)
@@ -735,6 +740,7 @@ async def _awrap(
                 attributes=metric_attributes,
             )
 
+        _apply_completion_safety(span, response, name)
         await _ahandle_response(span, event_logger, response)
 
         if span.is_recording():

@@ -13,6 +13,13 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from fortifyroot import Instruments, init
 from fortifyroot._internal.constants import FORTIFYROOT_SDK_VERSION_ATTRIBUTE
 from fortifyroot._internal.env_mapping import apply_env_var_mapping
+from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (
+    SafetyFinding,
+    SafetyLocation,
+    SafetyResult,
+    register_completion_safety_handler,
+    register_prompt_safety_handler,
+)
 from fortifyroot._vendor.opentelemetry.instrumentation.openai.shared.config import (
     Config as OpenAIConfig,
 )
@@ -261,6 +268,63 @@ def test_trace_content_false_hides_prompts(init_openai_sdk, span_exporter):
     span = _single_span(span_exporter)
     assert bool(should_send_prompts()) is False
     _assert_no_content_attrs(span)
+
+
+def test_safety_masking_masks_openai_request_and_span_content(init_openai_sdk, span_exporter):
+    with patch(
+        "openai.resources.chat.completions.Completions.create",
+        return_value=_fake_chat_response(content="raw-secret"),
+    ) as mock_create:
+        init_openai_sdk(trace_content=True)
+        register_prompt_safety_handler(
+            lambda context: SafetyResult(
+                text="[PII.email]",
+                overall_action="MASK",
+                findings=[
+                    SafetyFinding(
+                        category="PII",
+                        severity="HIGH",
+                        action="MASK",
+                        rule_name="PII.email",
+                        start=0,
+                        end=len(context.text),
+                    )
+                ],
+            )
+            if context.location == SafetyLocation.PROMPT and context.text == "secret@example.com"
+            else None
+        )
+        register_completion_safety_handler(
+            lambda context: SafetyResult(
+                text="[SECRET.token]",
+                overall_action="MASK",
+                findings=[
+                    SafetyFinding(
+                        category="SECRET",
+                        severity="HIGH",
+                        action="MASK",
+                        rule_name="SECRET.token",
+                        start=0,
+                        end=len(context.text),
+                    )
+                ],
+            )
+            if context.location == SafetyLocation.COMPLETION and context.text == "raw-secret"
+            else None
+        )
+        _run_chat_create(messages=[{"role": "user", "content": "secret@example.com"}])
+
+    span = _single_span(span_exporter)
+    called_messages = mock_create.call_args.kwargs["messages"]
+    assert called_messages[0]["content"] == "[PII.email]"
+    assert span.attributes[f"{GenAI.GEN_AI_COMPLETION}.0.content"] == "[SECRET.token]"
+    serialized_span_values = [str(value) for value in span.attributes.values()]
+    serialized_event_values = [
+        str(value)
+        for event in span.events
+        for value in event.attributes.values()
+    ]
+    assert "secret@example.com" not in "\n".join(serialized_span_values + serialized_event_values)
 
 
 def test_enrich_metrics_true_sets_openai_enrichment(init_openai_sdk, span_exporter):

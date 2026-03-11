@@ -61,6 +61,7 @@ from fortifyroot.core import (
 )
 from fortifyroot.decorators import agent, task, tool, workflow
 from fortifyroot.instruments import Instruments
+from fortifyroot.safety import TextSafetyDetector, TextSafetyMatch
 from fortifyroot.version import __version__
 
 __all__ = [
@@ -77,6 +78,8 @@ __all__ = [
     "tool",
     # Enums
     "Instruments",
+    "TextSafetyDetector",
+    "TextSafetyMatch",
     # Version
     "__version__",
 ]

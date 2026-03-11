@@ -21,6 +21,14 @@ from opentelemetry.propagators.textmap import TextMapPropagator
 from fortifyroot._vendor.traceloop.sdk import Traceloop
 
 from fortifyroot._internal.constants import FORTIFYROOT_SDK_VERSION_ATTRIBUTE
+from fortifyroot._internal.env_mapping import (
+    FORTIFYROOT_CONFIG_POLL_INTERVAL_SECONDS,
+    FORTIFYROOT_CONFIG_PROFILE_ID,
+)
+from fortifyroot._internal.safety.runtime import (
+    DEFAULT_CONFIG_POLL_INTERVAL_SECONDS,
+    configure_global_safety_runtime,
+)
 from fortifyroot.instruments import Instruments, _convert_to_tl_instruments
 from fortifyroot.processors.attribute_renamer import AttributeRenamingProcessor
 from fortifyroot.version import __version__
@@ -28,6 +36,21 @@ from fortifyroot.version import __version__
 
 # Default API endpoint for FortifyRoot
 DEFAULT_API_ENDPOINT = "https://api.fortifyroot.com"
+
+
+def _resolve_config_poll_interval_seconds(value: Optional[int]) -> int:
+    """Resolve the safety config poll interval from arg/env/defaults."""
+    if value is not None:
+        return value
+
+    raw_value = os.getenv(FORTIFYROOT_CONFIG_POLL_INTERVAL_SECONDS, "")
+    if not raw_value.strip():
+        return DEFAULT_CONFIG_POLL_INTERVAL_SECONDS
+
+    try:
+        return int(raw_value)
+    except (TypeError, ValueError):
+        return DEFAULT_CONFIG_POLL_INTERVAL_SECONDS
 
 
 def init(
@@ -51,6 +74,8 @@ def init(
     instruments: Optional[Set[Instruments]] = None,
     block_instruments: Optional[Set[Instruments]] = None,
     span_postprocess_callback: Optional[Callable[[ReadableSpan], None]] = None,
+    config_profile_id: Optional[str] = None,
+    config_poll_interval_seconds: Optional[int] = None,
 ) -> None:
     """
     Initialize FortifyRoot SDK for LLM observability.
@@ -122,6 +147,14 @@ def init(
         span_postprocess_callback: Optional callback function called on each span
             before export. Useful for custom span processing, filtering.
 
+        config_profile_id: Optional immutable backend config profile ID used for
+            safety config polling. Can also be provided through the
+            FORTIFYROOT_CONFIG_PROFILE_ID environment variable.
+
+        config_poll_interval_seconds: Optional polling interval for backend safety
+            config refresh. Defaults to 60 seconds. Can also be provided through
+            the FORTIFYROOT_CONFIG_POLL_INTERVAL_SECONDS environment variable.
+
     Example:
         Basic usage::
 
@@ -187,6 +220,13 @@ def init(
     api_endpoint_via_env = os.getenv("FORTIFYROOT_BASE_URL", "")
     if api_endpoint == DEFAULT_API_ENDPOINT and api_endpoint_via_env:
         api_endpoint = api_endpoint_via_env
+    if api_key is None:
+        api_key = os.getenv("FORTIFYROOT_API_KEY") or os.getenv("TRACELOOP_API_KEY")
+    if config_profile_id is None:
+        config_profile_id = os.getenv(FORTIFYROOT_CONFIG_PROFILE_ID)
+    config_poll_interval_seconds = _resolve_config_poll_interval_seconds(
+        config_poll_interval_seconds
+    )
 
     # Set TRACELOOP_TRACE_CONTENT based on trace_content parameter
     # This needs to be set before Traceloop.init() is called
@@ -294,6 +334,13 @@ def init(
         # propagator=propagator,
         **tl_kwargs,
     )
+    configure_global_safety_runtime(
+        enabled=enabled,
+        api_endpoint=api_endpoint,
+        api_key=api_key,
+        config_profile_id=config_profile_id,
+        poll_interval_seconds=config_poll_interval_seconds,
+    )
 
 
 def set_association_properties(properties: Dict) -> None:
@@ -385,6 +432,8 @@ class FortifyRootConfig:
         instruments: Optional[Set[Instruments]]
         block_instruments: Optional[Set[Instruments]]
         span_postprocess_callback: Optional[Callable[[ReadableSpan], None]]
+        config_profile_id: Optional[str]
+        config_poll_interval_seconds: Optional[int]
 
     def __init__(self) -> None:
         """Initialize with default configuration."""
@@ -494,6 +543,16 @@ class FortifyRootConfig:
     ) -> "FortifyRootConfig":
         """Set a callback for post-processing spans."""
         self._config["span_postprocess_callback"] = callback
+        return self
+
+    def config_profile_id(self, value: str) -> "FortifyRootConfig":
+        """Set the backend config profile ID used for safety polling."""
+        self._config["config_profile_id"] = value
+        return self
+
+    def config_poll_interval_seconds(self, value: int) -> "FortifyRootConfig":
+        """Set the safety config polling interval in seconds."""
+        self._config["config_poll_interval_seconds"] = value
         return self
 
     def init(self) -> None:

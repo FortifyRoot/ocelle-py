@@ -963,7 +963,7 @@ def init_vertexai_instrumentor(
 def init_voyageai_instrumentor():
     try:
         if is_package_installed("voyageai"):
-            from opentelemetry.instrumentation.voyageai import VoyageAIInstrumentor
+            from fortifyroot._vendor.opentelemetry.instrumentation.voyageai import VoyageAIInstrumentor
 
             instrumentor = VoyageAIInstrumentor()
             if not instrumentor.is_instrumented_by_opentelemetry:
