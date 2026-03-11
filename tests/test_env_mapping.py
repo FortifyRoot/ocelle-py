@@ -3,8 +3,6 @@
 import os
 from unittest import mock
 
-import pytest
-
 
 class TestEnvVarMapping:
     """Tests for FORTIFYROOT_* to TRACELOOP_* environment variable mapping."""
@@ -79,6 +77,19 @@ class TestEnvVarMapping:
             # No TRACELOOP vars should be set
             assert os.environ.get("TRACELOOP_API_KEY") is None
             assert os.environ.get("TRACELOOP_BASE_URL") is None
+
+    def test_apply_env_var_mapping_clears_stale_traceloop_vars(self):
+        """Test that stale TRACELOOP_* vars are removed when FR vars are absent."""
+        from fortifyroot._internal.env_mapping import apply_env_var_mapping
+
+        with mock.patch.dict(
+            os.environ,
+            {"TRACELOOP_API_KEY": "stale-key"},
+            clear=True,
+        ):
+            apply_env_var_mapping()
+
+            assert os.environ.get("TRACELOOP_API_KEY") is None
 
 
 class TestEnvVarMappingOnImport:

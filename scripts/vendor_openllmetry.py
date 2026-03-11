@@ -43,10 +43,10 @@ except ModuleNotFoundError:
 # OpenLLMetry instrumentation packages (these will be vendored)
 OL_INSTRUMENTATION_PACKAGES = {
     "agno", "alephalpha", "anthropic", "bedrock", "chromadb", "cohere",
-    "crewai", "google_generativeai", "groq", "haystack", "lancedb",
+    "crewai", "fortifyroot", "google_generativeai", "groq", "haystack", "lancedb",
     "langchain", "llamaindex", "marqo", "mcp", "milvus", "mistralai",
     "ollama", "openai", "openai_agents", "pinecone", "qdrant", "replicate",
-    "sagemaker", "together", "transformers", "vertexai", "watsonx",
+    "sagemaker", "together", "transformers", "vertexai", "voyageai", "watsonx",
     "weaviate", "writer"
 }
 

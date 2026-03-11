@@ -1,9 +1,9 @@
 {
-  "vendored_at": "2026-03-09T15:39:36.082088",
+  "vendored_at": "2026-03-11T18:21:32.250849",
   "openllmetry_version": "0.52.6",
-  "git_commit": "f78ee349a53f",
+  "git_commit": "384d54cdbd67",
   "git_branch": "HEAD",
-  "git_tag": "fr-v0.52.6.0",
+  "git_tag": "fr-v0.52.6.1",
   "packages": {
     "traceloop-sdk": "0.52.6",
     "opentelemetry-semantic-conventions-ai": "0.52.6",
@@ -14,6 +14,7 @@
     "opentelemetry-instrumentation-chromadb": "0.52.6",
     "opentelemetry-instrumentation-cohere": "0.52.6",
     "opentelemetry-instrumentation-crewai": "0.52.6",
+    "opentelemetry-instrumentation-fortifyroot": "0.52.6",
     "opentelemetry-instrumentation-google-generativeai": "0.52.6",
     "opentelemetry-instrumentation-groq": "0.52.6",
     "opentelemetry-instrumentation-haystack": "0.52.6",
@@ -34,6 +35,7 @@
     "opentelemetry-instrumentation-together": "0.52.6",
     "opentelemetry-instrumentation-transformers": "0.52.6",
     "opentelemetry-instrumentation-vertexai": "0.52.6",
+    "opentelemetry-instrumentation-voyageai": "0.52.6",
     "opentelemetry-instrumentation-watsonx": "0.52.6",
     "opentelemetry-instrumentation-weaviate": "0.52.6",
     "opentelemetry-instrumentation-writer": "0.52.6"
