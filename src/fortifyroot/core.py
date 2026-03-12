@@ -38,6 +38,15 @@ from fortifyroot.version import __version__
 DEFAULT_API_ENDPOINT = "https://api.fortifyroot.com"
 
 
+def _resolve_api_endpoint(value: str) -> str:
+    """Resolve the API endpoint from explicit arg or FortifyRoot env."""
+    if value != DEFAULT_API_ENDPOINT:
+        return value
+
+    env_value = os.getenv("FORTIFYROOT_BASE_URL", "").strip()
+    return env_value or value
+
+
 def _resolve_config_poll_interval_seconds(value: Optional[int]) -> int:
     """Resolve the safety config poll interval from arg/env/defaults."""
     if value is not None:
@@ -217,11 +226,9 @@ def init(
                 span_postprocess_callback=span_callback,
             )
     """
-    api_endpoint_via_env = os.getenv("FORTIFYROOT_BASE_URL", "")
-    if api_endpoint == DEFAULT_API_ENDPOINT and api_endpoint_via_env:
-        api_endpoint = api_endpoint_via_env
+    api_endpoint = _resolve_api_endpoint(api_endpoint)
     if api_key is None:
-        api_key = os.getenv("FORTIFYROOT_API_KEY") or os.getenv("TRACELOOP_API_KEY")
+        api_key = os.getenv("FORTIFYROOT_API_KEY")
     if config_profile_id is None:
         config_profile_id = os.getenv(FORTIFYROOT_CONFIG_PROFILE_ID)
     config_poll_interval_seconds = _resolve_config_poll_interval_seconds(

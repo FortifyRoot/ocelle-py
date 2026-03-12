@@ -50,8 +50,8 @@ class TestEnvVarMapping:
             assert os.environ.get("TRACELOOP_API_KEY") == "fr-test-key"
             assert os.environ.get("TRACELOOP_BASE_URL") == "https://custom.fortifyroot.com"
 
-    def test_apply_env_var_mapping_override_existing(self):
-        """Test that existing TRACELOOP_* vars are overwritten."""
+    def test_apply_env_var_mapping_overwrites_existing_traceloop_vars(self):
+        """Test that existing TRACELOOP_* vars are overwritten by FR vars."""
         from fortifyroot._internal.env_mapping import apply_env_var_mapping
 
         with mock.patch.dict(
@@ -78,18 +78,22 @@ class TestEnvVarMapping:
             assert os.environ.get("TRACELOOP_API_KEY") is None
             assert os.environ.get("TRACELOOP_BASE_URL") is None
 
-    def test_apply_env_var_mapping_clears_stale_traceloop_vars(self):
-        """Test that stale TRACELOOP_* vars are removed when FR vars are absent."""
+    def test_apply_env_var_mapping_clears_explicit_traceloop_vars(self):
+        """Test that direct TRACELOOP_* vars are removed when FR vars are absent."""
         from fortifyroot._internal.env_mapping import apply_env_var_mapping
 
         with mock.patch.dict(
             os.environ,
-            {"TRACELOOP_API_KEY": "stale-key"},
+            {
+                "TRACELOOP_API_KEY": "tl-key",
+                "TRACELOOP_BASE_URL": "https://tl.example.com",
+            },
             clear=True,
         ):
             apply_env_var_mapping()
 
             assert os.environ.get("TRACELOOP_API_KEY") is None
+            assert os.environ.get("TRACELOOP_BASE_URL") is None
 
 
 class TestEnvVarMappingOnImport:

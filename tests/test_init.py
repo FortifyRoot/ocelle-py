@@ -211,6 +211,63 @@ class TestSafetyRuntimeBootstrap:
             poll_interval_seconds=60,
         )
 
+    def test_init_ignores_traceloop_base_url_when_fr_base_url_is_absent(self):
+        """Test that init ignores direct TRACELOOP_BASE_URL fallback."""
+        from fortifyroot import init
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "TRACELOOP_BASE_URL": "https://collector.example.com",
+                "FORTIFYROOT_API_KEY": "env-key",
+                "FORTIFYROOT_CONFIG_PROFILE_ID": "cfg-env",
+            },
+            clear=False,
+        ):
+            os.environ.pop("FORTIFYROOT_BASE_URL", None)
+            with (
+                mock.patch("fortifyroot.core.Traceloop.get_default_span_processor", return_value=mock.Mock()),
+                mock.patch("fortifyroot.core.Traceloop.init"),
+                mock.patch("fortifyroot.core.configure_global_safety_runtime") as runtime_mock,
+            ):
+                init(app_name="fortifyroot-test")
+
+        runtime_mock.assert_called_once_with(
+            enabled=True,
+            api_endpoint="https://api.fortifyroot.com",
+            api_key="env-key",
+            config_profile_id="cfg-env",
+            poll_interval_seconds=60,
+        )
+
+    def test_init_uses_fortifyroot_base_url_when_set(self):
+        """Test that init honors FORTIFYROOT_BASE_URL."""
+        from fortifyroot import init
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FORTIFYROOT_BASE_URL": "https://dev-api.fortifyroot.com",
+                "FORTIFYROOT_API_KEY": "env-key",
+                "FORTIFYROOT_CONFIG_PROFILE_ID": "cfg-env",
+            },
+            clear=False,
+        ):
+            with (
+                mock.patch("fortifyroot.core.Traceloop.get_default_span_processor", return_value=mock.Mock()),
+                mock.patch("fortifyroot.core.Traceloop.init"),
+                mock.patch("fortifyroot.core.configure_global_safety_runtime") as runtime_mock,
+            ):
+                init(app_name="fortifyroot-test")
+
+        runtime_mock.assert_called_once_with(
+            enabled=True,
+            api_endpoint="https://dev-api.fortifyroot.com",
+            api_key="env-key",
+            config_profile_id="cfg-env",
+            poll_interval_seconds=60,
+        )
+
 
 class TestInitOptionalPaths:
     """Tests for less common init/configuration paths."""

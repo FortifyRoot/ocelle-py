@@ -1,4 +1,4 @@
-"""Environment variable mapping from FORTIFYROOT_* to TRACELOOP_*."""
+"""Environment variable mapping from FORTIFYROOT_* to vendored TRACELOOP_*."""
 
 import os
 
@@ -25,6 +25,8 @@ ENV_VAR_MAPPING: dict[str, str] = {
     "FORTIFYROOT_LOGGING_HEADERS": "TRACELOOP_LOGGING_HEADERS",
 }
 
+TRACELOOP_ENV_KEYS = tuple(ENV_VAR_MAPPING.values())
+
 
 def apply_env_var_mapping() -> None:
     """
@@ -34,13 +36,13 @@ def apply_env_var_mapping() -> None:
     traceloop-sdk modules are imported, to ensure that environment variables
     are properly set for the underlying SDK.
 
-    Note: This sets/unsets TRACELOOP_* vars based on whether corresponding FORTIFYROOT_*
-    vars are set/unset.
+    FortifyRoot is the public surface. Direct TRACELOOP_* user configuration is
+    cleared first so stale environment values cannot override FortifyRoot behavior.
     """
+    for tl_key in TRACELOOP_ENV_KEYS:
+        os.environ.pop(tl_key, None)
+
     for fr_key, tl_key in ENV_VAR_MAPPING.items():
         fr_value = os.environ.get(fr_key)
-        tl_value = os.environ.get(tl_key)
         if fr_value:
             os.environ[tl_key] = fr_value
-        elif tl_value:
-            os.environ.pop(tl_key)
