@@ -9,7 +9,8 @@ for the FortifyRoot SDK, including:
 
 import os
 import sys
-from typing import Callable, Dict, List, Optional, Set, TypedDict
+from urllib.parse import urlsplit
+from typing import Callable, Dict, List, Optional, Set, TypedDict, cast
 
 from opentelemetry.sdk.trace import SpanProcessor, ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter
@@ -36,6 +37,7 @@ from fortifyroot.version import __version__
 
 # Default API endpoint for FortifyRoot
 DEFAULT_API_ENDPOINT = "https://api.fortifyroot.com"
+AUTHORIZATION_HEADER = "Authorization"
 
 
 def _resolve_api_endpoint(value: str) -> str:
@@ -60,6 +62,263 @@ def _resolve_config_poll_interval_seconds(value: Optional[int]) -> int:
         return int(raw_value)
     except (TypeError, ValueError):
         return DEFAULT_CONFIG_POLL_INTERVAL_SECONDS
+
+
+def _resolve_api_key(value: Optional[str]) -> Optional[str]:
+    """Normalize API keys so blank values behave like missing values."""
+    if value is None:
+        return None
+
+    resolved = value.strip()
+    return resolved or None
+
+
+def _is_enabled_from_env(env_var: str, default: bool) -> bool:
+    """Resolve boolean FortifyRoot env flags at init time."""
+    fallback = "true" if default else "false"
+    return (os.getenv(env_var) or fallback).lower() == "true"
+
+
+def _has_authorization_header(headers: Dict[str, str]) -> bool:
+    """Check whether explicit headers already provide authorization."""
+    return any(
+        key.lower() == AUTHORIZATION_HEADER.lower() and str(value).strip()
+        for key, value in headers.items()
+    )
+
+
+def _get_authorization_header(headers: Dict[str, str]) -> Optional[tuple[str, str]]:
+    """Return the first explicit Authorization header, preserving its original key."""
+    for key, value in headers.items():
+        if key.lower() == AUTHORIZATION_HEADER.lower() and str(value).strip():
+            return key, str(value)
+    return None
+
+
+def _resolve_export_headers(
+    headers: Optional[Dict[str, str]],
+    api_key: Optional[str],
+) -> Dict[str, str]:
+    """Add bearer auth from the API key unless explicit auth headers are provided."""
+    resolved = dict(headers or {})
+    if api_key and not _has_authorization_header(resolved):
+        resolved[AUTHORIZATION_HEADER] = f"Bearer {api_key}"
+    return resolved
+
+
+def _resolve_signal_headers(
+    headers: Optional[Dict[str, str]],
+    fallback_headers: Dict[str, str],
+    api_key: Optional[str],
+) -> Dict[str, str]:
+    """Resolve signal-specific headers, inheriting trace auth by default."""
+    if headers is None:
+        return dict(fallback_headers)
+
+    resolved = dict(headers)
+    if not _has_authorization_header(resolved):
+        inherited_authorization = _get_authorization_header(fallback_headers)
+        if inherited_authorization is not None:
+            key, value = inherited_authorization
+            resolved[key] = value
+    return _resolve_export_headers(resolved, api_key)
+
+
+def _is_managed_fortifyroot_endpoint(api_endpoint: str) -> bool:
+    """Return True for hosted FortifyRoot API endpoints that require FortifyRoot auth."""
+    parsed = urlsplit((api_endpoint or "").strip())
+    host = (parsed.hostname or "").lower()
+    return bool(host) and host.endswith("fortifyroot.com")
+
+
+def _resolve_signal_endpoint(env_var: str, fallback_endpoint: str) -> str:
+    """Resolve per-signal endpoints, falling back to the main API endpoint."""
+    env_value = (os.getenv(env_var) or "").strip()
+    return env_value or fallback_endpoint
+
+
+def _normalize_http_otlp_endpoint(endpoint: str, suffix: str) -> str:
+    """Append the OTLP HTTP suffix unless the caller already supplied it."""
+    normalized = endpoint.strip().rstrip("/")
+    if not normalized.endswith(suffix):
+        normalized = f"{normalized}{suffix}"
+    return normalized
+
+
+def _init_default_metrics_exporter(
+    endpoint: str,
+    headers: Dict[str, str],
+) -> MetricExporter:
+    """Create a scheme-aware default OTLP metrics exporter."""
+    parsed = urlsplit(endpoint.strip())
+
+    match parsed.scheme.lower():
+        case "http" | "https":
+            from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
+                OTLPMetricExporter as HTTPMetricExporter,
+            )
+
+            return cast(
+                MetricExporter,
+                HTTPMetricExporter(
+                    endpoint=_normalize_http_otlp_endpoint(endpoint, "/v1/metrics"),
+                    headers=headers,
+                ),
+            )
+        case "grpc":
+            from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+                OTLPMetricExporter as GRPCMetricExporter,
+            )
+
+            return cast(
+                MetricExporter,
+                GRPCMetricExporter(
+                    endpoint=parsed.netloc,
+                    headers=headers,
+                    insecure=True,
+                ),
+            )
+        case "grpcs":
+            from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+                OTLPMetricExporter as GRPCMetricExporter,
+            )
+
+            return cast(
+                MetricExporter,
+                GRPCMetricExporter(
+                    endpoint=parsed.netloc,
+                    headers=headers,
+                    insecure=False,
+                ),
+            )
+        case _:
+            from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+                OTLPMetricExporter as GRPCMetricExporter,
+            )
+
+            return cast(
+                MetricExporter,
+                GRPCMetricExporter(
+                    endpoint=endpoint.strip(),
+                    headers=headers,
+                    insecure=True,
+                ),
+            )
+
+
+def _init_default_logging_exporter(
+    endpoint: str,
+    headers: Dict[str, str],
+) -> LogExporter:
+    """Create a scheme-aware default OTLP logging exporter."""
+    parsed = urlsplit(endpoint.strip())
+
+    match parsed.scheme.lower():
+        case "http" | "https":
+            from opentelemetry.exporter.otlp.proto.http._log_exporter import (
+                OTLPLogExporter as HTTPLogExporter,
+            )
+
+            return cast(
+                LogExporter,
+                HTTPLogExporter(
+                    endpoint=_normalize_http_otlp_endpoint(endpoint, "/v1/logs"),
+                    headers=headers,
+                ),
+            )
+        case "grpc":
+            from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
+                OTLPLogExporter as GRPCLogExporter,
+            )
+
+            return cast(
+                LogExporter,
+                GRPCLogExporter(
+                    endpoint=parsed.netloc,
+                    headers=headers,
+                    insecure=True,
+                ),
+            )
+        case "grpcs":
+            from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
+                OTLPLogExporter as GRPCLogExporter,
+            )
+
+            return cast(
+                LogExporter,
+                GRPCLogExporter(
+                    endpoint=parsed.netloc,
+                    headers=headers,
+                    insecure=False,
+                ),
+            )
+        case _:
+            from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
+                OTLPLogExporter as GRPCLogExporter,
+            )
+
+            return cast(
+                LogExporter,
+                GRPCLogExporter(
+                    endpoint=endpoint.strip(),
+                    headers=headers,
+                    insecure=True,
+                ),
+            )
+
+
+def _validate_default_export_auth(
+    *,
+    enabled: bool,
+    exporter: Optional[SpanExporter],
+    processors: Optional[List[SpanProcessor]],
+    metrics_exporter: Optional[MetricExporter],
+    logging_exporter: Optional[LogExporter],
+    trace_endpoint: str,
+    metrics_endpoint: str,
+    logging_endpoint: str,
+    trace_headers: Dict[str, str],
+    metrics_headers: Dict[str, str],
+    logging_headers: Dict[str, str],
+) -> None:
+    """Fail fast when default FortifyRoot exporters would run without auth."""
+    if not enabled or not _is_enabled_from_env("FORTIFYROOT_TRACING_ENABLED", True):
+        return
+
+    metrics_enabled = _is_enabled_from_env("FORTIFYROOT_METRICS_ENABLED", True)
+    logging_enabled = _is_enabled_from_env("FORTIFYROOT_LOGGING_ENABLED", False)
+
+    missing_signals: List[str] = []
+    if (
+        exporter is None
+        and processors is None
+        and _is_managed_fortifyroot_endpoint(trace_endpoint)
+        and not trace_headers
+    ):
+        missing_signals.append("traces")
+    if (
+        exporter is None
+        and metrics_exporter is None
+        and metrics_enabled
+        and _is_managed_fortifyroot_endpoint(metrics_endpoint)
+        and not metrics_headers
+    ):
+        missing_signals.append("metrics")
+    if (
+        exporter is None
+        and logging_exporter is None
+        and logging_enabled
+        and _is_managed_fortifyroot_endpoint(logging_endpoint)
+        and not logging_headers
+    ):
+        missing_signals.append("logs")
+
+    if missing_signals:
+        joined_signals = ", ".join(missing_signals)
+        raise ValueError(
+            "FortifyRoot API key or explicit export headers are required for "
+            f"default FortifyRoot {joined_signals} export"
+        )
 
 
 def init(
@@ -107,8 +366,8 @@ def init(
             Defaults to True.
 
         headers: Custom headers to send with trace exports.
-            If api_key is provided and headers is None, Authorization header
-            is automatically set.
+            If api_key is provided and Authorization is missing, a bearer
+            Authorization header is automatically added.
 
         disable_batch: If True, use SimpleSpanProcessor instead of BatchSpanProcessor.
             Useful for debugging. Defaults to False.
@@ -125,11 +384,15 @@ def init(
 
         metrics_headers: Custom headers for metrics export.
             Defaults to the same as trace headers if not specified.
+            If api_key is provided and Authorization is missing, a bearer
+            Authorization header is automatically added.
 
         logging_exporter: Custom LogExporter for log export.
 
         logging_headers: Custom headers for log export.
             Defaults to the same as trace headers if not specified.
+            If api_key is provided and Authorization is missing, a bearer
+            Authorization header is automatically added.
 
         processor: Custom SpanProcessor(s) to use.
             Can be a single processor or a list of processors.
@@ -229,10 +492,43 @@ def init(
     api_endpoint = _resolve_api_endpoint(api_endpoint)
     if api_key is None:
         api_key = os.getenv("FORTIFYROOT_API_KEY")
+    api_key = _resolve_api_key(api_key)
     if config_profile_id is None:
         config_profile_id = os.getenv(FORTIFYROOT_CONFIG_PROFILE_ID)
     config_poll_interval_seconds = _resolve_config_poll_interval_seconds(
         config_poll_interval_seconds
+    )
+    metrics_endpoint = _resolve_signal_endpoint(
+        "FORTIFYROOT_METRICS_ENDPOINT",
+        api_endpoint,
+    )
+    logging_endpoint = _resolve_signal_endpoint(
+        "FORTIFYROOT_LOGGING_ENDPOINT",
+        api_endpoint,
+    )
+    resolved_headers = _resolve_export_headers(headers, api_key)
+    resolved_metrics_headers = _resolve_signal_headers(
+        metrics_headers,
+        resolved_headers,
+        api_key,
+    )
+    resolved_logging_headers = _resolve_signal_headers(
+        logging_headers,
+        resolved_headers,
+        api_key,
+    )
+    _validate_default_export_auth(
+        enabled=enabled,
+        exporter=exporter,
+        processors=processors,
+        metrics_exporter=metrics_exporter,
+        logging_exporter=logging_exporter,
+        trace_endpoint=api_endpoint,
+        metrics_endpoint=metrics_endpoint,
+        logging_endpoint=logging_endpoint,
+        trace_headers=resolved_headers,
+        metrics_headers=resolved_metrics_headers,
+        logging_headers=resolved_logging_headers,
     )
 
     # Set TRACELOOP_TRACE_CONTENT based on trace_content parameter
@@ -271,7 +567,7 @@ def init(
             disable_batch=disable_batch,
             api_endpoint=api_endpoint,
             api_key=api_key,
-            headers=headers,
+            headers=resolved_headers,
         )
         final_processors = [AttributeRenamingProcessor(default_processor)]
 
@@ -282,18 +578,19 @@ def init(
         # Check if metrics are enabled via environment variable
         # Note: We read FORTIFYROOT_* vars directly for consistency; env_mapping.py
         # handles translation to TRACELOOP_* for the vendored SDK internals.
-        metrics_enabled = (os.environ.get("FORTIFYROOT_METRICS_ENABLED") or "true").lower() == "true"
+        metrics_enabled = _is_enabled_from_env("FORTIFYROOT_METRICS_ENABLED", True)
         if metrics_enabled:
-            from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-            # Use the same endpoint pattern as traces
-            metrics_endpoint = os.environ.get("FORTIFYROOT_METRICS_ENDPOINT") or api_endpoint
-            # Ensure the endpoint includes /v1/metrics path for OTLP HTTP
-            if not metrics_endpoint.endswith("/v1/metrics"):
-                metrics_endpoint = f"{metrics_endpoint.rstrip('/')}/v1/metrics"
-            metrics_exporter = OTLPMetricExporter(
-                endpoint=metrics_endpoint,
-                headers=metrics_headers or headers or {},
+            metrics_exporter = _init_default_metrics_exporter(
+                metrics_endpoint,
+                resolved_metrics_headers,
             )
+
+    logging_enabled = _is_enabled_from_env("FORTIFYROOT_LOGGING_ENABLED", False)
+    if exporter is None and logging_enabled and logging_exporter is None:
+        logging_exporter = _init_default_logging_exporter(
+            logging_endpoint,
+            resolved_logging_headers,
+        )
 
     class _TraceloopOptionalInitKwargs(TypedDict, total=False):
         metrics_exporter: MetricExporter
@@ -306,12 +603,12 @@ def init(
 
     if metrics_exporter is not None:
         tl_kwargs["metrics_exporter"] = metrics_exporter
-    if metrics_headers is not None:
-        tl_kwargs["metrics_headers"] = metrics_headers
+    if resolved_metrics_headers:
+        tl_kwargs["metrics_headers"] = resolved_metrics_headers
     if logging_exporter is not None:
         tl_kwargs["logging_exporter"] = logging_exporter
-    if logging_headers is not None:
-        tl_kwargs["logging_headers"] = logging_headers
+    if resolved_logging_headers:
+        tl_kwargs["logging_headers"] = resolved_logging_headers
     if propagator is not None:
         tl_kwargs["propagator"] = propagator
 
@@ -321,7 +618,7 @@ def init(
         api_endpoint=api_endpoint,
         api_key=api_key,
         enabled=enabled,
-        headers=headers or {},
+        headers=resolved_headers,
         disable_batch=disable_batch,
         exporter=exporter,
         processor=final_processors,
