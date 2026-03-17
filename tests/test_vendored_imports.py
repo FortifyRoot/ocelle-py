@@ -56,6 +56,15 @@ class TestVendoredImports:
         from fortifyroot._vendor.opentelemetry.instrumentation.langchain import LangchainInstrumentor
         assert LangchainInstrumentor is not None
 
+    @pytest.mark.skipif(
+        not _is_package_installed("litellm"),
+        reason="litellm package not installed"
+    )
+    def test_litellm_instrumentation_import(self):
+        """Test that LiteLLM instrumentation can be imported when litellm is installed."""
+        from fortifyroot._vendor.opentelemetry.instrumentation.litellm import LiteLLMInstrumentor
+        assert LiteLLMInstrumentor is not None
+
     def test_core_otel_not_vendored(self):
         """Test that core OTel packages come from site-packages, not vendor."""
         # These should be importable from the regular opentelemetry package
@@ -99,6 +108,7 @@ class TestFortifyrootApi:
         assert Instruments.OPENAI is not None
         assert Instruments.ANTHROPIC is not None
         assert Instruments.LANGCHAIN is not None
+        assert Instruments.LITELLM is not None
 
     def test_fortifyroot_decorators(self):
         """Test that decorators are available."""

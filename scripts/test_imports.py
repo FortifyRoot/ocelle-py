@@ -173,6 +173,13 @@ def test_imports():
     except ImportError as e:
         errors.append(f"vendored openai instrumentation: {e}")
         print(f"  ✗ fortifyroot._vendor.opentelemetry.instrumentation.openai: {e}")
+
+    try:
+        from fortifyroot._vendor.opentelemetry.instrumentation.litellm import LiteLLMInstrumentor
+        print("  ✓ fortifyroot._vendor.opentelemetry.instrumentation.litellm")
+    except ImportError as e:
+        errors.append(f"vendored litellm instrumentation: {e}")
+        print(f"  ✗ fortifyroot._vendor.opentelemetry.instrumentation.litellm: {e}")
     
     print()
     

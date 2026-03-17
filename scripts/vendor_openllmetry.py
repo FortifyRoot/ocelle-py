@@ -44,7 +44,7 @@ except ModuleNotFoundError:
 OL_INSTRUMENTATION_PACKAGES = {
     "agno", "alephalpha", "anthropic", "bedrock", "chromadb", "cohere",
     "crewai", "fortifyroot", "google_generativeai", "groq", "haystack", "lancedb",
-    "langchain", "llamaindex", "marqo", "mcp", "milvus", "mistralai",
+    "langchain", "llamaindex", "litellm", "marqo", "mcp", "milvus", "mistralai",
     "ollama", "openai", "openai_agents", "pinecone", "qdrant", "replicate",
     "sagemaker", "together", "transformers", "vertexai", "voyageai", "watsonx",
     "weaviate", "writer"

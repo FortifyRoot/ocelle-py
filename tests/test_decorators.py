@@ -160,6 +160,7 @@ class TestInstrumentsEnum:
         assert hasattr(Instruments, "OLLAMA")
         assert hasattr(Instruments, "BEDROCK")
         assert hasattr(Instruments, "VERTEXAI")
+        assert hasattr(Instruments, "LITELLM")
 
     def test_instruments_has_expected_frameworks(self) -> None:
         """Test that Instruments enum has framework members."""
@@ -191,6 +192,7 @@ class TestInstrumentsEnum:
         assert Instruments.OPENAI.value == TLInstruments.OPENAI.value
         assert Instruments.ANTHROPIC.value == TLInstruments.ANTHROPIC.value
         assert Instruments.LANGCHAIN.value == TLInstruments.LANGCHAIN.value
+        assert Instruments.LITELLM.value == TLInstruments.LITELLM.value
         assert Instruments.PINECONE.value == TLInstruments.PINECONE.value
 
     def test_instruments_can_be_used_in_set(self) -> None:
@@ -247,11 +249,17 @@ class TestInstrumentsConversion:
         from fortifyroot.instruments import _convert_to_tl_instruments
         from fortifyroot._vendor.traceloop.sdk.instruments import Instruments as TLInstruments
 
-        fr_set = {Instruments.OPENAI, Instruments.LANGCHAIN, Instruments.PINECONE}
+        fr_set = {
+            Instruments.OPENAI,
+            Instruments.LANGCHAIN,
+            Instruments.LITELLM,
+            Instruments.PINECONE,
+        }
         tl_set = _convert_to_tl_instruments(fr_set)
 
         assert tl_set is not None
-        assert len(tl_set) == 3
+        assert len(tl_set) == 4
         assert TLInstruments.OPENAI in tl_set
         assert TLInstruments.LANGCHAIN in tl_set
+        assert TLInstruments.LITELLM in tl_set
         assert TLInstruments.PINECONE in tl_set

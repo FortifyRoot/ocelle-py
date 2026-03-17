@@ -41,6 +41,7 @@ class Instruments(Enum):
         LLM Providers:
             OPENAI, ANTHROPIC, COHERE, GOOGLE_GENERATIVEAI, MISTRAL, GROQ,
             OLLAMA, BEDROCK, VERTEXAI, REPLICATE, TOGETHER, WATSONX,
+            LITELLM,
             ALEPHALPHA, SAGEMAKER, WRITER
 
         Frameworks:
@@ -66,6 +67,7 @@ class Instruments(Enum):
     REPLICATE = "replicate"
     TOGETHER = "together"
     WATSONX = "watsonx"
+    LITELLM = "litellm"
     ALEPHALPHA = "alephalpha"
     SAGEMAKER = "sagemaker"
     WRITER = "writer"

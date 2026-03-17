@@ -1,9 +1,9 @@
 {
-  "vendored_at": "2026-03-11T18:21:32.250849",
+  "vendored_at": "2026-03-17T20:32:46.976983",
   "openllmetry_version": "0.52.6",
-  "git_commit": "384d54cdbd67",
+  "git_commit": "9724c8c3fe85",
   "git_branch": "HEAD",
-  "git_tag": "fr-v0.52.6.1",
+  "git_tag": "fr-v0.52.6.2",
   "packages": {
     "traceloop-sdk": "0.52.6",
     "opentelemetry-semantic-conventions-ai": "0.52.6",
@@ -20,6 +20,7 @@
     "opentelemetry-instrumentation-haystack": "0.52.6",
     "opentelemetry-instrumentation-lancedb": "0.52.6",
     "opentelemetry-instrumentation-langchain": "0.52.6",
+    "opentelemetry-instrumentation-litellm": "0.52.6",
     "opentelemetry-instrumentation-llamaindex": "0.52.6",
     "opentelemetry-instrumentation-marqo": "0.52.6",
     "opentelemetry-instrumentation-mcp": "0.52.6",
