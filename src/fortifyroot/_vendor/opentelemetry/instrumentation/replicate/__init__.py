@@ -13,6 +13,10 @@ from fortifyroot._vendor.opentelemetry.instrumentation.replicate.event_emitter i
     emit_event,
 )
 from fortifyroot._vendor.opentelemetry.instrumentation.replicate.event_models import MessageEvent
+from fortifyroot._vendor.opentelemetry.instrumentation.replicate.safety import (
+    _apply_completion_safety,
+    _apply_prompt_safety,
+)
 from fortifyroot._vendor.opentelemetry.instrumentation.replicate.span_utils import (
     set_input_attributes,
     set_model_input_attributes,
@@ -131,6 +135,7 @@ def _wrap(
         },
     )
 
+    args, kwargs = _apply_prompt_safety(span, args, kwargs, name)
     _handle_request(span, event_logger, args, kwargs)
 
     response = wrapped(*args, **kwargs)
@@ -139,6 +144,7 @@ def _wrap(
         if is_streaming_response(response):
             return _build_from_streaming_response(span, event_logger, response)
         else:
+            response = _apply_completion_safety(span, response, name)
             _handle_response(span, event_logger, response)
 
     span.end()
