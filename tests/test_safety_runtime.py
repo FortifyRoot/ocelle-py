@@ -27,6 +27,7 @@ from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (
     SafetyLocation,
     clear_safety_handlers,
     get_completion_safety_handler,
+    get_completion_safety_stream_factory,
     get_prompt_safety_handler,
 )
 
@@ -215,6 +216,7 @@ def test_safety_runtime_registers_prompt_handler_from_snapshot():
         api_key="fr-key",
         config_profile_id="cfg-1",
         poll_interval_seconds=60,
+        stream_holdback_chars=128,
     )
 
     with (
@@ -243,12 +245,78 @@ def test_safety_runtime_registers_prompt_handler_from_snapshot():
     clear_safety_handlers()
 
 
+def test_safety_runtime_registers_completion_stream_factory_from_snapshot():
+    payload = {
+        "configProfile": {
+            "id": "cfg-1",
+            "version": 1,
+            "etag": "etag-1",
+            "config": {
+                "safetyConfig": {
+                    "enabled": True,
+                    "defaultAction": "SAFETY_ACTION_MASK",
+                    "rules": [
+                        {
+                            "name": "email",
+                            "category": "SAFETY_CATEGORY_PII",
+                            "severity": "SEVERITY_HIGH",
+                            "enabled": True,
+                            "regex": r"[a-z]+@[a-z]+\.com",
+                        }
+                    ],
+                }
+            },
+        }
+    }
+
+    runtime = SafetyRuntime(
+        api_endpoint="https://api.fortifyroot.com",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=4,
+    )
+
+    with (
+        mock.patch(
+            "fortifyroot._internal.safety.runtime.urllib.request.urlopen",
+            return_value=_FakeHTTPResponse(json.dumps(payload).encode("utf-8")),
+        ),
+        mock.patch.object(runtime._thread, "start"),
+    ):
+        runtime.start()
+
+    factory = get_completion_safety_stream_factory()
+    assert factory is not None
+    session = factory(
+        mock.Mock(
+            location=SafetyLocation.COMPLETION,
+            provider="OpenAI",
+            span_name="openai.chat",
+            request_type="chat",
+            segment_index=0,
+            segment_role="assistant",
+            metadata={},
+        )
+    )
+    assert session is not None
+    assert session.process_chunk("abc@") is None
+    assert session.process_chunk("gmail.com") is None
+    result = session.flush()
+    assert result is not None
+    assert result.text == "[PII.email]"
+
+    runtime.stop()
+    clear_safety_handlers()
+
+
 def test_safety_runtime_raises_when_initial_fetch_fails():
     runtime = SafetyRuntime(
         api_endpoint="https://api.fortifyroot.com",
         api_key="fr-key",
         config_profile_id="cfg-1",
         poll_interval_seconds=60,
+        stream_holdback_chars=128,
     )
 
     error = urllib.error.HTTPError(
@@ -270,6 +338,7 @@ def test_safety_runtime_raises_when_initial_fetch_fails():
 
     assert get_prompt_safety_handler() is None
     assert get_completion_safety_handler() is None
+    assert get_completion_safety_stream_factory() is None
 
 
 def test_configure_global_safety_runtime_clears_handlers_when_disabled():
@@ -281,10 +350,12 @@ def test_configure_global_safety_runtime_clears_handlers_when_disabled():
         api_key="fr-key",
         config_profile_id="cfg-1",
         poll_interval_seconds=60,
+        stream_holdback_chars=128,
     )
 
     assert get_prompt_safety_handler() is None
     assert get_completion_safety_handler() is None
+    assert get_completion_safety_stream_factory() is None
 
 
 def test_configure_global_safety_runtime_skips_when_endpoint_is_not_fortifyroot(caplog):
@@ -298,11 +369,13 @@ def test_configure_global_safety_runtime_skips_when_endpoint_is_not_fortifyroot(
             api_key="fr-key",
             config_profile_id="cfg-1",
             poll_interval_seconds=60,
+            stream_holdback_chars=128,
         )
 
     runtime_cls.assert_not_called()
     assert get_prompt_safety_handler() is None
     assert get_completion_safety_handler() is None
+    assert get_completion_safety_stream_factory() is None
     assert (
         "api_endpoint is not a trusted FortifyRoot API host or local FortifyRoot dev endpoint"
         in caplog.text
@@ -342,6 +415,7 @@ def test_configure_global_safety_runtime_accepts_local_dev_endpoint(host):
             api_key="fr-key",
             config_profile_id="cfg-1",
             poll_interval_seconds=60,
+            stream_holdback_chars=128,
         )
 
     runtime_cls.assert_called_once_with(
@@ -349,6 +423,7 @@ def test_configure_global_safety_runtime_accepts_local_dev_endpoint(host):
         api_key="fr-key",
         config_profile_id="cfg-1",
         poll_interval_seconds=60,
+        stream_holdback_chars=128,
     )
     runtime.start.assert_called_once()
 
@@ -364,11 +439,13 @@ def test_configure_global_safety_runtime_warns_when_required_config_is_missing(c
             api_key="",
             config_profile_id=None,
             poll_interval_seconds=60,
+            stream_holdback_chars=128,
         )
 
     runtime_cls.assert_not_called()
     assert get_prompt_safety_handler() is None
     assert get_completion_safety_handler() is None
+    assert get_completion_safety_stream_factory() is None
     assert "api_key, config_profile_id, and a positive poll interval are required" in caplog.text
 
 
@@ -378,6 +455,7 @@ def test_safety_runtime_stop_joins_running_thread_and_clears_snapshot():
         api_key="fr-key",
         config_profile_id="cfg-1",
         poll_interval_seconds=60,
+        stream_holdback_chars=128,
     )
     runtime._snapshot_store.set(mock.Mock())
 
@@ -397,6 +475,7 @@ def test_safety_runtime_poll_loop_refreshes_until_stopped():
         api_key="fr-key",
         config_profile_id="cfg-1",
         poll_interval_seconds=60,
+        stream_holdback_chars=128,
     )
 
     wait_results = iter([False, True])
@@ -424,6 +503,7 @@ def test_configure_global_safety_runtime_replaces_existing_runtime_and_shutdown_
             api_key="fr-key",
             config_profile_id="cfg-1",
             poll_interval_seconds=60,
+            stream_holdback_chars=128,
         )
         configure_global_safety_runtime(
             enabled=True,
@@ -431,6 +511,7 @@ def test_configure_global_safety_runtime_replaces_existing_runtime_and_shutdown_
             api_key="fr-key",
             config_profile_id="cfg-2",
             poll_interval_seconds=30,
+            stream_holdback_chars=128,
         )
 
         first_runtime.start.assert_called_once()
@@ -448,6 +529,7 @@ def test_safety_runtime_warns_once_when_no_rules_are_defined(caplog):
         api_key="fr-key",
         config_profile_id="cfg-1",
         poll_interval_seconds=60,
+        stream_holdback_chars=128,
     )
     snapshot = compile_snapshot(
         ConfigProfile(
@@ -496,6 +578,7 @@ def test_safety_runtime_warns_once_when_no_enabled_configs_exist(caplog):
         api_key="fr-key",
         config_profile_id="cfg-1",
         poll_interval_seconds=60,
+        stream_holdback_chars=128,
     )
     snapshot = compile_snapshot(
         ConfigProfile(
@@ -556,6 +639,7 @@ def test_safety_runtime_keeps_last_good_snapshot_when_later_poll_fails(caplog):
         api_key="fr-key",
         config_profile_id="cfg-1",
         poll_interval_seconds=60,
+        stream_holdback_chars=128,
     )
     snapshot = compile_snapshot(
         ConfigProfile(

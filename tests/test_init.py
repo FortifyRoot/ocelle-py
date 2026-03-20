@@ -147,6 +147,7 @@ class TestSafetyRuntimeBootstrap:
                 enabled=True,
                 config_profile_id="cfg-123",
                 config_poll_interval_seconds=15,
+                stream_holdback_chars=256,
             )
 
         runtime_mock.assert_called_once_with(
@@ -155,6 +156,7 @@ class TestSafetyRuntimeBootstrap:
             api_key="fr-key",
             config_profile_id="cfg-123",
             poll_interval_seconds=15,
+            stream_holdback_chars=256,
         )
 
     def test_init_configures_safety_runtime_from_environment(self):
@@ -167,6 +169,7 @@ class TestSafetyRuntimeBootstrap:
                 "FORTIFYROOT_API_KEY": "env-key",
                 "FORTIFYROOT_CONFIG_PROFILE_ID": "cfg-env",
                 "FORTIFYROOT_CONFIG_POLL_INTERVAL_SECONDS": "25",
+                "FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS": "192",
             },
             clear=False,
         ):
@@ -183,6 +186,7 @@ class TestSafetyRuntimeBootstrap:
             api_key="env-key",
             config_profile_id="cfg-env",
             poll_interval_seconds=25,
+            stream_holdback_chars=192,
         )
 
     def test_init_invalid_poll_interval_env_falls_back_to_default(self):
@@ -195,6 +199,7 @@ class TestSafetyRuntimeBootstrap:
                 "FORTIFYROOT_API_KEY": "env-key",
                 "FORTIFYROOT_CONFIG_PROFILE_ID": "cfg-env",
                 "FORTIFYROOT_CONFIG_POLL_INTERVAL_SECONDS": "not-an-int",
+                "FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS": "not-an-int",
             },
             clear=False,
         ):
@@ -211,6 +216,7 @@ class TestSafetyRuntimeBootstrap:
             api_key="env-key",
             config_profile_id="cfg-env",
             poll_interval_seconds=60,
+            stream_holdback_chars=128,
         )
 
     def test_init_ignores_traceloop_base_url_when_fr_base_url_is_absent(self):
@@ -240,6 +246,7 @@ class TestSafetyRuntimeBootstrap:
             api_key="env-key",
             config_profile_id="cfg-env",
             poll_interval_seconds=60,
+            stream_holdback_chars=128,
         )
 
     def test_init_uses_fortifyroot_base_url_when_set(self):
@@ -268,6 +275,7 @@ class TestSafetyRuntimeBootstrap:
             api_key="env-key",
             config_profile_id="cfg-env",
             poll_interval_seconds=60,
+            stream_holdback_chars=128,
         )
 
 
@@ -814,6 +822,7 @@ class TestFluentConfig:
                 .span_postprocess_callback(callback)
                 .config_profile_id("cfg-123")
                 .config_poll_interval_seconds(15)
+                .stream_holdback_chars(256)
                 .init()
             )
 
@@ -840,4 +849,5 @@ class TestFluentConfig:
             span_postprocess_callback=callback,
             config_profile_id="cfg-123",
             config_poll_interval_seconds=15,
+            stream_holdback_chars=256,
         )

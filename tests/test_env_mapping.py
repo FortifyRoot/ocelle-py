@@ -29,6 +29,16 @@ class TestEnvVarMapping:
         for var in expected_vars:
             assert var in ENV_VAR_MAPPING, f"Missing env var mapping: {var}"
 
+    def test_stream_holdback_env_var_is_declared_but_not_mapped_to_traceloop(self):
+        """Streaming holdback is SDK-local config and should not map to TRACELOOP_*."""
+        from fortifyroot._internal.env_mapping import (
+            ENV_VAR_MAPPING,
+            FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS,
+        )
+
+        assert FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS == "FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS"
+        assert FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS not in ENV_VAR_MAPPING
+
     def test_apply_env_var_mapping_sets_traceloop_vars(self):
         """Test that FORTIFYROOT_* vars are mapped to TRACELOOP_* vars."""
         from fortifyroot._internal.env_mapping import apply_env_var_mapping

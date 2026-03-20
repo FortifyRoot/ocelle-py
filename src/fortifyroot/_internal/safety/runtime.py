@@ -13,9 +13,11 @@ from dataclasses import dataclass, field
 
 from fortifyroot._internal.safety.engine import CompiledSafetySnapshot, compile_snapshot
 from fortifyroot._internal.safety.parser import parse_sdk_config_response
+from fortifyroot._internal.safety.streaming import CompletionSafetyStream
 from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (
     clear_safety_handlers,
     register_completion_safety_handler,
+    register_completion_safety_stream_factory,
     register_prompt_safety_handler,
 )
 from fortifyroot.version import __version__
@@ -23,6 +25,7 @@ from fortifyroot.version import __version__
 logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG_POLL_INTERVAL_SECONDS = 60
+DEFAULT_STREAM_HOLDBACK_CHARS = 128
 SDK_VERSION_HEADER = "X-FortifyRoot-SDK-Version"
 AUTHORIZATION_HEADER = "Authorization"
 REQUEST_TIMEOUT_SECONDS = 5
@@ -133,6 +136,29 @@ class SafetyHandler:
         return snapshot.evaluate_text(context.text)
 
 
+class SafetyStreamFactory:
+    def __init__(
+        self,
+        snapshot_store: SafetySnapshotStore,
+        stream_holdback_chars: int,
+    ) -> None:
+        self._snapshot_store = snapshot_store
+        self._stream_holdback_chars = stream_holdback_chars
+
+    def __call__(self, context):
+        snapshot = self._snapshot_store.get()
+        if (
+            snapshot is None
+            or not snapshot.enabled
+            or not snapshot.rules
+        ):
+            return None
+        return CompletionSafetyStream(
+            snapshot=snapshot,
+            holdback_chars=self._stream_holdback_chars,
+        )
+
+
 class SafetyRuntime:
     def __init__(
         self,
@@ -141,10 +167,12 @@ class SafetyRuntime:
         api_key: str,
         config_profile_id: str,
         poll_interval_seconds: int,
+        stream_holdback_chars: int,
     ) -> None:
         self._snapshot_store = SafetySnapshotStore()
         self._client = SafetyConfigClient(api_endpoint, api_key, config_profile_id)
         self._poll_interval_seconds = poll_interval_seconds
+        self._stream_holdback_chars = stream_holdback_chars
         self._stop_event = threading.Event()
         self._thread = threading.Thread(
             target=self._poll_loop,
@@ -156,11 +184,16 @@ class SafetyRuntime:
         handler = SafetyHandler(self._snapshot_store)
         self._prompt_handler = handler
         self._completion_handler = handler
+        self._completion_stream_factory = SafetyStreamFactory(
+            self._snapshot_store,
+            stream_holdback_chars,
+        )
 
     def start(self) -> None:
         self._refresh_once(initial=True)
         register_prompt_safety_handler(self._prompt_handler)
         register_completion_safety_handler(self._completion_handler)
+        register_completion_safety_stream_factory(self._completion_stream_factory)
         self._thread.start()
 
     def stop(self) -> None:
@@ -252,6 +285,7 @@ def configure_global_safety_runtime(
     api_key: str | None,
     config_profile_id: str | None,
     poll_interval_seconds: int,
+    stream_holdback_chars: int,
 ) -> None:
     global _GLOBAL_SAFETY_RUNTIME
     with _GLOBAL_RUNTIME_LOCK:
@@ -282,6 +316,7 @@ def configure_global_safety_runtime(
             api_key=api_key,
             config_profile_id=config_profile_id,
             poll_interval_seconds=poll_interval_seconds,
+            stream_holdback_chars=stream_holdback_chars,
         )
         runtime.start()
         _GLOBAL_SAFETY_RUNTIME = runtime

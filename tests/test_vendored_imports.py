@@ -269,3 +269,4 @@ class TestInitParameters:
         params = sig.parameters
 
         assert "span_postprocess_callback" in params
+        assert "stream_holdback_chars" in params
