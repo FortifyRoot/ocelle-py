@@ -1,5 +1,9 @@
 """Tests for SDK-local safety parsing and evaluation."""
 
+from types import SimpleNamespace
+from unittest import mock
+
+from fortifyroot._internal.safety import engine as safety_engine
 from fortifyroot._internal.safety.engine import (
     CompiledSafetyRule,
     CompiledSafetySnapshot,
@@ -655,3 +659,202 @@ def test_parse_sdk_config_response_handles_invalid_rule_shapes_and_scalar_values
     assert parsed.config_profile.safety.rules[0].severity == "MEDIUM"
     assert isinstance(parsed.config_profile.safety.rules[0].matcher, StringListMatcher)
     assert isinstance(parsed.config_profile.safety.rules[1].matcher, UdfMatcher)
+
+
+def test_parse_sdk_config_response_dedupes_list_values_and_drops_unknown_actions():
+    parsed = parse_sdk_config_response(
+        {
+            "config_profile": {
+                "id": "cfg-parser-dedup",
+                "version": 1,
+                "etag": "etag-parser-dedup",
+                "config": {
+                    "safety_config": {
+                        "enabled": True,
+                        "default_action": "MASK",
+                        "rules": [
+                            {
+                                "name": "secret_words",
+                                "category": "SECRET",
+                                "severity": "LOW",
+                                "enabled": True,
+                                "list": {
+                                    "values": ["secret", "secret", "token"],
+                                    "ignore_case": True,
+                                },
+                            },
+                            {
+                                "name": "unsupported_action",
+                                "category": "SECRET",
+                                "severity": "LOW",
+                                "action": "QUARANTINE",
+                                "enabled": True,
+                                "regex": "secret",
+                            }
+                        ],
+                    }
+                },
+            }
+        }
+    )
+
+    rule = parsed.config_profile.safety.rules[0]
+
+    assert [item.name for item in parsed.config_profile.safety.rules] == ["secret_words"]
+    assert rule.action is None
+    assert isinstance(rule.matcher, StringListMatcher)
+    assert rule.matcher.values == ("secret", "token")
+
+
+def test_compile_snapshot_skips_oversized_regex_patterns_and_caps_regex_matches():
+    oversized_profile = parse_sdk_config_response(
+        {
+            "config_profile": {
+                "id": "cfg-oversized",
+                "version": 1,
+                "etag": "etag-oversized",
+                "config": {
+                    "safety_config": {
+                        "enabled": True,
+                        "default_action": "MASK",
+                        "rules": [
+                            {
+                                "name": "too_big",
+                                "category": "SECRET",
+                                "severity": "HIGH",
+                                "enabled": True,
+                                "regex": "a" * (safety_engine.MAX_REGEX_PATTERN_LENGTH + 1),
+                            }
+                        ],
+                    }
+                },
+            }
+        }
+    ).config_profile
+
+    oversized_snapshot = compile_snapshot(oversized_profile)
+    assert oversized_snapshot.rules == ()
+
+    capped_profile = parse_sdk_config_response(
+        {
+            "config_profile": {
+                "id": "cfg-regex-cap",
+                "version": 1,
+                "etag": "etag-regex-cap",
+                "config": {
+                    "safety_config": {
+                        "enabled": True,
+                        "default_action": "ALLOW",
+                        "rules": [
+                            {
+                                "name": "any_char",
+                                "category": "SECRET",
+                                "severity": "LOW",
+                                "enabled": True,
+                                "regex": ".",
+                            }
+                        ],
+                    }
+                },
+            }
+        }
+    ).config_profile
+
+    capped_snapshot = compile_snapshot(capped_profile)
+    result = capped_snapshot.evaluate_text("a" * (safety_engine.MAX_REGEX_MATCHES + 25))
+
+    assert result is not None
+    assert len(result.findings) == safety_engine.MAX_REGEX_MATCHES
+    assert result.overall_action == SafetyDecision.ALLOW.value
+
+
+def test_engine_records_rule_evaluation_mask_and_udf_error_metrics():
+    rules_counter = mock.Mock()
+    findings_counter = mock.Mock()
+    masks_counter = mock.Mock()
+    udf_errors_counter = mock.Mock()
+
+    original_rules_counter = safety_engine._RULES_EVALUATED_COUNTER
+    original_findings_counter = safety_engine._FINDINGS_PRODUCED_COUNTER
+    original_masks_counter = safety_engine._MASKS_APPLIED_COUNTER
+    original_udf_errors_counter = safety_engine._UDF_ERRORS_COUNTER
+
+    safety_engine._RULES_EVALUATED_COUNTER = SimpleNamespace(add=rules_counter)
+    safety_engine._FINDINGS_PRODUCED_COUNTER = SimpleNamespace(add=findings_counter)
+    safety_engine._MASKS_APPLIED_COUNTER = SimpleNamespace(add=masks_counter)
+    safety_engine._UDF_ERRORS_COUNTER = SimpleNamespace(add=udf_errors_counter)
+    try:
+        masked_profile = parse_sdk_config_response(
+            {
+                "config_profile": {
+                    "id": "cfg-metrics",
+                    "version": 1,
+                    "etag": "etag-metrics",
+                    "config": {
+                        "safety_config": {
+                            "enabled": True,
+                            "default_action": "MASK",
+                            "rules": [
+                                {
+                                    "name": "secret_word",
+                                    "category": "SECRET",
+                                    "severity": "HIGH",
+                                    "enabled": True,
+                                    "list": {"values": ["secret"], "ignore_case": False},
+                                }
+                            ],
+                        }
+                    },
+                }
+            }
+        ).config_profile
+        masked_snapshot = compile_snapshot(masked_profile)
+
+        result = masked_snapshot.evaluate_text("secret")
+
+        assert result is not None
+        assert result.text == "[SECRET.secret_word]"
+
+        exploding_profile = parse_sdk_config_response(
+            {
+                "config_profile": {
+                    "id": "cfg-udf-metrics",
+                    "version": 1,
+                    "etag": "etag-udf-metrics",
+                    "config": {
+                        "safety_config": {
+                            "enabled": True,
+                            "default_action": "MASK",
+                            "rules": [
+                                {
+                                    "name": "ExplodingDetector",
+                                    "category": "SECRET",
+                                    "severity": "HIGH",
+                                    "enabled": True,
+                                    "udf": {
+                                        "entry_point": "tests.test_safety_engine:ExplodingDetector",
+                                        "languages": ["SDK_LANGUAGE_PYTHON"],
+                                    },
+                                }
+                            ],
+                        }
+                    },
+                }
+            }
+        ).config_profile
+        exploding_snapshot = compile_snapshot(exploding_profile)
+
+        assert exploding_snapshot.evaluate_text("secret") is None
+    finally:
+        safety_engine._RULES_EVALUATED_COUNTER = original_rules_counter
+        safety_engine._FINDINGS_PRODUCED_COUNTER = original_findings_counter
+        safety_engine._MASKS_APPLIED_COUNTER = original_masks_counter
+        safety_engine._UDF_ERRORS_COUNTER = original_udf_errors_counter
+
+    assert rules_counter.call_count >= 2
+    findings_counter.assert_called_once()
+    masks_counter.assert_called_once_with(
+        1,
+        attributes={"fortifyroot.safety.masked": "true"},
+    )
+    udf_errors_counter.assert_called_once()

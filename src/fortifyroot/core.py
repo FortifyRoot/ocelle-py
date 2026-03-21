@@ -7,6 +7,7 @@ for the FortifyRoot SDK, including:
 - FortifyRootConfig: Fluent API for configuration (builder pattern)
 """
 
+import logging
 import os
 import sys
 from urllib.parse import urlsplit
@@ -36,6 +37,8 @@ from fortifyroot.instruments import Instruments, _convert_to_tl_instruments
 from fortifyroot.processors.attribute_renamer import AttributeRenamingProcessor
 from fortifyroot.version import __version__
 
+
+logger = logging.getLogger(__name__)
 
 # Default API endpoint for FortifyRoot
 DEFAULT_API_ENDPOINT = "https://api.fortifyroot.com"
@@ -69,16 +72,25 @@ def _resolve_config_poll_interval_seconds(value: Optional[int]) -> int:
 def _resolve_stream_holdback_chars(value: Optional[int]) -> int:
     """Resolve the streaming completion holdback size from arg/env/defaults."""
     if value is not None:
-        return max(int(value), 0)
+        resolved = max(int(value), 1)
+    else:
+        raw_value = os.getenv(FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS, "")
+        if not raw_value.strip():
+            resolved = DEFAULT_STREAM_HOLDBACK_CHARS
+        else:
+            try:
+                resolved = max(int(raw_value), 1)
+            except (TypeError, ValueError):
+                resolved = DEFAULT_STREAM_HOLDBACK_CHARS
 
-    raw_value = os.getenv(FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS, "")
-    if not raw_value.strip():
-        return DEFAULT_STREAM_HOLDBACK_CHARS
+    if resolved < 16:
+        logger.warning(
+            "stream_holdback_chars=%d is below the minimum effective threshold; using 16",
+            resolved,
+        )
+        resolved = 16
 
-    try:
-        return max(int(raw_value), 0)
-    except (TypeError, ValueError):
-        return DEFAULT_STREAM_HOLDBACK_CHARS
+    return resolved
 
 
 def _resolve_api_key(value: Optional[str]) -> Optional[str]:

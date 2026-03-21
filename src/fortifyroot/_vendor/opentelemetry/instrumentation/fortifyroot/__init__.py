@@ -1,4 +1,5 @@
 from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot.safety import (
+    HANDLER_LOCK,
     SAFETY_EVENT_NAME,
     SafetyContext,
     SafetyDecision,
@@ -16,6 +17,9 @@ from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot.safety import
     run_prompt_safety,
     set_object_value,
 )
+from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot.text_streaming import (
+    CompletionTextStreamGroup,
+)
 from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot.streaming import (
     BoundCompletionSafetyStream,
     CompletionSafetyStreamFactory,
@@ -29,6 +33,7 @@ from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot.streaming imp
 
 __all__ = [
     "SAFETY_EVENT_NAME",
+    "HANDLER_LOCK",
     "SafetyContext",
     "SafetyDecision",
     "SafetyFinding",
@@ -40,6 +45,7 @@ __all__ = [
     "CompletionSafetyStreamFactory",
     "CompletionSafetyStreamSession",
     "BoundCompletionSafetyStream",
+    "CompletionTextStreamGroup",
     "create_completion_safety_stream",
     "get_completion_safety_handler",
     "get_completion_safety_stream_factory",

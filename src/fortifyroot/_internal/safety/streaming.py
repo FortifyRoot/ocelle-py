@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+from opentelemetry.metrics import get_meter
+
 from fortifyroot._internal.safety.engine import (
     CompiledSafetySnapshot,
     _apply_masks,
@@ -18,6 +20,11 @@ from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (
 )
 
 logger = logging.getLogger(__name__)
+_METER = get_meter("fortifyroot.safety")
+_FORCE_FINALIZATIONS_COUNTER = _METER.create_counter(
+    "fortifyroot.safety.streaming_force_finalizations",
+    description="Number of streaming safety force-finalizations due to pending-buffer caps.",
+)
 
 MIN_PENDING_CAP_CHARS = 4096
 MAX_PENDING_MULTIPLIER = 16
@@ -25,6 +32,8 @@ MAX_PENDING_MULTIPLIER = 16
 
 @dataclass(slots=True)
 class CompletionSafetyStream:
+    """Streaming completion evaluator with bounded holdback and pending-text cap."""
+
     snapshot: CompiledSafetySnapshot
     holdback_chars: int
     max_pending_chars: int | None = None
@@ -61,6 +70,11 @@ class CompletionSafetyStream:
                 self.max_pending_chars,
             )
             self._warned_pending_cap = True
+        if force_finalize:
+            _FORCE_FINALIZATIONS_COUNTER.add(
+                1,
+                attributes={"fortifyroot.safety.pending_cap_chars": str(self.max_pending_chars)},
+            )
         return self._release(release_boundary, findings, force_finalize=force_finalize)
 
     def flush(self) -> SafetyResult | None:
@@ -70,6 +84,9 @@ class CompletionSafetyStream:
             len(self._pending_text),
             self._evaluate_text(self._pending_text),
         )
+
+    def get_pending_text(self) -> str:
+        return self._pending_text
 
     def _release(
         self,

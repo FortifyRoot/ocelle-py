@@ -5,6 +5,8 @@ from unittest import mock
 
 import pytest
 
+from fortifyroot.core import _resolve_stream_holdback_chars
+
 
 class TestInit:
     """Tests for the init() function."""
@@ -126,6 +128,11 @@ class TestTraceContentParameter:
         trace_content_param = sig.parameters["trace_content"]
 
         assert trace_content_param.default is True
+
+    def test_stream_holdback_chars_has_minimum_of_one(self):
+        """Test that streaming holdback never resolves to zero or lower."""
+        assert _resolve_stream_holdback_chars(0) == 1
+        assert _resolve_stream_holdback_chars(-5) == 1
 
 
 class TestSafetyRuntimeBootstrap:

@@ -8,6 +8,7 @@ from unittest import mock
 
 import pytest
 
+from fortifyroot._internal.safety import runtime as safety_runtime
 from fortifyroot._internal.safety.engine import compile_snapshot
 from fortifyroot._internal.safety.models import ConfigProfile, SafetyConfig, SafetyRule
 from fortifyroot._internal.safety.runtime import (
@@ -310,7 +311,7 @@ def test_safety_runtime_registers_completion_stream_factory_from_snapshot():
     clear_safety_handlers()
 
 
-def test_safety_runtime_raises_when_initial_fetch_fails():
+def test_safety_runtime_starts_with_empty_snapshot_when_initial_fetch_fails(caplog):
     runtime = SafetyRuntime(
         api_endpoint="https://api.fortifyroot.com",
         api_key="fr-key",
@@ -327,18 +328,31 @@ def test_safety_runtime_raises_when_initial_fetch_fails():
         fp=None,
     )
     with (
+        caplog.at_level(logging.WARNING),
         mock.patch(
             "fortifyroot._internal.safety.runtime.urllib.request.urlopen",
             side_effect=error,
         ),
         mock.patch.object(runtime._thread, "start"),
     ):
-        with pytest.raises(RuntimeError, match="Initial FortifyRoot safety config fetch failed"):
-            runtime.start()
+        runtime.start()
 
-    assert get_prompt_safety_handler() is None
-    assert get_completion_safety_handler() is None
-    assert get_completion_safety_stream_factory() is None
+    assert "Initial FortifyRoot safety config fetch failed; starting with empty safety snapshot" in caplog.text
+    assert get_prompt_safety_handler() is not None
+    assert get_completion_safety_handler() is not None
+    assert get_completion_safety_stream_factory() is not None
+
+    prompt_result = get_prompt_safety_handler()(
+        SafetyContext(
+            provider="OpenAI",
+            text="secret",
+            location=SafetyLocation.PROMPT,
+            span_name="openai.chat",
+        )
+    )
+    assert prompt_result is None
+
+    runtime.stop()
 
 
 def test_configure_global_safety_runtime_clears_handlers_when_disabled():
@@ -489,9 +503,34 @@ def test_safety_runtime_poll_loop_refreshes_until_stopped():
     refresh_mock.assert_called_once()
 
 
+def test_safety_runtime_poll_loop_adds_jitter_to_wait_interval():
+    runtime = SafetyRuntime(
+        api_endpoint="https://api.fortifyroot.com",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    )
+
+    waits = []
+
+    def _wait(seconds):
+        waits.append(seconds)
+        return True
+
+    with (
+        mock.patch.object(runtime._stop_event, "wait", side_effect=_wait),
+        mock.patch("fortifyroot._internal.safety.runtime.random.uniform", return_value=6.0),
+    ):
+        runtime._poll_loop()
+
+    assert waits == [66.0]
+
+
 def test_configure_global_safety_runtime_replaces_existing_runtime_and_shutdown_stops_it():
     first_runtime = mock.Mock()
     second_runtime = mock.Mock()
+    first_runtime.same_configuration.return_value = False
 
     with mock.patch(
         "fortifyroot._internal.safety.runtime.SafetyRuntime",
@@ -521,6 +560,34 @@ def test_configure_global_safety_runtime_replaces_existing_runtime_and_shutdown_
         shutdown_global_safety_runtime()
 
     second_runtime.stop.assert_called_once()
+
+
+def test_configure_global_safety_runtime_short_circuits_when_configuration_is_unchanged():
+    existing_runtime = mock.Mock()
+    existing_runtime.same_configuration.return_value = True
+
+    with (
+        mock.patch.object(safety_runtime, "_GLOBAL_SAFETY_RUNTIME", existing_runtime),
+        mock.patch("fortifyroot._internal.safety.runtime.SafetyRuntime") as runtime_cls,
+    ):
+        configure_global_safety_runtime(
+            enabled=True,
+            api_endpoint="https://api.fortifyroot.com/",
+            api_key="fr-key",
+            config_profile_id="cfg-1",
+            poll_interval_seconds=60,
+            stream_holdback_chars=128,
+        )
+
+    existing_runtime.same_configuration.assert_called_once_with(
+        api_endpoint="https://api.fortifyroot.com",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    )
+    existing_runtime.stop.assert_not_called()
+    runtime_cls.assert_not_called()
 
 
 def test_safety_runtime_warns_once_when_no_rules_are_defined(caplog):
@@ -698,3 +765,77 @@ def test_safety_runtime_keeps_last_good_snapshot_when_later_poll_fails(caplog):
     assert "temporary failure" in caplog.text
 
     runtime.stop()
+
+
+def test_safety_config_client_fetch_records_not_modified_metrics():
+    client = SafetyConfigClient(
+        "https://api.fortifyroot.com",
+        "fr-key",
+        "cfg-1",
+    )
+    fetch_counter = mock.Mock()
+    failure_counter = mock.Mock()
+
+    with (
+        mock.patch.object(safety_runtime, "_CONFIG_FETCH_COUNTER", mock.Mock(add=fetch_counter)),
+        mock.patch.object(
+            safety_runtime,
+            "_CONFIG_FETCH_FAILURE_COUNTER",
+            mock.Mock(add=failure_counter),
+        ),
+        mock.patch(
+            "fortifyroot._internal.safety.runtime.urllib.request.urlopen",
+            return_value=_FakeHTTPResponse(json.dumps({"notModified": True}).encode("utf-8")),
+        ),
+    ):
+        result = client.fetch("")
+
+    assert result.not_modified is True
+    fetch_counter.assert_called_once_with(
+        1,
+        attributes={
+            "fortifyroot.safety.config_profile_id": "cfg-1",
+            "result": "not_modified",
+        },
+    )
+    failure_counter.assert_not_called()
+
+
+def test_safety_config_client_fetch_records_failure_metrics():
+    client = SafetyConfigClient(
+        "https://api.fortifyroot.com",
+        "fr-key",
+        "cfg-1",
+    )
+    fetch_counter = mock.Mock()
+    failure_counter = mock.Mock()
+
+    with (
+        mock.patch.object(safety_runtime, "_CONFIG_FETCH_COUNTER", mock.Mock(add=fetch_counter)),
+        mock.patch.object(
+            safety_runtime,
+            "_CONFIG_FETCH_FAILURE_COUNTER",
+            mock.Mock(add=failure_counter),
+        ),
+        mock.patch(
+            "fortifyroot._internal.safety.runtime.urllib.request.urlopen",
+            side_effect=RuntimeError("boom"),
+        ),
+    ):
+        with pytest.raises(SafetyConfigFetchError, match="Safety config fetch failed"):
+            client.fetch("")
+
+    fetch_counter.assert_called_once_with(
+        1,
+        attributes={
+            "fortifyroot.safety.config_profile_id": "cfg-1",
+            "result": "failure",
+        },
+    )
+    failure_counter.assert_called_once_with(
+        1,
+        attributes={
+            "fortifyroot.safety.config_profile_id": "cfg-1",
+            "error_type": "RuntimeError",
+        },
+    )

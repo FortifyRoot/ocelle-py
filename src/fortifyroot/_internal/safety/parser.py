@@ -77,6 +77,11 @@ def parse_safety_rule(payload: Mapping[str, Any]) -> SafetyRule | None:
     if not name or not category:
         return None
 
+    raw_action = _get_value(payload, "action")
+    action = _normalize_optional_action(raw_action)
+    if raw_action is not None and action is None:
+        return None
+
     matcher = _parse_matcher(payload)
     if matcher is None:
         return None
@@ -85,7 +90,7 @@ def parse_safety_rule(payload: Mapping[str, Any]) -> SafetyRule | None:
         name=name,
         category=category,
         severity=_normalize_severity(_get_value(payload, "severity")),
-        action=_normalize_optional_action(_get_value(payload, "action")),
+        action=action,
         enabled=bool(_get_value(payload, "enabled", default=False)),
         matcher=matcher,
     )
@@ -100,7 +105,11 @@ def _parse_matcher(payload: Mapping[str, Any]):
     if not list_payload:
         list_payload = _as_mapping(_get_value(payload, "listMatcher", "list_matcher", default={}))
     values = tuple(
-        value for value in (_get_value(list_payload, "values", default=()) or ()) if isinstance(value, str)
+        dict.fromkeys(
+            value
+            for value in (_get_value(list_payload, "values", default=()) or ())
+            if isinstance(value, str)
+        )
     )
     if values:
         return StringListMatcher(
@@ -182,7 +191,9 @@ def _normalize_optional_action(value: Any) -> str | None:
     if value is None:
         return None
     normalized = _normalize_enum(value, "SAFETY_ACTION_")
-    return normalized
+    if normalized in {"ALLOW", "MASK"}:
+        return normalized
+    return None
 
 
 def _normalize_language(value: Any) -> str | None:

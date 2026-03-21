@@ -1,5 +1,9 @@
 """Tests for streaming safety holdback evaluation."""
 
+from types import SimpleNamespace
+from unittest import mock
+
+from fortifyroot._internal.safety import streaming as safety_streaming
 from fortifyroot._internal.safety.engine import compile_snapshot
 from fortifyroot._internal.safety.models import (
     ConfigProfile,
@@ -131,3 +135,49 @@ def test_stream_completion_caps_pending_growth_for_pathological_matches():
     flushed = stream.flush()
     assert flushed is not None
     assert flushed.text == "[SECRET.catch_all]"
+
+
+def test_stream_completion_records_force_finalization_metric():
+    mock_add = mock.Mock()
+    counter = SimpleNamespace(add=mock_add)
+    original_counter = safety_streaming._FORCE_FINALIZATIONS_COUNTER
+    safety_streaming._FORCE_FINALIZATIONS_COUNTER = counter
+    try:
+        stream = CompletionSafetyStream(
+            snapshot=compile_snapshot(
+                ConfigProfile(
+                    config_profile_id="cfg-stream-metric",
+                    version=1,
+                    etag="etag-stream-metric",
+                    safety=SafetyConfig(
+                        enabled=True,
+                        default_action="ALLOW",
+                        rules=(
+                            SafetyRule(
+                                name="catch_all",
+                                category="SECRET",
+                                severity="HIGH",
+                                action="MASK",
+                                enabled=True,
+                                matcher=RegexMatcher(pattern=r".+"),
+                            ),
+                        ),
+                    ),
+                )
+            ),
+            holdback_chars=2,
+            max_pending_chars=4,
+        )
+
+        assert stream.process_chunk("ab") is None
+        assert stream.process_chunk("cd") is None
+
+        released = stream.process_chunk("ef")
+        assert released is not None
+    finally:
+        safety_streaming._FORCE_FINALIZATIONS_COUNTER = original_counter
+
+    mock_add.assert_called_once_with(
+        1,
+        attributes={"fortifyroot.safety.pending_cap_chars": "4"},
+    )

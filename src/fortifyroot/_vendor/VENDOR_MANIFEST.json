@@ -1,9 +1,9 @@
 {
-  "vendored_at": "2026-03-20T09:44:48.077953",
+  "vendored_at": "2026-03-21T21:08:23.894934",
   "openllmetry_version": "0.52.6",
-  "git_commit": "9724c8c3fe85",
-  "git_branch": "fr-v0.52.6.x",
-  "git_tag": "fr-v0.52.6.2",
+  "git_commit": "4a12d9ec17b0",
+  "git_branch": "feature/phase-1h-streaming-safety",
+  "git_tag": "unknown",
   "packages": {
     "traceloop-sdk": "0.52.6",
     "opentelemetry-semantic-conventions-ai": "0.52.6",
