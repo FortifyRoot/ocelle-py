@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import importlib
 import logging
 import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+
+from opentelemetry.metrics import get_meter
 
 from fortifyroot._internal.safety.models import (
     ConfigProfile,
@@ -24,7 +27,46 @@ from fortifyroot.safety import TextSafetyDetector, TextSafetyMatch
 
 logger = logging.getLogger(__name__)
 
+try:
+    import re2 as _re_engine
+
+    _USING_RE2 = True
+except ImportError:
+    _re_engine = re  # type: ignore[assignment]
+    _USING_RE2 = False
+
+REGEX_EVAL_TIMEOUT_SECONDS = 5
+
+_udf_detectors_enabled = False
+
+
+def set_udf_detectors_enabled(enabled: bool) -> None:
+    """Enable or disable loading of user-defined safety detectors."""
+    global _udf_detectors_enabled
+    _udf_detectors_enabled = enabled
+
+
+_METER = get_meter("fortifyroot.safety")
+_RULES_EVALUATED_COUNTER = _METER.create_counter(
+    "fortifyroot.safety.rules_evaluated",
+    description="Number of safety rules evaluated against text inputs.",
+)
+_FINDINGS_PRODUCED_COUNTER = _METER.create_counter(
+    "fortifyroot.safety.findings_produced",
+    description="Number of safety findings produced by rule evaluation.",
+)
+_MASKS_APPLIED_COUNTER = _METER.create_counter(
+    "fortifyroot.safety.masks_applied",
+    description="Number of safety masks applied to text outputs.",
+)
+_UDF_ERRORS_COUNTER = _METER.create_counter(
+    "fortifyroot.safety.udf_errors",
+    description="Number of safety UDF load or execution errors.",
+)
+
 SDK_LANGUAGE_PYTHON = "PYTHON"
+MAX_REGEX_PATTERN_LENGTH = 1024
+MAX_REGEX_MATCHES = 1000
 
 
 @dataclass(frozen=True, slots=True)
@@ -111,13 +153,19 @@ def _compile_rule(rule: SafetyRule, default_action: str) -> CompiledSafetyRule |
     udf_detector = None
 
     if isinstance(rule.matcher, RegexMatcher):
+        if len(rule.matcher.pattern) > MAX_REGEX_PATTERN_LENGTH:
+            logger.warning(
+                "Skipping safety rule with oversized regex: %s",
+                rule.name,
+            )
+            return None
         try:
-            regex = re.compile(rule.matcher.pattern)
-        except re.error:
+            regex = _re_engine.compile(rule.matcher.pattern)
+        except (re.error, Exception):
             logger.warning("Skipping safety rule with invalid regex: %s", rule.name)
             return None
     elif isinstance(rule.matcher, StringListMatcher):
-        list_values = tuple(dict.fromkeys(value for value in rule.matcher.values if value))
+        list_values = tuple(value for value in rule.matcher.values if value)
         list_ignore_case = rule.matcher.ignore_case
         if not list_values:
             return None
@@ -143,6 +191,13 @@ def _compile_rule(rule: SafetyRule, default_action: str) -> CompiledSafetyRule |
 
 
 def _load_detector(entry_point: str) -> TextSafetyDetector | None:
+    if not _udf_detectors_enabled:
+        logger.warning(
+            "UDF detector %r skipped: enable via init(allow_udf_detectors=True)",
+            entry_point,
+        )
+        return None
+
     module_name, _, symbol_name = entry_point.partition(":")
     if not module_name or not symbol_name:
         logger.warning("Skipping UDF rule with invalid entry point: %s", entry_point)
@@ -173,21 +228,71 @@ def _load_detector(entry_point: str) -> TextSafetyDetector | None:
     return None
 
 
+class _RegexTimeoutError(Exception):
+    """Internal error raised when a stdlib regex evaluation times out."""
+
+
+def _safe_finditer(
+    pattern: re.Pattern[str],
+    text: str,
+    rule_name: str,
+) -> list[re.Match[str]]:
+    """Return all matches for *pattern* against *text*.
+
+    When ``re2`` is available the call is direct (re2 has built-in
+    backtracking protection).  With stdlib ``re`` the evaluation is
+    delegated to a thread so we can enforce a timeout.
+    """
+    if _USING_RE2:
+        return list(pattern.finditer(text))
+
+    def _do_finditer() -> list[re.Match[str]]:
+        return list(pattern.finditer(text))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(_do_finditer)
+        try:
+            return future.result(timeout=REGEX_EVAL_TIMEOUT_SECONDS)
+        except concurrent.futures.TimeoutError:
+            logger.warning(
+                "Regex evaluation timed out after %ds for rule %s; returning empty findings",
+                REGEX_EVAL_TIMEOUT_SECONDS,
+                rule_name,
+            )
+            raise _RegexTimeoutError() from None
+
+
 def _evaluate_rule(rule: CompiledSafetyRule, text: str) -> list[SafetyFinding]:
+    metric_attributes = _rule_metric_attributes(rule)
+    _RULES_EVALUATED_COUNTER.add(1, attributes=metric_attributes)
+
     if rule.regex is not None:
-        return [
-            _build_finding(rule, match.start(), match.end(), rule.name)
-            for match in rule.regex.finditer(text)
-            if match.end() > match.start()
-        ]
+        findings: list[SafetyFinding] = []
+        try:
+            matches_iter = _safe_finditer(rule.regex, text, rule.name)
+        except _RegexTimeoutError:
+            return findings
+        for match in matches_iter:
+            if match.end() <= match.start():
+                continue
+            findings.append(_build_finding(rule, match.start(), match.end(), rule.name))
+            if len(findings) >= MAX_REGEX_MATCHES:
+                break
+        if findings:
+            _FINDINGS_PRODUCED_COUNTER.add(len(findings), attributes=metric_attributes)
+        return findings
 
     if rule.list_values:
         findings = []
         for value in rule.list_values:
-            findings.extend(
-                _build_finding(rule, start, end, rule.name)
-                for start, end in _find_literal_matches(text, value, rule.list_ignore_case)
-            )
+            for start, end in _find_literal_matches(text, value, rule.list_ignore_case):
+                findings.append(_build_finding(rule, start, end, rule.name))
+                if len(findings) >= MAX_REGEX_MATCHES:
+                    break
+            if len(findings) >= MAX_REGEX_MATCHES:
+                break
+        if findings:
+            _FINDINGS_PRODUCED_COUNTER.add(len(findings), attributes=metric_attributes)
         return findings
 
     if rule.udf_detector is not None:
@@ -196,6 +301,7 @@ def _evaluate_rule(rule: CompiledSafetyRule, text: str) -> list[SafetyFinding]:
             matches = rule.udf_detector.detect(text)
         except Exception:
             logger.warning("UDF detector execution failed: %s", rule.name)
+            _UDF_ERRORS_COUNTER.add(1, attributes=metric_attributes)
             return findings
         for match in matches:
             if not isinstance(match, TextSafetyMatch):
@@ -210,6 +316,9 @@ def _evaluate_rule(rule: CompiledSafetyRule, text: str) -> list[SafetyFinding]:
                     f"{rule.name}.{match.name}",
                 )
             )
+        findings = findings[:MAX_REGEX_MATCHES]
+        if findings:
+            _FINDINGS_PRODUCED_COUNTER.add(len(findings), attributes=metric_attributes)
         return findings
 
     return []
@@ -258,6 +367,11 @@ def _apply_masks(text: str, findings: Sequence[SafetyFinding]) -> str:
     if not selected:
         return text
 
+    _MASKS_APPLIED_COUNTER.add(
+        len(selected),
+        attributes={"fortifyroot.safety.masked": "true"},
+    )
+
     parts = []
     cursor = 0
     for start, end, replacement in selected:
@@ -269,7 +383,12 @@ def _apply_masks(text: str, findings: Sequence[SafetyFinding]) -> str:
 
 
 def _mask_replacement(finding: SafetyFinding) -> str:
-    return f"[{finding.category}.{finding.rule_name}]"
+    return f"[{finding.category}.{_sanitize_rule_name(finding.rule_name)}]"
+
+
+def _sanitize_rule_name(rule_name: str) -> str:
+    sanitized = re.sub(r"[^A-Za-z0-9_.-]+", "_", rule_name or "rule")
+    return sanitized.strip("._") or "rule"
 
 
 def _find_literal_matches(
@@ -277,13 +396,26 @@ def _find_literal_matches(
     needle: str,
     ignore_case: bool,
 ) -> Iterable[tuple[int, int]]:
-    haystack = text.lower() if ignore_case else text
-    token = needle.lower() if ignore_case else needle
-    start = 0
-    while token:
-        index = haystack.find(token, start)
-        if index == -1:
-            break
-        end = index + len(token)
-        yield index, end
-        start = end
+    if not needle:
+        return
+    flags = re.IGNORECASE if ignore_case else 0
+    for match in re.finditer(re.escape(needle), text, flags):
+        yield match.start(), match.end()
+
+
+def _rule_metric_attributes(rule: CompiledSafetyRule) -> dict[str, str]:
+    return {
+        "fortifyroot.safety.category": rule.category,
+        "fortifyroot.safety.action": rule.action,
+        "fortifyroot.safety.matcher": _rule_matcher_type(rule),
+    }
+
+
+def _rule_matcher_type(rule: CompiledSafetyRule) -> str:
+    if rule.regex is not None:
+        return "regex"
+    if rule.list_values:
+        return "list"
+    if rule.udf_detector is not None:
+        return "udf"
+    return "unknown"

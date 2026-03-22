@@ -5,24 +5,40 @@ from __future__ import annotations
 import json
 import ipaddress
 import logging
+import random
 import threading
 import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 
+from opentelemetry.metrics import get_meter
+
 from fortifyroot._internal.safety.engine import CompiledSafetySnapshot, compile_snapshot
 from fortifyroot._internal.safety.parser import parse_sdk_config_response
+from fortifyroot._internal.safety.streaming import CompletionSafetyStream
 from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (
     clear_safety_handlers,
     register_completion_safety_handler,
+    register_completion_safety_stream_factory,
     register_prompt_safety_handler,
 )
 from fortifyroot.version import __version__
 
 logger = logging.getLogger(__name__)
+_METER = get_meter("fortifyroot.safety")
+_CONFIG_FETCH_COUNTER = _METER.create_counter(
+    "fortifyroot.safety.config_fetches",
+    description="Number of FortifyRoot safety config fetch attempts.",
+)
+_CONFIG_FETCH_FAILURE_COUNTER = _METER.create_counter(
+    "fortifyroot.safety.config_fetch_failures",
+    description="Number of FortifyRoot safety config fetch failures.",
+)
 
+MAX_CONFIG_RESPONSE_BYTES = 1_048_576  # 1 MB
 DEFAULT_CONFIG_POLL_INTERVAL_SECONDS = 60
+DEFAULT_STREAM_HOLDBACK_CHARS = 128
 SDK_VERSION_HEADER = "X-FortifyRoot-SDK-Version"
 AUTHORIZATION_HEADER = "Authorization"
 REQUEST_TIMEOUT_SECONDS = 5
@@ -59,11 +75,14 @@ class SafetySnapshotStore:
 
 class SafetyConfigClient:
     def __init__(self, base_url: str, api_key: str, config_profile_id: str) -> None:
-        self._base_url = base_url.rstrip("/")
+        self._base_url = _normalize_api_endpoint(base_url)
         self._api_key = api_key
         self._config_profile_id = config_profile_id
 
     def fetch(self, current_etag: str) -> SafetyFetchResult:
+        fetch_attributes = {
+            "fortifyroot.safety.config_profile_id": self._config_profile_id,
+        }
         params = {"sdk_version": __version__}
         if current_etag:
             params["current_etag"] = current_etag
@@ -81,17 +100,38 @@ class SafetyConfigClient:
 
         try:
             with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-                payload = json.loads(response.read().decode("utf-8"))
+                body = response.read(MAX_CONFIG_RESPONSE_BYTES)
+                if response.read(1):
+                    raise SafetyConfigFetchError(
+                        f"Safety config response exceeded {MAX_CONFIG_RESPONSE_BYTES} bytes"
+                    )
+                payload = json.loads(body.decode("utf-8"))
+        except SafetyConfigFetchError:
+            raise
         except urllib.error.HTTPError as exc:
+            _CONFIG_FETCH_COUNTER.add(1, attributes={**fetch_attributes, "result": "failure"})
+            _CONFIG_FETCH_FAILURE_COUNTER.add(
+                1,
+                attributes={**fetch_attributes, "error_type": "http_error"},
+            )
             raise SafetyConfigFetchError(
                 f"Safety config fetch failed with HTTP status {exc.code}"
             ) from exc
         except Exception as exc:
+            _CONFIG_FETCH_COUNTER.add(1, attributes={**fetch_attributes, "result": "failure"})
+            _CONFIG_FETCH_FAILURE_COUNTER.add(
+                1,
+                attributes={**fetch_attributes, "error_type": exc.__class__.__name__},
+            )
             raise SafetyConfigFetchError("Safety config fetch failed") from exc
 
         try:
             parsed = parse_sdk_config_response(payload)
             if parsed.not_modified:
+                _CONFIG_FETCH_COUNTER.add(
+                    1,
+                    attributes={**fetch_attributes, "result": "not_modified"},
+                )
                 return SafetyFetchResult(
                     snapshot=None,
                     not_modified=True,
@@ -108,6 +148,10 @@ class SafetyConfigClient:
             has_enabled_rule_definitions = parsed.config_profile.safety.enabled and any(
                 rule.enabled for rule in parsed.config_profile.safety.rules
             )
+            _CONFIG_FETCH_COUNTER.add(
+                1,
+                attributes={**fetch_attributes, "result": "success"},
+            )
             return SafetyFetchResult(
                 snapshot=snapshot,
                 not_modified=False,
@@ -117,6 +161,11 @@ class SafetyConfigClient:
         except SafetyConfigFetchError:
             raise
         except Exception as exc:
+            _CONFIG_FETCH_COUNTER.add(1, attributes={**fetch_attributes, "result": "failure"})
+            _CONFIG_FETCH_FAILURE_COUNTER.add(
+                1,
+                attributes={**fetch_attributes, "error_type": exc.__class__.__name__},
+            )
             raise SafetyConfigFetchError(
                 "Safety config payload could not be parsed or compiled"
             ) from exc
@@ -133,6 +182,29 @@ class SafetyHandler:
         return snapshot.evaluate_text(context.text)
 
 
+class SafetyStreamFactory:
+    def __init__(
+        self,
+        snapshot_store: SafetySnapshotStore,
+        stream_holdback_chars: int,
+    ) -> None:
+        self._snapshot_store = snapshot_store
+        self._stream_holdback_chars = stream_holdback_chars
+
+    def __call__(self, context):
+        snapshot = self._snapshot_store.get()
+        if (
+            snapshot is None
+            or not snapshot.enabled
+            or not snapshot.rules
+        ):
+            return None
+        return CompletionSafetyStream(
+            snapshot=snapshot,
+            holdback_chars=self._stream_holdback_chars,
+        )
+
+
 class SafetyRuntime:
     def __init__(
         self,
@@ -141,11 +213,14 @@ class SafetyRuntime:
         api_key: str,
         config_profile_id: str,
         poll_interval_seconds: int,
+        stream_holdback_chars: int,
     ) -> None:
         self._snapshot_store = SafetySnapshotStore()
         self._client = SafetyConfigClient(api_endpoint, api_key, config_profile_id)
         self._poll_interval_seconds = poll_interval_seconds
+        self._stream_holdback_chars = stream_holdback_chars
         self._stop_event = threading.Event()
+        self._warning_lock = threading.Lock()
         self._thread = threading.Thread(
             target=self._poll_loop,
             name="fortifyroot-safety-poller",
@@ -156,11 +231,16 @@ class SafetyRuntime:
         handler = SafetyHandler(self._snapshot_store)
         self._prompt_handler = handler
         self._completion_handler = handler
+        self._completion_stream_factory = SafetyStreamFactory(
+            self._snapshot_store,
+            stream_holdback_chars,
+        )
 
     def start(self) -> None:
         self._refresh_once(initial=True)
         register_prompt_safety_handler(self._prompt_handler)
         register_completion_safety_handler(self._completion_handler)
+        register_completion_safety_stream_factory(self._completion_stream_factory)
         self._thread.start()
 
     def stop(self) -> None:
@@ -171,7 +251,13 @@ class SafetyRuntime:
         clear_safety_handlers()
 
     def _poll_loop(self) -> None:
-        while not self._stop_event.wait(self._poll_interval_seconds):
+        while True:
+            wait_seconds = self._poll_interval_seconds + random.uniform(
+                0,
+                self._poll_interval_seconds * 0.1,
+            )
+            if self._stop_event.wait(wait_seconds):
+                break
             self._refresh_once(initial=False)
 
     def _refresh_once(self, *, initial: bool = False) -> None:
@@ -181,7 +267,11 @@ class SafetyRuntime:
             result = self._client.fetch(current_etag)
         except SafetyConfigFetchError as exc:
             if initial:
-                raise RuntimeError("Initial FortifyRoot safety config fetch failed") from exc
+                logger.warning(
+                    "Initial FortifyRoot safety config fetch failed; starting with empty safety snapshot: %s",
+                    exc,
+                )
+                return
             logger.warning("%s", exc)
             return
 
@@ -198,19 +288,37 @@ class SafetyRuntime:
         if snapshot is None:
             return
 
-        if not result.has_rule_definitions:
-            if not self._warned_no_rules:
-                logger.warning("no safety rules are defined")
-                self._warned_no_rules = True
-            return
+        with self._warning_lock:
+            if not result.has_rule_definitions:
+                if not self._warned_no_rules:
+                    logger.warning("no safety rules are defined")
+                    self._warned_no_rules = True
+                return
 
-        if (
-            not result.has_enabled_rule_definitions
-            or not snapshot.enabled
-            or not snapshot.rules
-        ) and not self._warned_no_enabled_rules:
-            logger.warning("could not find any enabled safety configs")
-            self._warned_no_enabled_rules = True
+            if (
+                not result.has_enabled_rule_definitions
+                or not snapshot.enabled
+                or not snapshot.rules
+            ) and not self._warned_no_enabled_rules:
+                logger.warning("could not find any enabled safety configs")
+                self._warned_no_enabled_rules = True
+
+    def same_configuration(
+        self,
+        *,
+        api_endpoint: str,
+        api_key: str,
+        config_profile_id: str,
+        poll_interval_seconds: int,
+        stream_holdback_chars: int,
+    ) -> bool:
+        return (
+            self._client._base_url == _normalize_api_endpoint(api_endpoint)
+            and self._client._api_key == api_key
+            and self._client._config_profile_id == config_profile_id
+            and self._poll_interval_seconds == poll_interval_seconds
+            and self._stream_holdback_chars == stream_holdback_chars
+        )
 
 
 _GLOBAL_SAFETY_RUNTIME: SafetyRuntime | None = None
@@ -252,10 +360,20 @@ def configure_global_safety_runtime(
     api_key: str | None,
     config_profile_id: str | None,
     poll_interval_seconds: int,
+    stream_holdback_chars: int,
 ) -> None:
     global _GLOBAL_SAFETY_RUNTIME
     with _GLOBAL_RUNTIME_LOCK:
+        normalized_endpoint = _normalize_api_endpoint(api_endpoint)
         if _GLOBAL_SAFETY_RUNTIME is not None:
+            if enabled and _GLOBAL_SAFETY_RUNTIME.same_configuration(
+                api_endpoint=normalized_endpoint,
+                api_key=api_key or "",
+                config_profile_id=config_profile_id or "",
+                poll_interval_seconds=poll_interval_seconds,
+                stream_holdback_chars=stream_holdback_chars,
+            ):
+                return
             _GLOBAL_SAFETY_RUNTIME.stop()
             _GLOBAL_SAFETY_RUNTIME = None
 
@@ -278,10 +396,11 @@ def configure_global_safety_runtime(
             return
 
         runtime = SafetyRuntime(
-            api_endpoint=api_endpoint,
+            api_endpoint=normalized_endpoint,
             api_key=api_key,
             config_profile_id=config_profile_id,
             poll_interval_seconds=poll_interval_seconds,
+            stream_holdback_chars=stream_holdback_chars,
         )
         runtime.start()
         _GLOBAL_SAFETY_RUNTIME = runtime

@@ -7,6 +7,7 @@ for the FortifyRoot SDK, including:
 - FortifyRootConfig: Fluent API for configuration (builder pattern)
 """
 
+import logging
 import os
 import sys
 from urllib.parse import urlsplit
@@ -25,15 +26,20 @@ from fortifyroot._internal.constants import FORTIFYROOT_SDK_VERSION_ATTRIBUTE
 from fortifyroot._internal.env_mapping import (
     FORTIFYROOT_CONFIG_POLL_INTERVAL_SECONDS,
     FORTIFYROOT_CONFIG_PROFILE_ID,
+    FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS,
 )
+from fortifyroot._internal.safety.engine import set_udf_detectors_enabled
 from fortifyroot._internal.safety.runtime import (
     DEFAULT_CONFIG_POLL_INTERVAL_SECONDS,
+    DEFAULT_STREAM_HOLDBACK_CHARS,
     configure_global_safety_runtime,
 )
 from fortifyroot.instruments import Instruments, _convert_to_tl_instruments
 from fortifyroot.processors.attribute_renamer import AttributeRenamingProcessor
 from fortifyroot.version import __version__
 
+
+logger = logging.getLogger(__name__)
 
 # Default API endpoint for FortifyRoot
 DEFAULT_API_ENDPOINT = "https://api.fortifyroot.com"
@@ -62,6 +68,30 @@ def _resolve_config_poll_interval_seconds(value: Optional[int]) -> int:
         return int(raw_value)
     except (TypeError, ValueError):
         return DEFAULT_CONFIG_POLL_INTERVAL_SECONDS
+
+
+def _resolve_stream_holdback_chars(value: Optional[int]) -> int:
+    """Resolve the streaming completion holdback size from arg/env/defaults."""
+    if value is not None:
+        resolved = max(int(value), 1)
+    else:
+        raw_value = os.getenv(FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS, "")
+        if not raw_value.strip():
+            resolved = DEFAULT_STREAM_HOLDBACK_CHARS
+        else:
+            try:
+                resolved = max(int(raw_value), 1)
+            except (TypeError, ValueError):
+                resolved = DEFAULT_STREAM_HOLDBACK_CHARS
+
+    if resolved < 16:
+        logger.warning(
+            "stream_holdback_chars=%d is below the minimum effective threshold; using 16",
+            resolved,
+        )
+        resolved = 16
+
+    return resolved
 
 
 def _resolve_api_key(value: Optional[str]) -> Optional[str]:
@@ -344,6 +374,8 @@ def init(
     span_postprocess_callback: Optional[Callable[[ReadableSpan], None]] = None,
     config_profile_id: Optional[str] = None,
     config_poll_interval_seconds: Optional[int] = None,
+    stream_holdback_chars: Optional[int] = None,
+    allow_udf_detectors: bool = False,
 ) -> None:
     """
     Initialize FortifyRoot SDK for LLM observability.
@@ -427,6 +459,17 @@ def init(
             config refresh. Defaults to 60 seconds. Can also be provided through
             the FORTIFYROOT_CONFIG_POLL_INTERVAL_SECONDS environment variable.
 
+        stream_holdback_chars: Optional number of trailing completion characters to
+            retain during streaming safety evaluation before releasing text to the
+            caller. Defaults to 128. Can also be provided through the
+            FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS environment variable.
+
+        allow_udf_detectors: Whether to allow loading user-defined safety
+            detectors via ``importlib.import_module``. Defaults to False for
+            security. Can also be enabled via the
+            FORTIFYROOT_ALLOW_UDF_DETECTORS environment variable (set to
+            ``"true"``).
+
     Example:
         Basic usage::
 
@@ -498,6 +541,7 @@ def init(
     config_poll_interval_seconds = _resolve_config_poll_interval_seconds(
         config_poll_interval_seconds
     )
+    stream_holdback_chars = _resolve_stream_holdback_chars(stream_holdback_chars)
     metrics_endpoint = _resolve_signal_endpoint(
         "FORTIFYROOT_METRICS_ENDPOINT",
         api_endpoint,
@@ -638,12 +682,18 @@ def init(
         # propagator=propagator,
         **tl_kwargs,
     )
+    if allow_udf_detectors or _is_enabled_from_env(
+        "FORTIFYROOT_ALLOW_UDF_DETECTORS", False
+    ):
+        set_udf_detectors_enabled(True)
+
     configure_global_safety_runtime(
         enabled=enabled,
         api_endpoint=api_endpoint,
         api_key=api_key,
         config_profile_id=config_profile_id,
         poll_interval_seconds=config_poll_interval_seconds,
+        stream_holdback_chars=stream_holdback_chars,
     )
 
 
@@ -738,6 +788,8 @@ class FortifyRootConfig:
         span_postprocess_callback: Optional[Callable[[ReadableSpan], None]]
         config_profile_id: Optional[str]
         config_poll_interval_seconds: Optional[int]
+        stream_holdback_chars: Optional[int]
+        allow_udf_detectors: bool
 
     def __init__(self) -> None:
         """Initialize with default configuration."""
@@ -857,6 +909,16 @@ class FortifyRootConfig:
     def config_poll_interval_seconds(self, value: int) -> "FortifyRootConfig":
         """Set the safety config polling interval in seconds."""
         self._config["config_poll_interval_seconds"] = value
+        return self
+
+    def stream_holdback_chars(self, value: int) -> "FortifyRootConfig":
+        """Set the streaming safety completion holdback size in characters."""
+        self._config["stream_holdback_chars"] = value
+        return self
+
+    def allow_udf_detectors(self, value: bool = True) -> "FortifyRootConfig":
+        """Allow loading user-defined safety detectors via importlib."""
+        self._config["allow_udf_detectors"] = value
         return self
 
     def init(self) -> None:
