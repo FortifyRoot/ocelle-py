@@ -28,6 +28,7 @@ from fortifyroot._internal.env_mapping import (
     FORTIFYROOT_CONFIG_PROFILE_ID,
     FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS,
 )
+from fortifyroot._internal.safety.engine import set_udf_detectors_enabled
 from fortifyroot._internal.safety.runtime import (
     DEFAULT_CONFIG_POLL_INTERVAL_SECONDS,
     DEFAULT_STREAM_HOLDBACK_CHARS,
@@ -374,6 +375,7 @@ def init(
     config_profile_id: Optional[str] = None,
     config_poll_interval_seconds: Optional[int] = None,
     stream_holdback_chars: Optional[int] = None,
+    allow_udf_detectors: bool = False,
 ) -> None:
     """
     Initialize FortifyRoot SDK for LLM observability.
@@ -461,6 +463,12 @@ def init(
             retain during streaming safety evaluation before releasing text to the
             caller. Defaults to 128. Can also be provided through the
             FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS environment variable.
+
+        allow_udf_detectors: Whether to allow loading user-defined safety
+            detectors via ``importlib.import_module``. Defaults to False for
+            security. Can also be enabled via the
+            FORTIFYROOT_ALLOW_UDF_DETECTORS environment variable (set to
+            ``"true"``).
 
     Example:
         Basic usage::
@@ -674,6 +682,11 @@ def init(
         # propagator=propagator,
         **tl_kwargs,
     )
+    if allow_udf_detectors or _is_enabled_from_env(
+        "FORTIFYROOT_ALLOW_UDF_DETECTORS", False
+    ):
+        set_udf_detectors_enabled(True)
+
     configure_global_safety_runtime(
         enabled=enabled,
         api_endpoint=api_endpoint,
@@ -776,6 +789,7 @@ class FortifyRootConfig:
         config_profile_id: Optional[str]
         config_poll_interval_seconds: Optional[int]
         stream_holdback_chars: Optional[int]
+        allow_udf_detectors: bool
 
     def __init__(self) -> None:
         """Initialize with default configuration."""
@@ -900,6 +914,11 @@ class FortifyRootConfig:
     def stream_holdback_chars(self, value: int) -> "FortifyRootConfig":
         """Set the streaming safety completion holdback size in characters."""
         self._config["stream_holdback_chars"] = value
+        return self
+
+    def allow_udf_detectors(self, value: bool = True) -> "FortifyRootConfig":
+        """Allow loading user-defined safety detectors via importlib."""
+        self._config["allow_udf_detectors"] = value
         return self
 
     def init(self) -> None:

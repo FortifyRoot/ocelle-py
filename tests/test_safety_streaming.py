@@ -306,3 +306,121 @@ def test_finalize_local_findings_skips_non_overlapping_finding_beyond_boundary()
         force_finalize=True,
     )
     assert result == ()
+
+
+# ---- D-22: O(n^2) streaming release boundary fix ----
+
+
+def test_resolve_release_boundary_uses_max_end_optimization():
+    """D-22: _resolve_release_boundary should use max(f.end) instead of iterative loop."""
+    from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (
+        SafetyFinding,
+    )
+
+    stream = CompletionSafetyStream(snapshot=_snapshot(), holdback_chars=4)
+    stream._pending_text = "abcdefghijklmnop"  # 16 chars
+
+    # Release boundary = 16 - 4 = 12
+    # Finding spans [5, 14), so end > release_boundary
+    # The boundary should be pulled back to finding.start = 5
+    findings = [
+        SafetyFinding(
+            category="PII",
+            severity="HIGH",
+            action=SafetyDecision.MASK.value,
+            rule_name="email",
+            start=5,
+            end=14,
+        ),
+    ]
+
+    boundary = stream._resolve_release_boundary(findings)
+    assert boundary == 5
+
+
+def test_resolve_release_boundary_no_findings_crossing_boundary():
+    """D-22: When no findings cross the boundary, release_boundary stays at text - holdback."""
+    from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (
+        SafetyFinding,
+    )
+
+    stream = CompletionSafetyStream(snapshot=_snapshot(), holdback_chars=4)
+    stream._pending_text = "abcdefghijklmnop"  # 16 chars
+
+    # Finding entirely before the boundary (end=5 <= 12)
+    findings = [
+        SafetyFinding(
+            category="PII",
+            severity="HIGH",
+            action=SafetyDecision.MASK.value,
+            rule_name="email",
+            start=0,
+            end=5,
+        ),
+    ]
+
+    boundary = stream._resolve_release_boundary(findings)
+    assert boundary == 12
+
+
+def test_resolve_release_boundary_multiple_findings_crossing():
+    """D-22: When multiple findings cross the boundary, use earliest start."""
+    from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (
+        SafetyFinding,
+    )
+
+    stream = CompletionSafetyStream(snapshot=_snapshot(), holdback_chars=4)
+    stream._pending_text = "abcdefghijklmnop"  # 16 chars
+
+    # Two findings crossing the boundary (12):
+    # Finding 1: [3, 15) - start=3
+    # Finding 2: [8, 14) - start=8
+    # Should pick min(3, 8) = 3
+    findings = [
+        SafetyFinding(
+            category="PII",
+            severity="HIGH",
+            action=SafetyDecision.MASK.value,
+            rule_name="email1",
+            start=3,
+            end=15,
+        ),
+        SafetyFinding(
+            category="PII",
+            severity="HIGH",
+            action=SafetyDecision.MASK.value,
+            rule_name="email2",
+            start=8,
+            end=14,
+        ),
+    ]
+
+    boundary = stream._resolve_release_boundary(findings)
+    assert boundary == 3
+
+
+def test_resolve_release_boundary_empty_findings():
+    """D-22: With no findings, release_boundary = text - holdback."""
+    stream = CompletionSafetyStream(snapshot=_snapshot(), holdback_chars=4)
+    stream._pending_text = "abcdefghijklmnop"  # 16 chars
+
+    boundary = stream._resolve_release_boundary([])
+    assert boundary == 12
+
+
+def test_streaming_end_to_end_with_optimized_boundary():
+    """D-22: End-to-end test to verify the optimized boundary produces correct results."""
+    stream = CompletionSafetyStream(snapshot=_snapshot(), holdback_chars=4)
+
+    # "hello " is safe prefix released immediately, "abc@" held back in pending
+    result1 = stream.process_chunk("hello abc@")
+    assert result1 is not None
+    assert result1.text == "hello "
+
+    # "abc@gmail.com" completes the email match; masked text released
+    result2 = stream.process_chunk("gmail.com bye")
+    assert result2 is not None
+    assert "[PII.email]" in result2.text
+
+    flushed = stream.flush()
+    assert flushed is not None

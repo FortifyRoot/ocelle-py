@@ -3,6 +3,8 @@
 import io
 import json
 import logging
+import threading
+import time
 import urllib.error
 from unittest import mock
 
@@ -1094,3 +1096,234 @@ def test_is_fortifyroot_api_endpoint_returns_false_when_host_is_none():
     # A URL with no host (e.g. just a scheme) will have hostname=None
     assert _is_fortifyroot_api_endpoint("https://") is False
     assert _is_fortifyroot_api_endpoint("") is False
+
+
+def test_concurrent_poll_and_handler_is_thread_safe():
+    """D-27: Prove the immutable snapshot + lock pattern is thread-safe under
+    concurrent writer/reader pressure."""
+    store = SafetySnapshotStore()
+    errors: list[str] = []
+    duration = 0.5
+
+    def _make_snapshot(version: int) -> "CompiledSafetySnapshot":
+        from fortifyroot._internal.safety.engine import compile_snapshot as _compile
+
+        return _compile(
+            ConfigProfile(
+                config_profile_id="cfg-1",
+                version=version,
+                etag=f"etag-{version}",
+                safety=SafetyConfig(
+                    enabled=True,
+                    default_action="MASK",
+                    rules=(
+                        SafetyRule(
+                            name="email",
+                            category="PII",
+                            severity="HIGH",
+                            action="MASK",
+                            enabled=True,
+                            matcher=RegexMatcher(pattern=r"[a-z]+@[a-z]+\.com"),
+                        ),
+                    ),
+                ),
+            )
+        )
+
+    # Seed the store so readers never see None before the writer starts.
+    store.set(_make_snapshot(0))
+
+    stop = threading.Event()
+
+    def writer():
+        v = 1
+        while not stop.is_set():
+            store.set(_make_snapshot(v))
+            v += 1
+
+    def reader(index: int):
+        while not stop.is_set():
+            snapshot = store.get()
+            if snapshot is None:
+                errors.append(f"reader-{index}: got None snapshot")
+                continue
+            try:
+                snapshot.evaluate_text("reach me at jane@acme.com")
+            except Exception as exc:
+                errors.append(f"reader-{index}: {exc}")
+
+    threads: list[threading.Thread] = []
+    threads.append(threading.Thread(target=writer, daemon=True))
+    for i in range(4):
+        threads.append(threading.Thread(target=reader, args=(i,), daemon=True))
+
+    for t in threads:
+        t.start()
+
+    time.sleep(duration)
+    stop.set()
+
+    for t in threads:
+        t.join(timeout=2.0)
+
+    assert errors == [], f"Thread-safety errors: {errors}"
+
+
+def test_safety_config_client_fetch_raises_on_malformed_json_response():
+    """D-28: Non-JSON response bytes should raise SafetyConfigFetchError."""
+    client = SafetyConfigClient(
+        "https://api.fortifyroot.com",
+        "fr-key",
+        "cfg-1",
+    )
+
+    with mock.patch(
+        "fortifyroot._internal.safety.runtime.urllib.request.urlopen",
+        return_value=_FakeHTTPResponse(b"<html>error</html>"),
+    ):
+        with pytest.raises(SafetyConfigFetchError, match="Safety config fetch failed"):
+            client.fetch("")
+
+
+# ---- D-19: Unbounded response body read ----
+
+
+def test_max_config_response_bytes_constant_exists():
+    """D-19: MAX_CONFIG_RESPONSE_BYTES should be defined as 1MB."""
+    from fortifyroot._internal.safety.runtime import MAX_CONFIG_RESPONSE_BYTES
+
+    assert MAX_CONFIG_RESPONSE_BYTES == 1_048_576
+
+
+def test_safety_config_client_fetch_raises_on_oversized_response():
+    """D-19: Fetch should raise SafetyConfigFetchError if response exceeds 1MB."""
+    client = SafetyConfigClient(
+        "https://api.fortifyroot.com",
+        "fr-key",
+        "cfg-1",
+    )
+
+    # Create a response body larger than MAX_CONFIG_RESPONSE_BYTES
+    from fortifyroot._internal.safety.runtime import MAX_CONFIG_RESPONSE_BYTES
+
+    oversized_body = b"x" * (MAX_CONFIG_RESPONSE_BYTES + 100)
+
+    with mock.patch(
+        "fortifyroot._internal.safety.runtime.urllib.request.urlopen",
+        return_value=_FakeHTTPResponse(oversized_body),
+    ):
+        with pytest.raises(SafetyConfigFetchError, match="exceeded"):
+            client.fetch("")
+
+
+def test_safety_config_client_fetch_reads_bounded_response():
+    """D-19: Fetch should work normally for responses under 1MB."""
+    payload = {
+        "configProfile": {
+            "id": "cfg-1",
+            "version": 1,
+            "etag": "etag-1",
+            "config": {
+                "safetyConfig": {
+                    "enabled": True,
+                    "defaultAction": "MASK",
+                    "rules": [],
+                }
+            },
+        }
+    }
+
+    client = SafetyConfigClient(
+        "https://api.fortifyroot.com",
+        "fr-key",
+        "cfg-1",
+    )
+
+    with mock.patch(
+        "fortifyroot._internal.safety.runtime.urllib.request.urlopen",
+        return_value=_FakeHTTPResponse(json.dumps(payload).encode("utf-8")),
+    ):
+        result = client.fetch("")
+
+    assert result.snapshot is not None
+
+
+# ---- D-24: Case-sensitive endpoint comparison ----
+
+
+def test_same_configuration_normalizes_endpoint_case():
+    """D-24: same_configuration should normalize endpoints for comparison."""
+    runtime = SafetyRuntime(
+        api_endpoint="HTTPS://API.FORTIFYROOT.COM",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    )
+
+    # Same endpoint but with different casing
+    assert runtime.same_configuration(
+        api_endpoint="https://api.fortifyroot.com",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    ) is True
+
+
+def test_same_configuration_normalizes_trailing_slash():
+    """D-24: same_configuration should normalize trailing slashes."""
+    runtime = SafetyRuntime(
+        api_endpoint="https://api.fortifyroot.com/",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    )
+
+    assert runtime.same_configuration(
+        api_endpoint="https://api.fortifyroot.com",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    ) is True
+
+
+def test_configure_global_safety_runtime_normalizes_endpoint_before_same_configuration():
+    """D-24: configure_global_safety_runtime should use _normalize_api_endpoint."""
+    existing_runtime = mock.Mock()
+    existing_runtime.same_configuration.return_value = True
+
+    with (
+        mock.patch.object(safety_runtime, "_GLOBAL_SAFETY_RUNTIME", existing_runtime),
+        mock.patch("fortifyroot._internal.safety.runtime.SafetyRuntime") as runtime_cls,
+    ):
+        configure_global_safety_runtime(
+            enabled=True,
+            api_endpoint="HTTPS://API.FORTIFYROOT.COM/",
+            api_key="fr-key",
+            config_profile_id="cfg-1",
+            poll_interval_seconds=60,
+            stream_holdback_chars=128,
+        )
+
+    # Verify that same_configuration was called with normalized endpoint
+    existing_runtime.same_configuration.assert_called_once_with(
+        api_endpoint="https://api.fortifyroot.com",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    )
+    runtime_cls.assert_not_called()
+
+
+def test_safety_config_client_normalizes_base_url():
+    """D-24: SafetyConfigClient should normalize base_url in __init__."""
+    client = SafetyConfigClient(
+        "HTTPS://API.FORTIFYROOT.COM/",
+        "fr-key",
+        "cfg-1",
+    )
+    assert client._base_url == "https://api.fortifyroot.com"

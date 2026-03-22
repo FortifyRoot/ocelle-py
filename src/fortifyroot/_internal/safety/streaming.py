@@ -153,10 +153,14 @@ class CompletionSafetyStream:
         if release_boundary <= 0:
             return 0
 
-        for finding in findings:
-            if finding.end > release_boundary:
-                release_boundary = min(release_boundary, finding.start)
-        return max(release_boundary, 0)
+        max_finding_end = max((f.end for f in findings), default=0)
+        if max_finding_end > release_boundary:
+            release_boundary = min(
+                (f.start for f in findings if f.end > release_boundary),
+                default=release_boundary,
+            )
+        release_boundary = max(release_boundary, 0)
+        return release_boundary
 
     def _resolve_forced_release_boundary(self) -> int:
         if len(self._pending_text) <= self.max_pending_chars:

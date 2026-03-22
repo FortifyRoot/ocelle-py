@@ -1,7 +1,10 @@
 """Tests for SDK-local safety parsing and evaluation."""
 
+import logging
 from types import SimpleNamespace
 from unittest import mock
+
+import pytest
 
 from fortifyroot._internal.safety import engine as safety_engine
 from fortifyroot._internal.safety.engine import (
@@ -9,6 +12,7 @@ from fortifyroot._internal.safety.engine import (
     CompiledSafetySnapshot,
     _load_detector,
     compile_snapshot,
+    set_udf_detectors_enabled,
 )
 from fortifyroot._internal.safety.models import StringListMatcher, UdfMatcher
 from fortifyroot._internal.safety.parser import parse_sdk_config_response
@@ -16,6 +20,18 @@ from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (
     SafetyDecision,
 )
 from fortifyroot.safety import TextSafetyDetector, TextSafetyMatch
+
+
+@pytest.fixture(autouse=True)
+def _enable_udf_detectors():
+    """Enable UDF detectors for all tests in this module by default.
+
+    Individual tests that verify the guard behaviour override this via
+    explicit ``set_udf_detectors_enabled(False)`` calls.
+    """
+    set_udf_detectors_enabled(True)
+    yield
+    set_udf_detectors_enabled(False)
 
 
 class SensitiveDetector(TextSafetyDetector):
@@ -1144,3 +1160,301 @@ def test_udf_findings_counter_path_with_valid_matches():
     assert len(result.findings) == 1
     assert result.findings[0].rule_name == "sensitive.token"
     assert result.overall_action == "ALLOW"
+
+
+# ---- UDF opt-in guard tests ----
+
+
+class TestUdfDetectorGuard:
+    """_load_detector must respect the _udf_detectors_enabled flag."""
+
+    def test_load_detector_returns_none_when_udf_not_enabled(self, caplog) -> None:
+        """When UDF detectors are disabled, _load_detector returns None and logs a warning."""
+        set_udf_detectors_enabled(False)
+
+        with caplog.at_level(logging.WARNING):
+            result = _load_detector("some.module:Detector")
+
+        assert result is None
+        assert any(
+            "UDF detector" in record.message and "skipped" in record.message
+            for record in caplog.records
+        )
+
+    def test_load_detector_works_when_udf_enabled(self) -> None:
+        """When UDF detectors are enabled, _load_detector loads the module normally."""
+        set_udf_detectors_enabled(True)
+
+        entry_point = "tests.test_safety_engine:SensitiveDetector"
+        result = _load_detector(entry_point)
+
+        assert result is not None
+        assert isinstance(result, TextSafetyDetector)
+
+    def test_load_detector_returns_none_for_invalid_entry_point_when_enabled(self, caplog) -> None:
+        """Even when enabled, an invalid entry point still returns None."""
+        set_udf_detectors_enabled(True)
+
+        with caplog.at_level(logging.WARNING):
+            result = _load_detector("no_colon_here")
+
+        assert result is None
+
+    def test_load_detector_returns_none_for_missing_module_when_enabled(self, caplog) -> None:
+        """Even when enabled, a missing module returns None."""
+        set_udf_detectors_enabled(True)
+
+        with caplog.at_level(logging.WARNING):
+            result = _load_detector("nonexistent.module:Detector")
+
+        assert result is None
+
+
+# ---- D-18: ReDoS residual - re2 with timeout fallback ----
+
+
+class TestRegexTimeoutFallback:
+    """Tests for _safe_finditer and the re2/stdlib fallback logic."""
+
+    def test_safe_finditer_returns_matches_with_stdlib_re(self):
+        """_safe_finditer should return matches when using stdlib re."""
+        import re
+
+        from fortifyroot._internal.safety.engine import _safe_finditer
+
+        pattern = re.compile(r"\d+")
+        matches = _safe_finditer(pattern, "abc 123 def 456", "test_rule")
+        assert len(matches) == 2
+        assert matches[0].group() == "123"
+        assert matches[1].group() == "456"
+
+    def test_safe_finditer_returns_empty_on_timeout(self, caplog):
+        """_safe_finditer should raise _RegexTimeoutError on timeout and log a warning."""
+        import concurrent.futures
+        import re
+
+        from fortifyroot._internal.safety.engine import (
+            REGEX_EVAL_TIMEOUT_SECONDS,
+            _RegexTimeoutError,
+            _safe_finditer,
+        )
+
+        pattern = re.compile(r"\d+")
+
+        with (
+            caplog.at_level(logging.WARNING),
+            mock.patch("fortifyroot._internal.safety.engine._USING_RE2", False),
+            mock.patch(
+                "fortifyroot._internal.safety.engine.concurrent.futures.ThreadPoolExecutor"
+            ) as mock_pool_cls,
+        ):
+            mock_pool = mock.MagicMock()
+            mock_pool_cls.return_value.__enter__ = mock.Mock(return_value=mock_pool)
+            mock_pool_cls.return_value.__exit__ = mock.Mock(return_value=False)
+            mock_future = mock.Mock()
+            mock_future.result.side_effect = concurrent.futures.TimeoutError()
+            mock_pool.submit.return_value = mock_future
+
+            with pytest.raises(_RegexTimeoutError):
+                _safe_finditer(pattern, "abc 123", "slow_rule")
+
+        assert any("timed out" in record.message for record in caplog.records)
+
+    def test_evaluate_rule_returns_empty_on_regex_timeout(self):
+        """D-18: When regex evaluation times out, _evaluate_rule returns empty findings."""
+        import re
+
+        from fortifyroot._internal.safety.engine import _RegexTimeoutError, _evaluate_rule
+
+        rule = CompiledSafetyRule(
+            name="slow_regex",
+            category="PII",
+            severity="HIGH",
+            action="MASK",
+            regex=re.compile(r"\d+"),
+            list_values=(),
+            list_ignore_case=False,
+            udf_detector=None,
+        )
+
+        with mock.patch(
+            "fortifyroot._internal.safety.engine._safe_finditer",
+            side_effect=_RegexTimeoutError(),
+        ):
+            findings = _evaluate_rule(rule, "abc 123 def")
+
+        assert findings == []
+
+    def test_using_re2_flag_and_re_engine(self):
+        """Verify _USING_RE2 and _re_engine are set correctly (no re2 installed)."""
+        import re as stdlib_re
+
+        from fortifyroot._internal.safety.engine import _USING_RE2, _re_engine
+
+        # In test environments without google-re2, we expect stdlib fallback.
+        assert _USING_RE2 is False
+        assert _re_engine is stdlib_re
+
+    def test_regex_eval_timeout_constant_exists(self):
+        """REGEX_EVAL_TIMEOUT_SECONDS should be 5."""
+        from fortifyroot._internal.safety.engine import REGEX_EVAL_TIMEOUT_SECONDS
+
+        assert REGEX_EVAL_TIMEOUT_SECONDS == 5
+
+
+# ---- D-20: No match count cap for string list matcher ----
+
+
+class TestListMatcherCap:
+    """Tests for the match count cap on the string list matcher."""
+
+    def test_list_matcher_caps_findings_at_max_regex_matches(self):
+        """D-20: List matcher should cap findings at MAX_REGEX_MATCHES."""
+        rule = CompiledSafetyRule(
+            name="a_finder",
+            category="PII",
+            severity="LOW",
+            action="ALLOW",
+            regex=None,
+            list_values=("a",),
+            list_ignore_case=False,
+            udf_detector=None,
+        )
+
+        snapshot = CompiledSafetySnapshot(
+            config_profile_id="cfg-list-cap",
+            version=1,
+            etag="etag-list-cap",
+            enabled=True,
+            rules=(rule,),
+        )
+
+        text = "a" * (safety_engine.MAX_REGEX_MATCHES + 500)
+        result = snapshot.evaluate_text(text)
+
+        assert result is not None
+        assert len(result.findings) == safety_engine.MAX_REGEX_MATCHES
+
+    def test_list_matcher_cap_breaks_across_multiple_values(self):
+        """D-20: Cap should apply across all list values, not per-value."""
+        rule = CompiledSafetyRule(
+            name="multi_finder",
+            category="PII",
+            severity="LOW",
+            action="ALLOW",
+            regex=None,
+            list_values=("a", "b"),
+            list_ignore_case=False,
+            udf_detector=None,
+        )
+
+        snapshot = CompiledSafetySnapshot(
+            config_profile_id="cfg-list-cap-multi",
+            version=1,
+            etag="etag-list-cap-multi",
+            enabled=True,
+            rules=(rule,),
+        )
+
+        # Many 'a's followed by many 'b's
+        text = "a" * (safety_engine.MAX_REGEX_MATCHES + 100) + "b" * 100
+        result = snapshot.evaluate_text(text)
+
+        assert result is not None
+        assert len(result.findings) == safety_engine.MAX_REGEX_MATCHES
+
+
+# ---- D-21: No UDF match count cap ----
+
+
+class ManyMatchDetector(TextSafetyDetector):
+    """UDF that returns more matches than MAX_REGEX_MATCHES."""
+
+    def detect(self, text: str):
+        matches = []
+        for i in range(len(text)):
+            if i + 1 <= len(text):
+                matches.append(TextSafetyMatch(name=f"m{i}", start=i, end=i + 1))
+        return matches
+
+
+class TestUdfMatchCountCap:
+    """Tests for the UDF match count cap."""
+
+    def test_udf_findings_capped_at_max_regex_matches(self):
+        """D-21: UDF findings should be truncated to MAX_REGEX_MATCHES."""
+        rule = CompiledSafetyRule(
+            name="many_udf",
+            category="PII",
+            severity="LOW",
+            action="ALLOW",
+            regex=None,
+            list_values=(),
+            list_ignore_case=False,
+            udf_detector=ManyMatchDetector(),
+        )
+
+        snapshot = CompiledSafetySnapshot(
+            config_profile_id="cfg-udf-cap",
+            version=1,
+            etag="etag-udf-cap",
+            enabled=True,
+            rules=(rule,),
+        )
+
+        text = "x" * (safety_engine.MAX_REGEX_MATCHES + 500)
+        result = snapshot.evaluate_text(text)
+
+        assert result is not None
+        assert len(result.findings) == safety_engine.MAX_REGEX_MATCHES
+
+
+# ---- D-26: Unicode case-insensitive matching position drift ----
+
+
+class TestUnicodeCaseInsensitiveMatching:
+    """Tests for correct Unicode case-insensitive matching via re.finditer."""
+
+    def test_case_insensitive_match_returns_correct_positions(self):
+        """D-26: Case-insensitive matching should use re.finditer for correct positions."""
+        from fortifyroot._internal.safety.engine import _find_literal_matches
+
+        matches = list(_find_literal_matches("Hello HELLO hello", "hello", True))
+        assert len(matches) == 3
+        assert matches[0] == (0, 5)
+        assert matches[1] == (6, 11)
+        assert matches[2] == (12, 17)
+
+    def test_unicode_sharp_s_case_insensitive(self):
+        """D-26: German sharp s (\u00df) should match correctly with re.IGNORECASE."""
+        from fortifyroot._internal.safety.engine import _find_literal_matches
+
+        # In Unicode, \u00df (sharp s) lowercases to itself and has no single-char uppercase.
+        # The re.IGNORECASE handles this correctly.
+        text = "Stra\u00dfe"
+        matches = list(_find_literal_matches(text, "stra\u00dfe", True))
+        assert len(matches) == 1
+        assert matches[0] == (0, 6)
+
+    def test_case_sensitive_match_returns_correct_positions(self):
+        """Case-sensitive matching should only find exact matches."""
+        from fortifyroot._internal.safety.engine import _find_literal_matches
+
+        matches = list(_find_literal_matches("Hello HELLO hello", "hello", False))
+        assert len(matches) == 1
+        assert matches[0] == (12, 17)
+
+    def test_empty_needle_returns_no_matches(self):
+        """Empty needle should return no matches."""
+        from fortifyroot._internal.safety.engine import _find_literal_matches
+
+        matches = list(_find_literal_matches("some text", "", False))
+        assert matches == []
+
+    def test_special_regex_chars_in_needle_are_escaped(self):
+        """Needles with regex special chars should be treated as literals."""
+        from fortifyroot._internal.safety.engine import _find_literal_matches
+
+        matches = list(_find_literal_matches("a.b a*b a+b", "a.b", False))
+        assert len(matches) == 1
+        assert matches[0] == (0, 3)

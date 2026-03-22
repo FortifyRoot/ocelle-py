@@ -1207,6 +1207,67 @@ class TestInitExporterBranch:
         assert kwargs["processor"] is None
 
 
+class TestAllowUdfDetectors:
+    """Tests for allow_udf_detectors parameter in init()."""
+
+    def test_init_allow_udf_detectors_enables_udf_loading(self):
+        """Test that init(allow_udf_detectors=True) enables UDF detector loading."""
+        from fortifyroot import init
+        from fortifyroot._internal.safety import engine as safety_engine
+
+        with (
+            mock.patch("fortifyroot.core.Traceloop.get_default_span_processor", return_value=mock.Mock()),
+            mock.patch("fortifyroot.core.Traceloop.init"),
+            mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+        ):
+            init(
+                app_name="fortifyroot-test",
+                api_key="fr-key",
+                allow_udf_detectors=True,
+            )
+
+        assert safety_engine._udf_detectors_enabled is True
+
+    def test_init_default_udf_detectors_disabled(self):
+        """Test that init() does not enable UDF detectors by default."""
+        from fortifyroot import init
+        from fortifyroot._internal.safety import engine as safety_engine
+
+        with (
+            mock.patch("fortifyroot.core.Traceloop.get_default_span_processor", return_value=mock.Mock()),
+            mock.patch("fortifyroot.core.Traceloop.init"),
+            mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+        ):
+            init(
+                app_name="fortifyroot-test",
+                api_key="fr-key",
+            )
+
+        assert safety_engine._udf_detectors_enabled is False
+
+    def test_init_allow_udf_detectors_via_env_var(self):
+        """Test that FORTIFYROOT_ALLOW_UDF_DETECTORS env var enables UDF loading."""
+        from fortifyroot import init
+        from fortifyroot._internal.safety import engine as safety_engine
+
+        with mock.patch.dict(
+            os.environ,
+            {"FORTIFYROOT_ALLOW_UDF_DETECTORS": "true"},
+            clear=False,
+        ):
+            with (
+                mock.patch("fortifyroot.core.Traceloop.get_default_span_processor", return_value=mock.Mock()),
+                mock.patch("fortifyroot.core.Traceloop.init"),
+                mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+            ):
+                init(
+                    app_name="fortifyroot-test",
+                    api_key="fr-key",
+                )
+
+        assert safety_engine._udf_detectors_enabled is True
+
+
 class TestSetAssociationProperties:
     """Tests for set_association_properties (line 723 coverage)."""
 

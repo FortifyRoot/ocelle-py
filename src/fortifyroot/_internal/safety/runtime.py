@@ -36,6 +36,7 @@ _CONFIG_FETCH_FAILURE_COUNTER = _METER.create_counter(
     description="Number of FortifyRoot safety config fetch failures.",
 )
 
+MAX_CONFIG_RESPONSE_BYTES = 1_048_576  # 1 MB
 DEFAULT_CONFIG_POLL_INTERVAL_SECONDS = 60
 DEFAULT_STREAM_HOLDBACK_CHARS = 128
 SDK_VERSION_HEADER = "X-FortifyRoot-SDK-Version"
@@ -74,7 +75,7 @@ class SafetySnapshotStore:
 
 class SafetyConfigClient:
     def __init__(self, base_url: str, api_key: str, config_profile_id: str) -> None:
-        self._base_url = base_url.rstrip("/")
+        self._base_url = _normalize_api_endpoint(base_url)
         self._api_key = api_key
         self._config_profile_id = config_profile_id
 
@@ -99,7 +100,14 @@ class SafetyConfigClient:
 
         try:
             with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-                payload = json.loads(response.read().decode("utf-8"))
+                body = response.read(MAX_CONFIG_RESPONSE_BYTES)
+                if response.read(1):
+                    raise SafetyConfigFetchError(
+                        f"Safety config response exceeded {MAX_CONFIG_RESPONSE_BYTES} bytes"
+                    )
+                payload = json.loads(body.decode("utf-8"))
+        except SafetyConfigFetchError:
+            raise
         except urllib.error.HTTPError as exc:
             _CONFIG_FETCH_COUNTER.add(1, attributes={**fetch_attributes, "result": "failure"})
             _CONFIG_FETCH_FAILURE_COUNTER.add(
@@ -305,7 +313,7 @@ class SafetyRuntime:
         stream_holdback_chars: int,
     ) -> bool:
         return (
-            self._client._base_url == api_endpoint.rstrip("/")
+            self._client._base_url == _normalize_api_endpoint(api_endpoint)
             and self._client._api_key == api_key
             and self._client._config_profile_id == config_profile_id
             and self._poll_interval_seconds == poll_interval_seconds
@@ -356,7 +364,7 @@ def configure_global_safety_runtime(
 ) -> None:
     global _GLOBAL_SAFETY_RUNTIME
     with _GLOBAL_RUNTIME_LOCK:
-        normalized_endpoint = api_endpoint.rstrip("/")
+        normalized_endpoint = _normalize_api_endpoint(api_endpoint)
         if _GLOBAL_SAFETY_RUNTIME is not None:
             if enabled and _GLOBAL_SAFETY_RUNTIME.same_configuration(
                 api_endpoint=normalized_endpoint,
