@@ -858,3 +858,289 @@ def test_engine_records_rule_evaluation_mask_and_udf_error_metrics():
         attributes={"fortifyroot.safety.masked": "true"},
     )
     udf_errors_counter.assert_called_once()
+
+
+# ---- Additional coverage tests ----
+
+
+class MixedReturnDetector(TextSafetyDetector):
+    """Returns a mix of valid TextSafetyMatch items and invalid non-match objects."""
+
+    def detect(self, text: str):
+        return [
+            "not-a-match",
+            42,
+            None,
+            TextSafetyMatch(name="real", start=0, end=min(4, len(text))),
+        ]
+
+
+# A plain object that is NOT a TextSafetyDetector
+NotADetector = "just a string"
+
+
+def test_compile_snapshot_skips_disabled_rules():
+    """Cover line 106: disabled rule causes 'continue' in compile_snapshot loop."""
+    from fortifyroot._internal.safety.models import (
+        ConfigProfile,
+        RegexMatcher,
+        SafetyConfig,
+        SafetyRule,
+    )
+
+    profile = ConfigProfile(
+        config_profile_id="cfg-disabled-rule",
+        version=1,
+        etag="etag-disabled-rule",
+        safety=SafetyConfig(
+            enabled=True,
+            default_action="MASK",
+            rules=(
+                SafetyRule(
+                    name="disabled_rule",
+                    category="PII",
+                    severity="HIGH",
+                    action="MASK",
+                    enabled=False,
+                    matcher=RegexMatcher(pattern="secret"),
+                ),
+                SafetyRule(
+                    name="enabled_rule",
+                    category="SECRET",
+                    severity="LOW",
+                    action="MASK",
+                    enabled=True,
+                    matcher=RegexMatcher(pattern="token"),
+                ),
+            ),
+        ),
+    )
+
+    snapshot = compile_snapshot(profile)
+
+    assert len(snapshot.rules) == 1
+    assert snapshot.rules[0].name == "enabled_rule"
+
+
+def test_compile_rule_skips_unsupported_action():
+    """Cover lines 126-127: rule with unsupported action returns None."""
+    from fortifyroot._internal.safety.engine import _compile_rule
+    from fortifyroot._internal.safety.models import RegexMatcher, SafetyRule
+
+    rule = SafetyRule(
+        name="block_rule",
+        category="PII",
+        severity="HIGH",
+        action="BLOCK",
+        enabled=True,
+        matcher=RegexMatcher(pattern="secret"),
+    )
+
+    result = _compile_rule(rule, default_action="BLOCK")
+
+    assert result is None
+
+
+def test_compile_rule_returns_none_for_failed_udf_load():
+    """Cover lines 155-156: UDF detector load fails -> _compile_rule returns None."""
+    from fortifyroot._internal.safety.engine import _compile_rule
+    from fortifyroot._internal.safety.models import SafetyRule, UdfMatcher
+
+    rule = SafetyRule(
+        name="bad_udf",
+        category="PII",
+        severity="HIGH",
+        action="MASK",
+        enabled=True,
+        matcher=UdfMatcher(
+            entry_point="nonexistent.module:Detector",
+            languages=("PYTHON",),
+        ),
+    )
+
+    result = _compile_rule(rule, default_action="MASK")
+
+    assert result is None
+
+
+def test_compile_rule_returns_none_for_unknown_matcher_type():
+    """Cover lines 157-158: unknown matcher type falls through all branches."""
+    from fortifyroot._internal.safety.engine import _compile_rule
+    from fortifyroot._internal.safety.models import SafetyRule
+
+    # Create a rule with a matcher that isn't RegexMatcher, StringListMatcher, or UdfMatcher
+    rule = SafetyRule(
+        name="weird_matcher",
+        category="PII",
+        severity="HIGH",
+        action="MASK",
+        enabled=True,
+        matcher="not-a-real-matcher",
+    )
+
+    result = _compile_rule(rule, default_action="MASK")
+
+    assert result is None
+
+
+def test_load_detector_handles_import_failure():
+    """Cover lines 180-182: importlib.import_module raises an exception."""
+    result = _load_detector("this.module.does.not.exist:SomeDetector")
+
+    assert result is None
+
+
+def test_load_detector_rejects_non_detector_symbol():
+    """Cover lines 199-200: symbol exists but is not a TextSafetyDetector type."""
+    result = _load_detector("tests.test_safety_engine:NotADetector")
+
+    assert result is None
+
+
+def test_evaluate_rule_skips_zero_length_regex_matches():
+    """Cover line 211: zero-length regex match (end <= start) is skipped."""
+    # A regex like (?=a) matches zero-length positions before 'a'
+    import re
+
+    rule = CompiledSafetyRule(
+        name="zero_len",
+        category="PII",
+        severity="HIGH",
+        action="MASK",
+        regex=re.compile(r"(?=a)"),
+        list_values=(),
+        list_ignore_case=False,
+        udf_detector=None,
+    )
+
+    snapshot = CompiledSafetySnapshot(
+        config_profile_id="cfg-zero-len",
+        version=1,
+        etag="etag-zero-len",
+        enabled=True,
+        rules=(rule,),
+    )
+
+    # The regex matches zero-length at every 'a', but all matches have end==start
+    result = snapshot.evaluate_text("aaa")
+
+    assert result is None
+
+
+def test_evaluate_rule_skips_non_text_safety_match_from_udf():
+    """Cover line 240: UDF returns non-TextSafetyMatch items which are skipped."""
+    rule = CompiledSafetyRule(
+        name="mixed_udf",
+        category="PII",
+        severity="HIGH",
+        action="MASK",
+        regex=None,
+        list_values=(),
+        list_ignore_case=False,
+        udf_detector=MixedReturnDetector(),
+    )
+
+    snapshot = CompiledSafetySnapshot(
+        config_profile_id="cfg-mixed-udf",
+        version=1,
+        etag="etag-mixed-udf",
+        enabled=True,
+        rules=(rule,),
+    )
+
+    result = snapshot.evaluate_text("abcdefgh")
+
+    assert result is not None
+    # Only the valid TextSafetyMatch ("real") should produce a finding
+    assert len(result.findings) == 1
+    assert result.findings[0].rule_name == "mixed_udf.real"
+
+
+def test_apply_masks_deduplicates_overlapping_segments():
+    """Cover the overlap filtering branch in _apply_masks (lines 293-294, 299)."""
+    from fortifyroot._internal.safety.engine import _apply_masks
+    from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (
+        SafetyFinding,
+    )
+
+    # Two overlapping MASK findings: wide [0,10) and narrow [2,5).
+    # After sorting by (start, -length), the wider one is selected first
+    # and the narrower one is skipped because its start < last_end.
+    findings = [
+        SafetyFinding(
+            category="PII",
+            severity="HIGH",
+            action="MASK",
+            rule_name="wide_rule",
+            start=0,
+            end=10,
+        ),
+        SafetyFinding(
+            category="PII",
+            severity="HIGH",
+            action="MASK",
+            rule_name="narrow_rule",
+            start=2,
+            end=5,
+        ),
+    ]
+
+    result = _apply_masks("0123456789abcdef", findings)
+
+    # The wider segment [0,10) should win, the narrower [2,5) is skipped
+    assert "[PII.wide_rule]" in result
+    assert "[PII.narrow_rule]" not in result
+    assert result.endswith("abcdef")
+
+
+def test_evaluate_text_returns_none_for_empty_text():
+    """Cover the empty text branch in evaluate_text (line 72)."""
+    rule = CompiledSafetyRule(
+        name="email",
+        category="PII",
+        severity="HIGH",
+        action="MASK",
+        regex=None,
+        list_values=("secret",),
+        list_ignore_case=False,
+        udf_detector=None,
+    )
+
+    snapshot = CompiledSafetySnapshot(
+        config_profile_id="cfg-empty-text",
+        version=1,
+        etag="etag-empty-text",
+        enabled=True,
+        rules=(rule,),
+    )
+
+    assert snapshot.evaluate_text("") is None
+
+
+def test_udf_findings_counter_path_with_valid_matches():
+    """Cover line 251: UDF evaluation produces valid findings and hits the counter."""
+    rule = CompiledSafetyRule(
+        name="sensitive",
+        category="SECRET",
+        severity="HIGH",
+        action="ALLOW",
+        regex=None,
+        list_values=(),
+        list_ignore_case=False,
+        udf_detector=SensitiveDetector(),
+    )
+
+    snapshot = CompiledSafetySnapshot(
+        config_profile_id="cfg-udf-findings",
+        version=1,
+        etag="etag-udf-findings",
+        enabled=True,
+        rules=(rule,),
+    )
+
+    result = snapshot.evaluate_text("this has secret data")
+
+    assert result is not None
+    assert len(result.findings) == 1
+    assert result.findings[0].rule_name == "sensitive.token"
+    assert result.overall_action == "ALLOW"

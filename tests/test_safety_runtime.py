@@ -17,8 +17,12 @@ from fortifyroot._internal.safety.runtime import (
     SafetyConfigFetchError,
     SafetyConfigClient,
     SafetyFetchResult,
+    SafetyHandler,
     SafetyRuntime,
+    SafetySnapshotStore,
+    SafetyStreamFactory,
     _is_fortifyroot_api_endpoint,
+    _normalize_api_endpoint,
     configure_global_safety_runtime,
     shutdown_global_safety_runtime,
 )
@@ -839,3 +843,254 @@ def test_safety_config_client_fetch_records_failure_metrics():
             "error_type": "RuntimeError",
         },
     )
+
+
+# --- Tests for previously uncovered lines ---
+
+
+def test_safety_config_client_fetch_raises_when_config_profile_is_none():
+    """Line 134: config_profile is None but not_modified is False."""
+    payload = {"configProfile": None}
+    client = SafetyConfigClient(
+        "https://api.fortifyroot.com",
+        "fr-key",
+        "cfg-1",
+    )
+    with mock.patch(
+        "fortifyroot._internal.safety.runtime.urllib.request.urlopen",
+        return_value=_FakeHTTPResponse(json.dumps(payload).encode("utf-8")),
+    ):
+        with pytest.raises(
+            SafetyConfigFetchError,
+            match="Safety config payload did not include config_profile",
+        ):
+            client.fetch("")
+
+
+def test_safety_config_client_fetch_reraises_safety_config_fetch_error():
+    """Line 154: except SafetyConfigFetchError: raise (re-raise path)."""
+    # Trigger SafetyConfigFetchError from parse_sdk_config_response so it
+    # hits the inner try/except and re-raises without wrapping.
+    payload = {"configProfile": None}
+    client = SafetyConfigClient(
+        "https://api.fortifyroot.com",
+        "fr-key",
+        "cfg-1",
+    )
+    # parse_sdk_config_response itself won't raise SafetyConfigFetchError,
+    # but the code on line 134 does. We already test that above. To confirm
+    # the re-raise path (line 154) specifically, we mock parse_sdk_config_response
+    # to raise SafetyConfigFetchError directly and verify it is NOT wrapped.
+    with (
+        mock.patch(
+            "fortifyroot._internal.safety.runtime.urllib.request.urlopen",
+            return_value=_FakeHTTPResponse(json.dumps(payload).encode("utf-8")),
+        ),
+        mock.patch(
+            "fortifyroot._internal.safety.runtime.parse_sdk_config_response",
+            side_effect=SafetyConfigFetchError("custom error from parse"),
+        ),
+    ):
+        with pytest.raises(SafetyConfigFetchError, match="custom error from parse"):
+            client.fetch("")
+
+
+def test_safety_stream_factory_returns_none_when_snapshot_is_none():
+    """Line 193: SafetyStreamFactory returns None when no snapshot."""
+    store = SafetySnapshotStore()
+    factory = SafetyStreamFactory(store, stream_holdback_chars=128)
+    ctx = mock.Mock()
+    assert factory(ctx) is None
+
+
+def test_safety_stream_factory_returns_none_when_snapshot_disabled():
+    """Line 193: SafetyStreamFactory returns None when snapshot.enabled is False."""
+    store = SafetySnapshotStore()
+    snapshot = compile_snapshot(
+        ConfigProfile(
+            config_profile_id="cfg-1",
+            version=1,
+            etag="etag-1",
+            safety=SafetyConfig(
+                enabled=False,
+                default_action="MASK",
+                rules=(
+                    SafetyRule(
+                        name="email",
+                        category="PII",
+                        severity="HIGH",
+                        action="MASK",
+                        enabled=True,
+                        matcher=RegexMatcher(pattern=r".+"),
+                    ),
+                ),
+            ),
+        )
+    )
+    store.set(snapshot)
+    factory = SafetyStreamFactory(store, stream_holdback_chars=128)
+    ctx = mock.Mock()
+    assert factory(ctx) is None
+
+
+def test_safety_stream_factory_returns_none_when_snapshot_has_no_rules():
+    """Line 193: SafetyStreamFactory returns None when snapshot has no rules."""
+    store = SafetySnapshotStore()
+    snapshot = compile_snapshot(
+        ConfigProfile(
+            config_profile_id="cfg-1",
+            version=1,
+            etag="etag-1",
+            safety=SafetyConfig(enabled=True, default_action="MASK", rules=()),
+        )
+    )
+    store.set(snapshot)
+    factory = SafetyStreamFactory(store, stream_holdback_chars=128)
+    ctx = mock.Mock()
+    assert factory(ctx) is None
+
+
+def test_refresh_once_returns_early_on_not_modified():
+    """Line 271: _refresh_once returns early when result.not_modified is True."""
+    runtime = SafetyRuntime(
+        api_endpoint="https://api.fortifyroot.com",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    )
+    initial_snapshot = compile_snapshot(
+        ConfigProfile(
+            config_profile_id="cfg-1",
+            version=1,
+            etag="etag-1",
+            safety=SafetyConfig(enabled=True, default_action="MASK", rules=()),
+        )
+    )
+    runtime._snapshot_store.set(initial_snapshot)
+
+    with mock.patch.object(
+        runtime._client,
+        "fetch",
+        return_value=SafetyFetchResult(
+            snapshot=None,
+            not_modified=True,
+            has_rule_definitions=False,
+            has_enabled_rule_definitions=False,
+        ),
+    ):
+        runtime._refresh_once()
+
+    # Snapshot should be unchanged (not cleared)
+    assert runtime._snapshot_store.get() is initial_snapshot
+
+
+def test_refresh_once_returns_early_when_snapshot_is_none_and_not_not_modified():
+    """Line 273: _refresh_once returns early when result.snapshot is None and not not_modified."""
+    runtime = SafetyRuntime(
+        api_endpoint="https://api.fortifyroot.com",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    )
+    initial_snapshot = compile_snapshot(
+        ConfigProfile(
+            config_profile_id="cfg-1",
+            version=1,
+            etag="etag-1",
+            safety=SafetyConfig(enabled=True, default_action="MASK", rules=()),
+        )
+    )
+    runtime._snapshot_store.set(initial_snapshot)
+
+    with mock.patch.object(
+        runtime._client,
+        "fetch",
+        return_value=SafetyFetchResult(
+            snapshot=None,
+            not_modified=False,
+            has_rule_definitions=False,
+            has_enabled_rule_definitions=False,
+        ),
+    ):
+        runtime._refresh_once()
+
+    # Snapshot should be unchanged (not cleared)
+    assert runtime._snapshot_store.get() is initial_snapshot
+
+
+def test_maybe_warn_about_snapshot_returns_early_when_snapshot_is_none():
+    """Line 281: _maybe_warn_about_snapshot returns early when snapshot is None."""
+    runtime = SafetyRuntime(
+        api_endpoint="https://api.fortifyroot.com",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    )
+    result = SafetyFetchResult(
+        snapshot=None,
+        not_modified=False,
+        has_rule_definitions=False,
+        has_enabled_rule_definitions=False,
+    )
+    # Should not raise or log anything; just return
+    runtime._maybe_warn_about_snapshot(result)
+    assert not runtime._warned_no_rules
+    assert not runtime._warned_no_enabled_rules
+
+
+def test_same_configuration_returns_true_for_matching_config():
+    """Line 307: same_configuration returns True when all params match."""
+    runtime = SafetyRuntime(
+        api_endpoint="https://api.fortifyroot.com",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    )
+    assert runtime.same_configuration(
+        api_endpoint="https://api.fortifyroot.com",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    ) is True
+
+
+def test_same_configuration_returns_false_for_different_config():
+    """Line 307: same_configuration returns False when params differ."""
+    runtime = SafetyRuntime(
+        api_endpoint="https://api.fortifyroot.com",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    )
+    assert runtime.same_configuration(
+        api_endpoint="https://api.fortifyroot.com",
+        api_key="fr-key",
+        config_profile_id="cfg-2",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    ) is False
+
+
+def test_normalize_api_endpoint_returns_empty_for_empty_input():
+    """Line 323: _normalize_api_endpoint returns '' for empty string."""
+    assert _normalize_api_endpoint("") == ""
+    assert _normalize_api_endpoint("  ") == ""
+
+
+def test_normalize_api_endpoint_returns_stripped_raw_when_no_scheme():
+    """Line 326: _normalize_api_endpoint returns raw.rstrip('/') when no scheme/netloc."""
+    assert _normalize_api_endpoint("just-a-host/") == "just-a-host"
+    assert _normalize_api_endpoint("some-path/trailing/") == "some-path/trailing"
+
+
+def test_is_fortifyroot_api_endpoint_returns_false_when_host_is_none():
+    """Line 339: _is_fortifyroot_api_endpoint returns False when host is None."""
+    # A URL with no host (e.g. just a scheme) will have hostname=None
+    assert _is_fortifyroot_api_endpoint("https://") is False
+    assert _is_fortifyroot_api_endpoint("") is False

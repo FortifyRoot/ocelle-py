@@ -181,3 +181,128 @@ def test_stream_completion_records_force_finalization_metric():
         1,
         attributes={"fortifyroot.safety.pending_cap_chars": "4"},
     )
+
+
+def test_get_pending_text_returns_buffered_content():
+    """Cover line 89: get_pending_text() accessor."""
+    stream = CompletionSafetyStream(snapshot=_snapshot(), holdback_chars=128)
+
+    assert stream.get_pending_text() == ""
+    stream.process_chunk("hello ")
+    assert stream.get_pending_text() == "hello "
+    stream.process_chunk("world")
+    assert stream.get_pending_text() == "hello world"
+
+    stream.flush()
+    assert stream.get_pending_text() == ""
+
+
+def test_release_returns_none_when_boundary_is_zero():
+    """Cover line 99: _release returns None for release_boundary <= 0."""
+    stream = CompletionSafetyStream(snapshot=_snapshot(), holdback_chars=4)
+    stream._pending_text = "abc"
+
+    result = stream._release(0, [])
+    assert result is None
+
+    result = stream._release(-1, [])
+    assert result is None
+
+    # Pending text should be untouched since _release bailed out early
+    assert stream._pending_text == "abc"
+
+
+def test_release_returns_none_when_result_text_is_empty():
+    """Cover line 134: defensive guard in _release when masked_release
+    and finalized_absolute are both empty.
+
+    Line 134 is a defensive guard that is not reachable through normal
+    code paths (release_text is always non-empty when release_boundary > 0
+    and _pending_text is truthy). We use a string subclass to simulate
+    the edge case where slicing produces an empty string.
+    """
+    stream = CompletionSafetyStream(snapshot=_snapshot(), holdback_chars=4)
+
+    class EmptySliceStr(str):
+        """A string that is truthy but produces empty string when sliced."""
+
+        def __getitem__(self, key):
+            return ""
+
+    stream._pending_text = EmptySliceStr("notempty")
+    stream._pending_offset = 0
+    result = stream._release(1, [])
+    assert result is None
+
+
+def test_evaluate_text_returns_empty_for_disabled_snapshot():
+    """Cover line 144: _evaluate_text returns [] when snapshot is disabled."""
+    disabled_snapshot = compile_snapshot(
+        ConfigProfile(
+            config_profile_id="cfg-disabled",
+            version=1,
+            etag="etag-disabled",
+            safety=SafetyConfig(
+                enabled=False,
+                default_action="ALLOW",
+                rules=(),
+            ),
+        )
+    )
+    stream = CompletionSafetyStream(snapshot=disabled_snapshot, holdback_chars=4)
+
+    # _evaluate_text should return [] for disabled snapshot even with non-empty text
+    assert stream._evaluate_text("some text with abc@gmail.com") == []
+
+
+def test_evaluate_text_returns_empty_for_empty_text_with_enabled_snapshot():
+    """Cover line 144: _evaluate_text returns [] for empty text string."""
+    stream = CompletionSafetyStream(snapshot=_snapshot(), holdback_chars=4)
+    assert stream._evaluate_text("") == []
+
+
+def test_finalize_local_findings_skips_non_overlapping_finding_beyond_boundary():
+    """Cover branch 178->174: in _finalize_local_findings with force_finalize=True,
+    a finding whose start >= release_boundary is skipped (not truncated)."""
+    from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (
+        SafetyFinding,
+    )
+
+    stream = CompletionSafetyStream(snapshot=_snapshot(), holdback_chars=4)
+
+    # Finding that starts at or beyond the release boundary:
+    # start=5, end=10, release_boundary=5 => start is NOT < release_boundary
+    # so the overlap condition (start < boundary AND end > boundary) is False
+    # => finding is skipped, loop continues back to line 174
+    finding_beyond = SafetyFinding(
+        category="PII",
+        severity="HIGH",
+        action=SafetyDecision.MASK.value,
+        rule_name="email",
+        start=5,
+        end=10,
+    )
+
+    result = stream._finalize_local_findings(
+        [finding_beyond],
+        release_boundary=5,
+        force_finalize=True,
+    )
+    assert result == ()
+
+    # Also test with a finding entirely beyond the boundary
+    finding_far_beyond = SafetyFinding(
+        category="PII",
+        severity="HIGH",
+        action=SafetyDecision.MASK.value,
+        rule_name="email",
+        start=8,
+        end=15,
+    )
+
+    result = stream._finalize_local_findings(
+        [finding_far_beyond],
+        release_boundary=5,
+        force_finalize=True,
+    )
+    assert result == ()

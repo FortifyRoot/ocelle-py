@@ -5,7 +5,12 @@ from unittest import mock
 
 import pytest
 
-from fortifyroot.core import _resolve_stream_holdback_chars
+from fortifyroot.core import (
+    _get_authorization_header,
+    _normalize_http_otlp_endpoint,
+    _resolve_signal_headers,
+    _resolve_stream_holdback_chars,
+)
 
 
 class TestInit:
@@ -129,10 +134,15 @@ class TestTraceContentParameter:
 
         assert trace_content_param.default is True
 
-    def test_stream_holdback_chars_has_minimum_of_one(self):
-        """Test that streaming holdback never resolves to zero or lower."""
-        assert _resolve_stream_holdback_chars(0) == 1
-        assert _resolve_stream_holdback_chars(-5) == 1
+    def test_stream_holdback_chars_has_minimum_of_sixteen(self):
+        """Test that streaming holdback enforces a safety-meaningful minimum of 16."""
+        assert _resolve_stream_holdback_chars(0) == 16
+        assert _resolve_stream_holdback_chars(-5) == 16
+        assert _resolve_stream_holdback_chars(1) == 16
+        assert _resolve_stream_holdback_chars(15) == 16
+        assert _resolve_stream_holdback_chars(16) == 16
+        assert _resolve_stream_holdback_chars(17) == 17
+        assert _resolve_stream_holdback_chars(128) == 128
 
 
 class TestSafetyRuntimeBootstrap:
@@ -857,4 +867,358 @@ class TestFluentConfig:
             config_profile_id="cfg-123",
             config_poll_interval_seconds=15,
             stream_holdback_chars=256,
+        )
+
+
+class TestGetAuthorizationHeader:
+    """Tests for _get_authorization_header helper."""
+
+    def test_returns_none_when_no_authorization_header(self):
+        """Test that _get_authorization_header returns None when no auth header exists."""
+        result = _get_authorization_header({"x-custom": "value", "content-type": "json"})
+        assert result is None
+
+    def test_returns_none_for_empty_headers(self):
+        """Test that _get_authorization_header returns None for empty dict."""
+        result = _get_authorization_header({})
+        assert result is None
+
+    def test_returns_none_when_auth_header_is_blank(self):
+        """Test that blank Authorization values are treated as absent."""
+        result = _get_authorization_header({"Authorization": "  "})
+        assert result is None
+
+
+class TestResolveSignalHeaders:
+    """Tests for _resolve_signal_headers edge cases."""
+
+    def test_signal_headers_with_own_auth_skips_inheritance(self):
+        """Test that signal headers with explicit auth do not inherit from fallback."""
+        result = _resolve_signal_headers(
+            headers={"Authorization": "Bearer signal-key", "x-signal": "1"},
+            fallback_headers={"Authorization": "Bearer fallback-key", "x-trace": "2"},
+            api_key=None,
+        )
+        assert result["Authorization"] == "Bearer signal-key"
+        assert result["x-signal"] == "1"
+        # Fallback headers should NOT be merged in
+        assert "x-trace" not in result
+
+    def test_signal_headers_without_auth_and_fallback_without_auth(self):
+        """Test signal headers when neither has auth and no api_key."""
+        result = _resolve_signal_headers(
+            headers={"x-signal": "1"},
+            fallback_headers={"x-trace": "2"},
+            api_key=None,
+        )
+        assert result == {"x-signal": "1"}
+        assert "Authorization" not in result
+
+    def test_signal_headers_without_auth_inherits_from_fallback_and_applies_api_key(self):
+        """Test that api_key fills in when neither signal nor fallback has auth."""
+        result = _resolve_signal_headers(
+            headers={"x-signal": "1"},
+            fallback_headers={"x-trace": "2"},
+            api_key="my-key",
+        )
+        assert result == {"x-signal": "1", "Authorization": "Bearer my-key"}
+
+
+class TestNormalizeHttpOtlpEndpoint:
+    """Tests for _normalize_http_otlp_endpoint edge cases."""
+
+    def test_does_not_double_append_suffix(self):
+        """Test that suffix is not appended when endpoint already has it."""
+        result = _normalize_http_otlp_endpoint(
+            "https://api.example.com/v1/metrics", "/v1/metrics"
+        )
+        assert result == "https://api.example.com/v1/metrics"
+
+    def test_strips_trailing_slash_before_appending(self):
+        """Test that trailing slashes are stripped before suffix check."""
+        result = _normalize_http_otlp_endpoint(
+            "https://api.example.com/", "/v1/logs"
+        )
+        assert result == "https://api.example.com/v1/logs"
+
+    def test_appends_suffix_when_missing(self):
+        """Test that suffix is appended when not already present."""
+        result = _normalize_http_otlp_endpoint(
+            "https://api.example.com", "/v1/metrics"
+        )
+        assert result == "https://api.example.com/v1/metrics"
+
+
+class TestMetricsExporterSchemes:
+    """Tests for _init_default_metrics_exporter scheme branches."""
+
+    def test_grpc_scheme_creates_insecure_grpc_metrics_exporter(self):
+        """Test that grpc:// scheme creates an insecure gRPC metrics exporter."""
+        from fortifyroot import init
+
+        default_processor = mock.Mock()
+        created_metrics_exporter = mock.Mock()
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FORTIFYROOT_METRICS_ENABLED": "true",
+                "FORTIFYROOT_METRICS_ENDPOINT": "grpc://metrics.example.com:4317",
+            },
+            clear=False,
+        ):
+            with (
+                mock.patch(
+                    "fortifyroot.core.Traceloop.get_default_span_processor",
+                    return_value=default_processor,
+                ),
+                mock.patch("fortifyroot.core.Traceloop.init"),
+                mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+                mock.patch(
+                    "opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter",
+                    return_value=created_metrics_exporter,
+                ) as metric_exporter_cls,
+            ):
+                init(
+                    app_name="fortifyroot-test",
+                    api_key="fr-key",
+                )
+
+        metric_exporter_cls.assert_called_once_with(
+            endpoint="metrics.example.com:4317",
+            headers={"Authorization": "Bearer fr-key"},
+            insecure=True,
+        )
+
+    def test_unknown_scheme_creates_insecure_grpc_metrics_exporter(self):
+        """Test that an unknown scheme falls back to insecure gRPC metrics exporter."""
+        from fortifyroot import init
+
+        default_processor = mock.Mock()
+        created_metrics_exporter = mock.Mock()
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FORTIFYROOT_METRICS_ENABLED": "true",
+                "FORTIFYROOT_METRICS_ENDPOINT": "custom://metrics.example.com:4317",
+            },
+            clear=False,
+        ):
+            with (
+                mock.patch(
+                    "fortifyroot.core.Traceloop.get_default_span_processor",
+                    return_value=default_processor,
+                ),
+                mock.patch("fortifyroot.core.Traceloop.init"),
+                mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+                mock.patch(
+                    "opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter",
+                    return_value=created_metrics_exporter,
+                ) as metric_exporter_cls,
+            ):
+                init(
+                    app_name="fortifyroot-test",
+                    api_key="fr-key",
+                )
+
+        metric_exporter_cls.assert_called_once_with(
+            endpoint="custom://metrics.example.com:4317",
+            headers={"Authorization": "Bearer fr-key"},
+            insecure=True,
+        )
+
+
+class TestLoggingExporterSchemes:
+    """Tests for _init_default_logging_exporter scheme branches."""
+
+    def test_grpcs_scheme_creates_secure_grpc_logging_exporter(self):
+        """Test that grpcs:// scheme creates a secure gRPC logging exporter."""
+        from fortifyroot import init
+
+        default_processor = mock.Mock()
+        created_logging_exporter = mock.Mock()
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FORTIFYROOT_LOGGING_ENABLED": "true",
+                "FORTIFYROOT_LOGGING_ENDPOINT": "grpcs://logs.example.com:4317",
+            },
+            clear=False,
+        ):
+            with (
+                mock.patch(
+                    "fortifyroot.core.Traceloop.get_default_span_processor",
+                    return_value=default_processor,
+                ),
+                mock.patch("fortifyroot.core.Traceloop.init"),
+                mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+                mock.patch(
+                    "opentelemetry.exporter.otlp.proto.grpc._log_exporter.OTLPLogExporter",
+                    return_value=created_logging_exporter,
+                ) as logging_exporter_cls,
+                mock.patch(
+                    "fortifyroot.core._init_default_metrics_exporter",
+                    return_value=mock.Mock(),
+                ),
+            ):
+                init(
+                    app_name="fortifyroot-test",
+                    api_key="fr-key",
+                )
+
+        logging_exporter_cls.assert_called_once_with(
+            endpoint="logs.example.com:4317",
+            headers={"Authorization": "Bearer fr-key"},
+            insecure=False,
+        )
+
+    def test_unknown_scheme_creates_insecure_grpc_logging_exporter(self):
+        """Test that an unknown scheme falls back to insecure gRPC logging exporter."""
+        from fortifyroot import init
+
+        default_processor = mock.Mock()
+        created_logging_exporter = mock.Mock()
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FORTIFYROOT_LOGGING_ENABLED": "true",
+                "FORTIFYROOT_LOGGING_ENDPOINT": "custom://logs.example.com:4317",
+            },
+            clear=False,
+        ):
+            with (
+                mock.patch(
+                    "fortifyroot.core.Traceloop.get_default_span_processor",
+                    return_value=default_processor,
+                ),
+                mock.patch("fortifyroot.core.Traceloop.init"),
+                mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+                mock.patch(
+                    "opentelemetry.exporter.otlp.proto.grpc._log_exporter.OTLPLogExporter",
+                    return_value=created_logging_exporter,
+                ) as logging_exporter_cls,
+                mock.patch(
+                    "fortifyroot.core._init_default_metrics_exporter",
+                    return_value=mock.Mock(),
+                ),
+            ):
+                init(
+                    app_name="fortifyroot-test",
+                    api_key="fr-key",
+                )
+
+        logging_exporter_cls.assert_called_once_with(
+            endpoint="custom://logs.example.com:4317",
+            headers={"Authorization": "Bearer fr-key"},
+            insecure=True,
+        )
+
+
+class TestValidateDefaultExportAuth:
+    """Tests for _validate_default_export_auth edge cases."""
+
+    def test_requires_auth_for_managed_fortifyroot_logging_endpoint(self):
+        """Test that FortifyRoot logging export requires auth (line 343 coverage)."""
+        from fortifyroot import init
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FORTIFYROOT_METRICS_ENABLED": "false",
+                "FORTIFYROOT_LOGGING_ENABLED": "true",
+                "FORTIFYROOT_LOGGING_ENDPOINT": "https://api.fortifyroot.com",
+            },
+            clear=False,
+        ):
+            with (
+                mock.patch("fortifyroot.core.Traceloop.get_default_span_processor"),
+                mock.patch("fortifyroot.core.Traceloop.init"),
+                mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+            ):
+                with pytest.raises(
+                    ValueError,
+                    match="default FortifyRoot.*logs export",
+                ):
+                    init(
+                        app_name="fortifyroot-test",
+                        api_endpoint="https://collector.example.com",
+                    )
+
+    def test_requires_auth_for_all_managed_signals(self):
+        """Test that all three signals appear when all go to FortifyRoot without auth."""
+        from fortifyroot import init
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FORTIFYROOT_METRICS_ENABLED": "true",
+                "FORTIFYROOT_LOGGING_ENABLED": "true",
+            },
+            clear=False,
+        ):
+            os.environ.pop("FORTIFYROOT_METRICS_ENDPOINT", None)
+            os.environ.pop("FORTIFYROOT_LOGGING_ENDPOINT", None)
+            with (
+                mock.patch("fortifyroot.core.Traceloop.get_default_span_processor"),
+                mock.patch("fortifyroot.core.Traceloop.init"),
+                mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+            ):
+                with pytest.raises(
+                    ValueError,
+                    match="traces, metrics, logs export",
+                ):
+                    init(app_name="fortifyroot-test")
+
+
+class TestInitExporterBranch:
+    """Tests for init() when a custom exporter is provided (line 600 branch)."""
+
+    def test_custom_exporter_skips_default_processor_creation(self):
+        """Test that providing exporter skips default processor creation."""
+        from fortifyroot import init
+
+        custom_exporter = mock.Mock()
+
+        with mock.patch.dict(
+            os.environ,
+            {"FORTIFYROOT_METRICS_ENABLED": "false"},
+            clear=False,
+        ):
+            with (
+                mock.patch(
+                    "fortifyroot.core.Traceloop.get_default_span_processor",
+                ) as default_processor_mock,
+                mock.patch("fortifyroot.core.Traceloop.init") as traceloop_init_mock,
+                mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+            ):
+                init(
+                    app_name="fortifyroot-test",
+                    api_key="fr-key",
+                    exporter=custom_exporter,
+                )
+
+        # Default processor should NOT be created when custom exporter is provided
+        default_processor_mock.assert_not_called()
+        _, kwargs = traceloop_init_mock.call_args
+        assert kwargs["exporter"] is custom_exporter
+        assert kwargs["processor"] is None
+
+
+class TestSetAssociationProperties:
+    """Tests for set_association_properties (line 723 coverage)."""
+
+    def test_delegates_to_traceloop(self):
+        """Test that set_association_properties delegates to Traceloop."""
+        from fortifyroot import set_association_properties
+
+        with mock.patch(
+            "fortifyroot.core.Traceloop.set_association_properties"
+        ) as traceloop_mock:
+            set_association_properties({"user_id": "u123", "session_id": "s456"})
+
+        traceloop_mock.assert_called_once_with(
+            {"user_id": "u123", "session_id": "s456"}
         )
