@@ -1,7 +1,7 @@
 {
-  "vendored_at": "2026-03-22T09:37:56.333008",
+  "vendored_at": "2026-03-22T13:37:27.502569",
   "openllmetry_version": "0.52.6",
-  "git_commit": "4a12d9ec17b0",
+  "git_commit": "6b16993534d1",
   "git_branch": "feature/phase-1h-streaming-safety",
   "git_tag": "unknown",
   "packages": {
