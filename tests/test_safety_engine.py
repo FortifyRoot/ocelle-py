@@ -1286,14 +1286,14 @@ class TestRegexTimeoutFallback:
         assert findings == []
 
     def test_using_re2_flag_and_re_engine(self):
-        """Verify _USING_RE2 and _re_engine are set correctly (no re2 installed)."""
-        import re as stdlib_re
+        """Verify _USING_RE2 and _re_engine are set correctly (google-re2 required)."""
+        import re2
 
         from fortifyroot._internal.safety.engine import _USING_RE2, _re_engine
 
-        # In test environments without google-re2, we expect stdlib fallback.
-        assert _USING_RE2 is False
-        assert _re_engine is stdlib_re
+        # google-re2 is a required dependency; re2 must be active.
+        assert _USING_RE2 is True
+        assert _re_engine is re2
 
     def test_regex_eval_timeout_constant_exists(self):
         """REGEX_EVAL_TIMEOUT_SECONDS should be 5."""
