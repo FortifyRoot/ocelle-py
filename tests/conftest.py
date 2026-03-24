@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import logging
 from collections.abc import Iterator
 
 import pytest
@@ -23,9 +22,6 @@ from fortifyroot._vendor.opentelemetry.instrumentation.openai.shared.config impo
 from fortifyroot._internal.safety.engine import set_udf_detectors_enabled
 from fortifyroot._internal.safety.runtime import shutdown_global_safety_runtime
 from fortifyroot._vendor.traceloop.sdk.logging.logging import LoggerWrapper
-from fortifyroot._vendor.traceloop.sdk.logging.logging import (
-    is_fortifyroot_logging_handler,
-)
 from fortifyroot._vendor.traceloop.sdk.metrics.metrics import MetricsWrapper
 from fortifyroot._vendor.traceloop.sdk.tracing.tracing import TracerWrapper
 
@@ -97,11 +93,6 @@ def _reset_singletons() -> None:
     LoggerWrapper.resource_attributes = {}
     LoggerWrapper.endpoint = None
     LoggerWrapper.headers = {}
-
-    root_logger = logging.getLogger()
-    for handler in list(root_logger.handlers):
-        if is_fortifyroot_logging_handler(handler):
-            root_logger.removeHandler(handler)
 
     OpenAIConfig.enrich_assistant = False
     OpenAIConfig.use_legacy_attributes = True
