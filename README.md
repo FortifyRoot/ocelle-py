@@ -49,6 +49,14 @@ You can configure FortifyRoot using environment variables:
 | `FORTIFYROOT_TRACE_CONTENT` | Capture prompt/response content | `true` |
 | `FORTIFYROOT_TRACING_ENABLED` | Enable/disable tracing | `true` |
 | `FORTIFYROOT_METRICS_ENABLED` | Enable/disable metrics | `true` |
+| `FORTIFYROOT_LOGGING_ENABLED` | Enable OTLP log export and synthetic span-end logs | `false` |
+
+When `FORTIFYROOT_LOGGING_ENABLED=true`:
+- stdlib Python `logging` records keep using the app's existing handlers and formatting
+- stdlib Python `logging` records emitted inside active spans are exported with trace/span correlation
+- stdlib Python `logging` records emitted outside active spans can still be exported, but they remain uncorrelated
+- FortifyRoot also emits one synthetic correlated log for each completed instrumented span
+- `print(...)`, stdout, and stderr capture are not included in MVP; use Python `logging` for application logs
 
 ### Programmatic Configuration
 
