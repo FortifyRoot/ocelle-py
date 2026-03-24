@@ -28,10 +28,6 @@ from fortifyroot._internal.env_mapping import (
     FORTIFYROOT_CONFIG_PROFILE_ID,
     FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS,
 )
-from fortifyroot._internal.synthetic_logs import (
-    compose_span_postprocess_callbacks,
-    emit_synthetic_span_log,
-)
 from fortifyroot._internal.safety.engine import set_udf_detectors_enabled
 from fortifyroot._internal.safety.runtime import (
     DEFAULT_CONFIG_POLL_INTERVAL_SECONDS,
@@ -639,13 +635,6 @@ def init(
             logging_endpoint,
             resolved_logging_headers,
         )
-    logs_pipeline_enabled = logging_enabled and (logging_exporter is not None or exporter is None)
-    internal_span_callback = emit_synthetic_span_log if logs_pipeline_enabled else None
-    combined_span_callback = compose_span_postprocess_callbacks(
-        internal_span_callback,
-        span_postprocess_callback,
-    )
-
     class _TraceloopOptionalInitKwargs(TypedDict, total=False):
         metrics_exporter: MetricExporter
         metrics_headers: Dict[str, str]
@@ -681,7 +670,7 @@ def init(
         resource_attributes=resource_attributes,
         instruments=tl_instruments,
         block_instruments=tl_block_instruments,
-        span_postprocess_callback=combined_span_callback,
+        span_postprocess_callback=span_postprocess_callback,
         # Disable Traceloop-specific sync features
         traceloop_sync_enabled=False,
         # Instead of following direct assignments, using **tl_kwargs to "fix" Pylance errors!
