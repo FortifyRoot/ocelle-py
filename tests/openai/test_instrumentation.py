@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import logging
 from unittest.mock import MagicMock, patch
 
 import openai
@@ -429,3 +430,72 @@ def test_logging_toggle_enables_logging_wrapper():
         instruments={Instruments.OPENAI},
     )
     assert hasattr(LoggerWrapper, "instance")
+
+
+def test_span_postprocess_callback_runs_once_with_processor_list(init_openai_sdk):
+    callback = MagicMock()
+
+    with patch(
+        "openai.resources.chat.completions.Completions.create",
+        return_value=_fake_chat_response(),
+    ):
+        init_openai_sdk(span_postprocess_callback=callback)
+        _run_chat_create()
+
+    callback.assert_called_once()
+
+
+def test_span_postprocess_callback_runs_once_with_single_processor(span_exporter):
+    callback = MagicMock()
+
+    os.environ["FORTIFYROOT_METRICS_ENABLED"] = "false"
+    os.environ["FORTIFYROOT_LOGGING_ENABLED"] = "false"
+    apply_env_var_mapping()
+
+    with patch(
+        "openai.resources.chat.completions.Completions.create",
+        return_value=_fake_chat_response(),
+    ):
+        init(
+            app_name="fortifyroot-test",
+            enabled=True,
+            disable_batch=True,
+            processors=SimpleSpanProcessor(span_exporter),
+            instruments={Instruments.OPENAI},
+            span_postprocess_callback=callback,
+        )
+        _run_chat_create()
+
+    callback.assert_called_once()
+
+
+def test_logging_enabled_emits_synthetic_log_for_finished_span(
+    init_openai_sdk, span_exporter
+):
+    os.environ["FORTIFYROOT_LOGGING_ENABLED"] = "true"
+
+    with (
+        patch(
+            "openai.resources.chat.completions.Completions.create",
+            return_value=_fake_chat_response(),
+        ),
+        patch(
+            "fortifyroot._internal.synthetic_logs._SYNTHETIC_LOGGER.log"
+        ) as synthetic_log_mock,
+    ):
+        init_openai_sdk(logging_exporter=MagicMock())
+        _run_chat_create()
+
+    span = _single_span(span_exporter)
+
+    synthetic_log_mock.assert_called_once()
+    assert synthetic_log_mock.call_args.args[0] == logging.INFO
+    assert synthetic_log_mock.call_args.args[1] == "FortifyRoot synthetic span log"
+
+    payload = synthetic_log_mock.call_args.kwargs["extra"]
+    assert payload["fortifyroot.synthetic_log"] is True
+    assert payload["fortifyroot.synthetic_log.version"] == 1
+    assert payload["trace_id"] == f"{span.context.trace_id:032x}"
+    assert payload["span_id"] == f"{span.context.span_id:016x}"
+    assert payload["span_name"] == span.name
+    assert payload["service_name"] == "fortifyroot-test"
