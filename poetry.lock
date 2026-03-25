@@ -391,7 +391,7 @@ description = "python client to interact with Aleph Alpha api endpoints"
 optional = false
 python-versions = "*"
 groups = ["main", "test"]
-markers = "python_version < \"3.14\" and python_full_version >= \"3.13.0\""
+markers = "python_version == \"3.13\""
 files = [
     {file = "aleph_alpha_client-7.4.0-py3-none-any.whl", hash = "sha256:e912cee297d1871c0f4bc8e999854e0110b511c5ca8742592cb28f1a12348594"},
     {file = "aleph_alpha_client-7.4.0.tar.gz", hash = "sha256:26fbcf09bd4fa0a179ec479f685d5d36feb62c1c0bbe658b6f3f6a06678c2e56"},
@@ -455,6 +455,7 @@ description = "Document parameters, class attributes, return types, and variable
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "annotated_doc-0.0.4-py3-none-any.whl", hash = "sha256:571ac1dc6991c450b25a9c2d84a3705e2ae7a53467b5d111c24fa8baabbed320"},
     {file = "annotated_doc-0.0.4.tar.gz", hash = "sha256:fbcda96e87e9c92ad167c2e53839e57503ecfda18804ea28102353485033faa4"},
@@ -537,6 +538,7 @@ description = "ASGI specs, helper code, and adapters"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "asgiref-3.11.1-py3-none-any.whl", hash = "sha256:e8667a091e69529631969fd45dc268fa79b99c92c5fcdda727757e52146ec133"},
     {file = "asgiref-3.11.1.tar.gz", hash = "sha256:5f184dc43b7e763efe848065441eac62229c9f7b0475f41f80e207a114eda4ce"},
@@ -703,6 +705,7 @@ description = "Modern password hashing for your software and your servers"
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "bcrypt-5.0.0-cp313-cp313t-macosx_10_12_universal2.whl", hash = "sha256:f3c08197f3039bec79cee59a606d62b96b16669cff3949f21e74796b6e3cd2be"},
     {file = "bcrypt-5.0.0-cp313-cp313t-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:200af71bc25f22006f4069060c88ed36f8aa4ff7f53e67ff04d2ab3f1e79a5b2"},
@@ -897,6 +900,7 @@ description = "A simple, correct Python build frontend"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "build-1.4.1-py3-none-any.whl", hash = "sha256:21c81f7a0fa423f0da229335c5c2a605967fbfc9af3c4b6ecd368265ed59c6bc"},
     {file = "build-1.4.1.tar.gz", hash = "sha256:30adeb28821e573a49b556030d8c84186d112f6a38b12fa5476092c4544ae55a"},
@@ -1178,6 +1182,7 @@ description = "Chromas fork of hnswlib"
 optional = false
 python-versions = "*"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "chroma_hnswlib-0.7.6-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:f35192fbbeadc8c0633f0a69c3d3e9f1a4eab3a46b65458bbcbcabdd9e895c36"},
     {file = "chroma_hnswlib-0.7.6-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:6f007b608c96362b8f0c8b6b2ac94f67f83fcbabd857c378ae82007ec92f4d82"},
@@ -1220,6 +1225,7 @@ description = "Chroma."
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "chromadb-0.5.23-py3-none-any.whl", hash = "sha256:ffe5bdd7276d12cb682df0d38a13aa37573e6a3678e71889ac45f539ae05ad7e"},
     {file = "chromadb-0.5.23.tar.gz", hash = "sha256:360a12b9795c5a33cb1f839d14410ccbde662ef1accd36153b0ae22312edabd1"},
@@ -1311,6 +1317,7 @@ description = "Colored terminal output for Python's logging module"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "coloredlogs-15.0.1-py2.py3-none-any.whl", hash = "sha256:612ee75c546f53e92e70049c9dbfcc18c935a2b9a53b66085ce9ef6a6e5c0934"},
     {file = "coloredlogs-15.0.1.tar.gz", hash = "sha256:7c991aa71a4577af2f82600d8f8f3a89f936baeaf9b50a9c197da014e5bf16b0"},
@@ -1789,6 +1796,7 @@ description = "Module for converting between datetime.timedelta and Go's Duratio
 optional = false
 python-versions = "*"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "durationpy-0.10-py3-none-any.whl", hash = "sha256:3b41e1b601234296b4fb368338fdcd3e13e0b4fb5b67345948f4f2bf9868b286"},
     {file = "durationpy-0.10.tar.gz", hash = "sha256:1fa6893409a6e739c9c72334fc65cca1f355dbdd93405d30f726deb5bde42fba"},
@@ -1851,6 +1859,7 @@ description = "FastAPI framework, high performance, easy to learn, fast to code,
 optional = false
 python-versions = ">=3.10"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "fastapi-0.135.2-py3-none-any.whl", hash = "sha256:0af0447d541867e8db2a6a25c23a8c4bd80e2394ac5529bd87501bbb9e240ca5"},
     {file = "fastapi-0.135.2.tar.gz", hash = "sha256:88a832095359755527b7f63bb4c6bc9edb8329a026189eed83d6c1afcf419d56"},
@@ -2085,6 +2094,7 @@ description = "The FlatBuffers serialization format for Python"
 optional = false
 python-versions = "*"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "flatbuffers-25.12.19-py2.py3-none-any.whl", hash = "sha256:7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4"},
 ]
@@ -3075,7 +3085,7 @@ description = "LLM framework to build customizable, production-ready LLM applica
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "test"]
-markers = "python_version < \"3.14\" and python_full_version >= \"3.13.0\""
+markers = "python_version == \"3.13\""
 files = [
     {file = "haystack_ai-2.2.2-py3-none-any.whl", hash = "sha256:d2df0ea3f6b8a07ebd50f59a85ce6165b5267754e44cf1a38f1657e6933d7984"},
     {file = "haystack_ai-2.2.2.tar.gz", hash = "sha256:4c5205985b9648f516e03e37dc3df6efa4e2abf8397df159eeaa94b3280ffd66"},
@@ -3220,6 +3230,7 @@ description = "A collection of framework independent HTTP protocol utils."
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "httptools-0.7.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:11d01b0ff1fe02c4c32d60af61a4d613b74fad069e47e06e9067758c01e9ac78"},
     {file = "httptools-0.7.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:84d86c1e5afdc479a6fdabf570be0d3eb791df0ae727e8dbc0259ed1249998d4"},
@@ -3350,6 +3361,7 @@ description = "Human friendly output for text interfaces using Python"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "humanfriendly-10.0-py2.py3-none-any.whl", hash = "sha256:1697e1a8a8f550fd43c2865cd84542fc175a61dcb779b6fee18cf6b6ccba1477"},
     {file = "humanfriendly-10.0.tar.gz", hash = "sha256:6b0b831ce8f15f7300721aa49829fc4e83921a9a301cc7f606be6686a2288ddc"},
@@ -3510,6 +3522,7 @@ description = "Read resources from Python packages"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "importlib_resources-6.5.2-py3-none-any.whl", hash = "sha256:789cfdc3ed28c78b67a06acb8126751ced69a3d5f79c095a98298cd8a760ccec"},
     {file = "importlib_resources-6.5.2.tar.gz", hash = "sha256:185f87adef5bcc288449d98fb4fba07cea78bc036455dd44c5fc4a2fe78fed2c"},
@@ -4148,6 +4161,7 @@ description = "Kubernetes python client"
 optional = false
 python-versions = ">=3.6"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "kubernetes-35.0.0-py2.py3-none-any.whl", hash = "sha256:39e2b33b46e5834ef6c3985ebfe2047ab39135d41de51ce7641a7ca5b372a13d"},
     {file = "kubernetes-35.0.0.tar.gz", hash = "sha256:3d00d344944239821458b9efd484d6df9f011da367ecb155dadf9513f05f09ee"},
@@ -5232,6 +5246,7 @@ description = "Python extension for MurmurHash (MurmurHash3), a set of fast and 
 optional = false
 python-versions = ">=3.10"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "mmh3-5.2.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:5d87a3584093e1a89987e3d36d82c98d9621b2cb944e22a420aa1401e096758f"},
     {file = "mmh3-5.2.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:30e4d2084df019880d55f6f7bea35328d9b464ebee090baa372c096dc77556fb"},
@@ -5369,6 +5384,7 @@ description = "Python library for arbitrary-precision floating-point arithmetic"
 optional = false
 python-versions = "*"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "mpmath-1.3.0-py3-none-any.whl", hash = "sha256:a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c"},
     {file = "mpmath-1.3.0.tar.gz", hash = "sha256:7a28eb2a9774d00c7bc92411c19a89209d5da7c4c9a9e227be8330a23a25b91f"},
@@ -5677,7 +5693,7 @@ description = "Python package for creating and manipulating graphs and networks"
 optional = false
 python-versions = "!=3.14.1,>=3.11"
 groups = ["main", "test"]
-markers = "python_version < \"3.14\" and python_version >= \"3.11\""
+markers = "python_version <= \"3.13\" and python_version >= \"3.11\""
 files = [
     {file = "networkx-3.6.1-py3-none-any.whl", hash = "sha256:d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762"},
     {file = "networkx-3.6.1.tar.gz", hash = "sha256:26b7c357accc0c8cde558ad486283728b65b6a95d85ee1cd66bafab4c8168509"},
@@ -5787,7 +5803,7 @@ description = "Fundamental package for array computing in Python"
 optional = false
 python-versions = ">=3.11"
 groups = ["main", "test"]
-markers = "python_version < \"3.14\" and python_full_version >= \"3.13.0\""
+markers = "python_version == \"3.13\""
 files = [
     {file = "numpy-2.4.3-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:33b3bf58ee84b172c067f56aeadc7ee9ab6de69c5e800ab5b10295d54c581adb"},
     {file = "numpy-2.4.3-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:8ba7b51e71c05aa1f9bc3641463cd82308eab40ce0d5c7e1fd4038cbf9938147"},
@@ -5870,6 +5886,7 @@ description = "A generic, spec-compliant, thorough implementation of the OAuth r
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "oauthlib-3.3.1-py3-none-any.whl", hash = "sha256:88119c938d2b8fb88561af5f6ee0eec8cc8d552b7bb1f712743136eb7523b7a1"},
     {file = "oauthlib-3.3.1.tar.gz", hash = "sha256:0f0f8aa759826a193cf66c12ea1af1637f87b9b4622d46e866952bb022e538c9"},
@@ -5903,6 +5920,7 @@ description = "ONNX Runtime is a runtime accelerator for Machine Learning models
 optional = false
 python-versions = "*"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "onnxruntime-1.19.2-cp310-cp310-macosx_11_0_universal2.whl", hash = "sha256:84fa57369c06cadd3c2a538ae2a26d76d583e7c34bdecd5769d71ca5c0fc750e"},
     {file = "onnxruntime-1.19.2-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:bdc471a66df0c1cdef774accef69e9f2ca168c851ab5e4f2f3341512c7ef4666"},
@@ -6009,6 +6027,7 @@ files = [
     {file = "opentelemetry_exporter_otlp_proto_grpc-1.39.1-py3-none-any.whl", hash = "sha256:fa1c136a05c7e9b4c09f739469cbdb927ea20b34088ab1d959a849b5cc589c18"},
     {file = "opentelemetry_exporter_otlp_proto_grpc-1.39.1.tar.gz", hash = "sha256:772eb1c9287485d625e4dbe9c879898e5253fea111d9181140f51291b5fec3ad"},
 ]
+markers = {test = "python_full_version <= \"3.13.0\""}
 
 [package.dependencies]
 googleapis-common-protos = ">=1.57,<2.0"
@@ -6060,6 +6079,7 @@ files = [
     {file = "opentelemetry_instrumentation-0.60b1-py3-none-any.whl", hash = "sha256:04480db952b48fb1ed0073f822f0ee26012b7be7c3eac1a3793122737c78632d"},
     {file = "opentelemetry_instrumentation-0.60b1.tar.gz", hash = "sha256:57ddc7974c6eb35865af0426d1a17132b88b2ed8586897fee187fd5b8944bd6a"},
 ]
+markers = {test = "python_full_version <= \"3.13.0\""}
 
 [package.dependencies]
 opentelemetry-api = ">=1.4,<2.0"
@@ -6074,6 +6094,7 @@ description = "ASGI instrumentation for OpenTelemetry"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "opentelemetry_instrumentation_asgi-0.60b1-py3-none-any.whl", hash = "sha256:d48def2dbed10294c99cfcf41ebbd0c414d390a11773a41f472d20000fcddc25"},
     {file = "opentelemetry_instrumentation_asgi-0.60b1.tar.gz", hash = "sha256:16bfbe595cd24cda309a957456d0fc2523f41bc7b076d1f2d7e98a1ad9876d6f"},
@@ -6096,6 +6117,7 @@ description = "OpenTelemetry FastAPI Instrumentation"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "opentelemetry_instrumentation_fastapi-0.60b1-py3-none-any.whl", hash = "sha256:af94b7a239ad1085fc3a820ecf069f67f579d7faf4c085aaa7bd9b64eafc8eaf"},
     {file = "opentelemetry_instrumentation_fastapi-0.60b1.tar.gz", hash = "sha256:de608955f7ff8eecf35d056578346a5365015fd7d8623df9b1f08d1c74769c01"},
@@ -6289,6 +6311,7 @@ files = [
     {file = "opentelemetry_util_http-0.60b1-py3-none-any.whl", hash = "sha256:66381ba28550c91bee14dcba8979ace443444af1ed609226634596b4b0faf199"},
     {file = "opentelemetry_util_http-0.60b1.tar.gz", hash = "sha256:0d97152ca8c8a41ced7172d29d3622a219317f74ae6bb3027cfbdcf22c3cc0d6"},
 ]
+markers = {test = "python_full_version <= \"3.13.0\""}
 
 [[package]]
 name = "orjson"
@@ -6453,6 +6476,7 @@ description = "A decorator to automatically detect mismatch when overriding a me
 optional = false
 python-versions = ">=3.6"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "overrides-7.7.0-py3-none-any.whl", hash = "sha256:c7ed9d062f78b8e4c1a7b70bd8796b35ead4d9f510227ef9c5dc7626c60d7e49"},
     {file = "overrides-7.7.0.tar.gz", hash = "sha256:55158fa3d93b98cc75299b1e67078ad9003ca27945c76162c1c0766d6f91820a"},
@@ -7681,6 +7705,7 @@ description = "A SQL query builder API for Python"
 optional = false
 python-versions = "*"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "pypika-0.51.1-py2.py3-none-any.whl", hash = "sha256:77985b4d7ce71b9905255bf12468cf598349e98837c037541cfc240e528aec46"},
     {file = "pypika-0.51.1.tar.gz", hash = "sha256:c30c7c1048fbf056fd3920c5a2b88b0c29dd190a9b2bee971fd17e4abe4d0ebe"},
@@ -7696,6 +7721,7 @@ description = "Wrappers to call pyproject.toml-based build backend hooks."
 optional = false
 python-versions = ">=3.7"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "pyproject_hooks-1.2.0-py3-none-any.whl", hash = "sha256:9e5c6bfa8dcc30091c74b0cf803c81fdd29d94f01992a7707bc97babb1141913"},
     {file = "pyproject_hooks-1.2.0.tar.gz", hash = "sha256:1e859bd5c40fae9448642dd871adf459e5e2084186e8d2c2a79a824c970da1f8"},
@@ -7708,7 +7734,7 @@ description = "A python implementation of GNU readline."
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "test"]
-markers = "sys_platform == \"win32\""
+markers = "sys_platform == \"win32\" and python_full_version <= \"3.13.0\""
 files = [
     {file = "pyreadline3-3.5.4-py3-none-any.whl", hash = "sha256:eaf8e6cc3c49bcccf145fc6067ba8643d1df34d604a1ec0eccbf7a18e6d3fae6"},
     {file = "pyreadline3-3.5.4.tar.gz", hash = "sha256:8d57d53039a1c75adba8e50dd3d992b28143480816187ea5efbd5c78e6c885b7"},
@@ -8289,6 +8315,7 @@ description = "OAuthlib authentication support for Requests."
 optional = false
 python-versions = ">=3.4"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "requests-oauthlib-2.0.0.tar.gz", hash = "sha256:b3dffaebd884d8cd778494369603a9e7b58d29111bf6b41bdc2dcd87203af4e9"},
     {file = "requests_oauthlib-2.0.0-py2.py3-none-any.whl", hash = "sha256:7dd8a5c40426b779b0868c404bdef9768deccf22749cde15852df527e6269b36"},
@@ -8776,6 +8803,7 @@ description = "Computer algebra system (CAS) in Python"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "sympy-1.14.0-py3-none-any.whl", hash = "sha256:e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5"},
     {file = "sympy-1.14.0.tar.gz", hash = "sha256:d3d3fe8df1e5a0b42f0e7bdf50541697dbe7d23746e894990c030e2b05e72517"},
@@ -9377,6 +9405,7 @@ description = "The lightning-fast ASGI server."
 optional = false
 python-versions = ">=3.10"
 groups = ["main", "test"]
+markers = "sys_platform != \"emscripten\" or python_full_version <= \"3.13.0\""
 files = [
     {file = "uvicorn-0.42.0-py3-none-any.whl", hash = "sha256:96c30f5c7abe6f74ae8900a70e92b85ad6613b745d4879eb9b16ccad15645359"},
     {file = "uvicorn-0.42.0.tar.gz", hash = "sha256:9b1f190ce15a2dd22e7758651d9b6d12df09a13d51ba5bf4fc33c383a48e1775"},
@@ -9404,7 +9433,7 @@ description = "Fast implementation of asyncio event loop on top of libuv"
 optional = false
 python-versions = ">=3.8.1"
 groups = ["main", "test"]
-markers = "platform_python_implementation != \"PyPy\" and sys_platform != \"win32\" and sys_platform != \"cygwin\""
+markers = "sys_platform != \"win32\" and sys_platform != \"cygwin\" and platform_python_implementation != \"PyPy\" and python_full_version <= \"3.13.0\""
 files = [
     {file = "uvloop-0.22.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:ef6f0d4cc8a9fa1f6a910230cd53545d9a14479311e87e3cb225495952eb672c"},
     {file = "uvloop-0.22.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:7cd375a12b71d33d46af85a3343b35d98e8116134ba404bd657b3b1d15988792"},
@@ -9554,6 +9583,7 @@ description = "Simple, modern and high performance file watching and code reload
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "watchfiles-1.1.1-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:eef58232d32daf2ac67f42dea51a2c80f0d03379075d44a587051e63cc2e368c"},
     {file = "watchfiles-1.1.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:03fa0f5237118a0c5e496185cafa92878568b652a2e9a9382a5151b1a0380a43"},
@@ -9709,6 +9739,7 @@ description = "WebSocket client for Python with low level API options"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "test"]
+markers = "python_full_version <= \"3.13.0\""
 files = [
     {file = "websocket_client-1.9.0-py3-none-any.whl", hash = "sha256:af248a825037ef591efbf6ed20cc5faa03d3b47b9e5a2230a529eeee1c1fc3ef"},
     {file = "websocket_client-1.9.0.tar.gz", hash = "sha256:9e813624b6eb619999a97dc7958469217c3176312b3a16a4bd1bc7e08a46ec98"},
@@ -10385,4 +10416,4 @@ writer = ["writer-sdk"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "6e66d41539aee7fbd445c2a497cd7f4001c0aff899042bca7e897036b101511f"
+content-hash = "e23642ea904ffd1d4e5b911a8a1d294ecc43701658dc627c24e7049e739cb7b2"
