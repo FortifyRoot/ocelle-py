@@ -162,10 +162,10 @@ def parse_poetry_deps(pyproject_path: Path) -> Dict[str, Dict]:
     - [tool.poetry.dependencies], [tool.poetry.group.*.dependencies]
     - [project].dependencies, [dependency-groups]
 
-    Returns dict with keys: 'main', 'dev', 'test'
+    Returns dict with keys: 'main', 'dev', 'test', 'instruments'
     Each value is a dict of {package_name: version_spec}
     """
-    deps = {'main': {}, 'dev': {}, 'test': {}}
+    deps = {'main': {}, 'dev': {}, 'test': {}, 'instruments': {}}
 
     if not pyproject_path.exists():
         return deps
@@ -175,11 +175,20 @@ def parse_poetry_deps(pyproject_path: Path) -> Dict[str, Dict]:
     try:
         parsed = tomllib.loads(content)
     except Exception:
-        return _parse_deps_legacy_regex(content)
+        result = _parse_deps_legacy_regex(content)
+        result.setdefault('instruments', {})
+        return result
 
     project = parsed.get('project', {})
     if isinstance(project, dict):
         deps['main'].update(_parse_dependency_list(project.get('dependencies', [])))
+
+        # Extract [project.optional-dependencies] — typically the "instruments"
+        # key lists the library being instrumented (e.g. litellm, openai).
+        optional_deps = project.get('optional-dependencies', {})
+        if isinstance(optional_deps, dict):
+            for group_name, entries in optional_deps.items():
+                deps['instruments'].update(_parse_dependency_list(entries))
 
     dependency_groups = parsed.get('dependency-groups', {})
     if isinstance(dependency_groups, dict):
@@ -336,9 +345,9 @@ def extract_all_deps(ol_repo: Path) -> Dict[str, Dict[str, str]]:
     """
     Extract all dependencies from all vendored packages.
 
-    Returns merged dependencies for main, dev, and test.
+    Returns merged dependencies for main, dev, test, and instruments.
     """
-    all_deps = {'main': {}, 'dev': {}, 'test': {}}
+    all_deps = {'main': {}, 'dev': {}, 'test': {}, 'instruments': {}}
     packages_dir = ol_repo / 'packages'
 
     # List of packages to scan
@@ -355,7 +364,7 @@ def extract_all_deps(ol_repo: Path) -> Dict[str, Dict[str, str]]:
 
         pkg_deps = parse_poetry_deps(pyproject)
 
-        for dep_type in ['main', 'dev', 'test']:
+        for dep_type in ['main', 'dev', 'test', 'instruments']:
             for pkg, version in pkg_deps[dep_type].items():
                 # Skip vendored/internal packages
                 if pkg in SKIP_DEPS or pkg.lower() in SKIP_DEPS:
@@ -544,6 +553,47 @@ def write_manifest(vendor_root: Path, ol_repo: Path, vendored_packages: List[str
     print(f"    Manifest: {manifest_file}")
 
 
+def _get_current_git_ref(repo: Path) -> str:
+    """Return the current branch name, or the commit SHA if HEAD is detached."""
+    import subprocess
+
+    result = subprocess.run(
+        ['git', 'symbolic-ref', '--quiet', '--short', 'HEAD'],
+        cwd=repo, capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        return result.stdout.strip()
+
+    # Detached HEAD — fall back to the full commit SHA.
+    result = subprocess.run(
+        ['git', 'rev-parse', 'HEAD'],
+        cwd=repo, capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        return result.stdout.strip()
+
+    return "HEAD"
+
+
+def _restore_git_ref(repo: Path, ref: Optional[str]) -> None:
+    """Restore the fork repo to *ref* if we checked out a tag earlier."""
+    if ref is None:
+        return
+
+    import subprocess
+
+    print(f"\n==> Restoring fork repo to: {ref}")
+    result = subprocess.run(
+        ['git', 'checkout', ref],
+        cwd=repo, capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        print(f"    Restored: {ref}")
+    else:
+        print(f"    WARNING: Could not restore fork repo to {ref}: {result.stderr}")
+        print(f"    You may need to manually run: git -C {repo} checkout {ref}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Vendor OpenLLMetry into FortifyRoot SDK',
@@ -622,10 +672,12 @@ def main():
     print(f"Vendor directory: {vendor_root}")
     print()
 
-    # Checkout tag if specified
+    # Checkout tag if specified, remembering the original ref so we can restore it.
+    original_ref = None
     if args.tag:
         import subprocess
-        print(f"==> Checking out tag: {args.tag}")
+        original_ref = _get_current_git_ref(ol_repo)
+        print(f"==> Checking out tag: {args.tag}  (will restore {original_ref} when done)")
         result = subprocess.run(
             ['git', 'checkout', 'tags/' + args.tag],
             cwd=ol_repo, capture_output=True, text=True
@@ -637,47 +689,51 @@ def main():
 
     if args.dry_run:
         print("=== DRY RUN MODE ===")
+        _restore_git_ref(ol_repo, original_ref)
         return
 
-    # Clean if requested
-    if args.clean and vendor_root.exists():
-        print("==> Cleaning vendor directory")
-        shutil.rmtree(vendor_root)
+    try:
+        # Clean if requested
+        if args.clean and vendor_root.exists():
+            print("==> Cleaning vendor directory")
+            shutil.rmtree(vendor_root)
 
-    vendor_root.mkdir(parents=True, exist_ok=True)
+        vendor_root.mkdir(parents=True, exist_ok=True)
 
-    # Vendor packages
-    vendor_traceloop_sdk(ol_repo, vendor_root)
-    vendored_packages = vendor_instrumentation_packages(ol_repo, vendor_root)
-    vendor_semconv_ai(ol_repo, vendor_root)
+        # Vendor packages
+        vendor_traceloop_sdk(ol_repo, vendor_root)
+        vendored_packages = vendor_instrumentation_packages(ol_repo, vendor_root)
+        vendor_semconv_ai(ol_repo, vendor_root)
 
-    # Create __init__.py files
-    create_vendor_init_files(vendor_root)
+        # Create __init__.py files
+        create_vendor_init_files(vendor_root)
 
-    # Rewrite imports
-    rewrite_all_imports(vendor_root, args.vendor_prefix)
+        # Rewrite imports
+        rewrite_all_imports(vendor_root, args.vendor_prefix)
 
-    # Extract dependencies
-    if args.extract_deps:
-        print("==> Extracting dependencies")
-        deps = extract_all_deps(ol_repo)
-        write_deps_manifest(vendor_root, deps)
+        # Extract dependencies
+        if args.extract_deps:
+            print("==> Extracting dependencies")
+            deps = extract_all_deps(ol_repo)
+            write_deps_manifest(vendor_root, deps)
 
-        print("\n    Main dependencies found:")
-        for pkg, ver in sorted(deps['main'].items()):
-            print(f"      {pkg} = \"{ver}\"")
+            print("\n    Main dependencies found:")
+            for pkg, ver in sorted(deps['main'].items()):
+                print(f"      {pkg} = \"{ver}\"")
 
-    # Write manifest
-    write_manifest(vendor_root, ol_repo, vendored_packages)
+        # Write manifest
+        write_manifest(vendor_root, ol_repo, vendored_packages)
 
-    print()
-    print("==> Vendoring complete!")
-    print()
-    print("Next steps:")
-    print("  1. Review VENDOR_DEPENDENCIES.json for any new dependencies")
-    print("  2. Update pyproject.toml if needed")
-    print("  3. Run: poetry install && poetry run pytest tests/")
-    print("  4. Commit the changes")
+        print()
+        print("==> Vendoring complete!")
+        print()
+        print("Next steps:")
+        print("  1. Review VENDOR_DEPENDENCIES.json for any new dependencies")
+        print("  2. Update pyproject.toml if needed")
+        print("  3. Run: poetry install && poetry run pytest tests/")
+        print("  4. Commit the changes")
+    finally:
+        _restore_git_ref(ol_repo, original_ref)
 
 
 if __name__ == '__main__':

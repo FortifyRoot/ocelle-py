@@ -1,12 +1,6 @@
 """Test that vendored imports work correctly."""
 
-import importlib.util
 import pytest
-
-
-def _is_package_installed(package_name: str) -> bool:
-    """Check if a package is installed."""
-    return importlib.util.find_spec(package_name) is not None
 
 
 class TestVendoredImports:
@@ -29,39 +23,23 @@ class TestVendoredImports:
         from fortifyroot._vendor.opentelemetry.semconv_ai import SpanAttributes
         assert SpanAttributes is not None
 
-    @pytest.mark.skipif(
-        not _is_package_installed("openai"),
-        reason="openai package not installed"
-    )
     def test_openai_instrumentation_import(self):
-        """Test that OpenAI instrumentation can be imported when openai is installed."""
+        """Test that OpenAI instrumentation can be imported."""
         from fortifyroot._vendor.opentelemetry.instrumentation.openai import OpenAIInstrumentor
         assert OpenAIInstrumentor is not None
 
-    @pytest.mark.skipif(
-        not _is_package_installed("anthropic"),
-        reason="anthropic package not installed"
-    )
     def test_anthropic_instrumentation_import(self):
-        """Test that Anthropic instrumentation can be imported when anthropic is installed."""
+        """Test that Anthropic instrumentation can be imported."""
         from fortifyroot._vendor.opentelemetry.instrumentation.anthropic import AnthropicInstrumentor
         assert AnthropicInstrumentor is not None
 
-    @pytest.mark.skipif(
-        not _is_package_installed("langchain_core"),
-        reason="langchain_core package not installed"
-    )
     def test_langchain_instrumentation_import(self):
-        """Test that LangChain instrumentation can be imported when langchain is installed."""
+        """Test that LangChain instrumentation can be imported."""
         from fortifyroot._vendor.opentelemetry.instrumentation.langchain import LangchainInstrumentor
         assert LangchainInstrumentor is not None
 
-    @pytest.mark.skipif(
-        not _is_package_installed("litellm"),
-        reason="litellm package not installed"
-    )
     def test_litellm_instrumentation_import(self):
-        """Test that LiteLLM instrumentation can be imported when litellm is installed."""
+        """Test that LiteLLM instrumentation can be imported."""
         from fortifyroot._vendor.opentelemetry.instrumentation.litellm import LiteLLMInstrumentor
         assert LiteLLMInstrumentor is not None
 
