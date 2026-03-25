@@ -10385,4 +10385,4 @@ writer = ["writer-sdk"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "0ac93cf5e5d696e9c3cb2d65bfd53ea6b45a5b4c1bff76e03be7c3e0024ded50"
+content-hash = "6e66d41539aee7fbd445c2a497cd7f4001c0aff899042bca7e897036b101511f"
