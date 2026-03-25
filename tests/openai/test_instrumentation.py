@@ -412,8 +412,9 @@ def test_logging_toggle_disables_logging_wrapper():
     init(
         app_name="fortifyroot-test",
         enabled=True,
-        api_endpoint="http://localhost:4318",
         api_key="dummy",
+        disable_batch=True,
+        processors=SimpleSpanProcessor(MagicMock()),
         instruments={Instruments.OPENAI},
     )
     assert not hasattr(LoggerWrapper, "instance")
@@ -425,8 +426,10 @@ def test_logging_toggle_enables_logging_wrapper():
     init(
         app_name="fortifyroot-test",
         enabled=True,
-        api_endpoint="http://localhost:4318",
         api_key="dummy",
+        disable_batch=True,
+        processors=SimpleSpanProcessor(MagicMock()),
+        logging_exporter=MagicMock(),
         instruments={Instruments.OPENAI},
     )
     assert hasattr(LoggerWrapper, "instance")
