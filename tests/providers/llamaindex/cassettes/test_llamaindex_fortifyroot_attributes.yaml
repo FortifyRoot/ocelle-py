@@ -1,0 +1,107 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"user","content":"Summarize the inquiry from [PII.email]
+      about the new software license."}],"model":"gpt-4.1","max_tokens":50,"stream":false,"temperature":0.1}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '180'
+      Content-Type:
+      - application/json
+      Host:
+      - api.openai.com
+      User-Agent:
+      - OpenAI/Python 1.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - 'false'
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 1.109.1
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.10.19
+      traceparent:
+      - 00-9ca7c00a1758cc7cc6471add73bcb1dc-946aa9fb59a8c9e6-01
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdQkMqUos8AMAAAD//41TwW7bMAy95ys4nZMg
+        CZImPfeyDgW2Qzd0KAJDkWlbqyy5opzMGPLvo+SkTroNGGALEKn3+MRHPT0cvhdPC/z46eahfbz7
+        fHv4+u3ViHFEuN0PVOGMmirHOAza2T6tPMqAkXW+Xq8Ws+X8dpYStcvRRFjZhMlyOp8sZovVZLac
+        zJcnZOW0QuIjz7wF+JXWqNHm+JPDiSdFaiSSJXLsfIiD3pkYEZJIU5A2iPGQVM4GtEn2HfogtTXd
+        B3isELR9bbXvoPCuhucv9/dTrKU2W9AEHkvpc21LyJExhkDuXBsgMM7iAcgV4SA9gmHllnCaGAlZ
+        sI94QnyJaGWk14VWMvYJ+IsEAX1NY2jjTcDrsgq8kzbnvwPurS2RILaXC+QQHDQe99q1dK5GqVwH
+        texAGnKwQ5CUCvYyG68V75hVBb3vizfeKcxbjzS+7I/HgoVEf2xrzEVCWutCgiZntqfM8c0L40rm
+        3NE7qCi01VRlPA7Es8F9N2jLUImUP/K6Ta63V0YKpqqbkAX3gqngYtkTimHOhuTqNBEisEQzxNdn
+        0BVbdvLwYmqEkqrCfEAOIybbXLuLxOji1n+K+Rt3f3Pu///QDwmlsOEHlLHbuVbXFx6OeYyv8F/H
+        3nqcBAtCv+eRyYJGH53IsZCt6d+HoI4C1hnbVaLniekfSdFkxWZTrFc3mxWK0XH0G5kF3F8uBAAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9e66a1ad88c7c183-BLR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 03 Apr 2026 08:16:31 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-processing-ms:
+      - '855'
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - __cf_bm=J6aTcgHq9uQYIh7esBFpbpqPE2nA.XRWaVsQwFoGc6A-1775204190.3270993-1.0.1.1-Bb9Z8.4Mczk572BgWdSYTKlk7OiQ0Uwt1cANgwecfPHMQzbzXafBRuZXPZvrkPYnLft7xiTlnT8YYWxJPAP5fkJvPVdyP10qhRNWfJI.wjMoNIl_sFJFggjugLf_.eYJ;
+        HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 03 Apr 2026
+        08:46:31 GMT
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29980'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 40ms
+      x-request-id:
+      - req_6bda96eaae964574a1dae76bd492cb86
+    status:
+      code: 200
+      message: OK
+version: 1

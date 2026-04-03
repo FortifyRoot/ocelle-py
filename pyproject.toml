@@ -281,6 +281,10 @@ filterwarnings = [
     "ignore::DeprecationWarning:fortifyroot._vendor.*",
     "ignore::PendingDeprecationWarning:fortifyroot._vendor.*",
     "ignore::DeprecationWarning:google.genai.*",
+    # LiteLLM TPL: Pydantic v1->v2 migration debt (response.dict(), model_fields on instance)
+    "ignore::UserWarning:pydantic.*",
+    "ignore::DeprecationWarning:pydantic.*",
+    "ignore::DeprecationWarning:litellm.*",
 ]
 
 [tool.coverage.run]

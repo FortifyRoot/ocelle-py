@@ -1,0 +1,206 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"user","content":"Summarize the inquiry from john.doe@example.com
+      about card 4111 1111 1111 1111."}],"model":"gpt-4.1","max_tokens":50}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '156'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=inclm5LQKx4p757g0ox75z1R4zY9kLW7h5H2QdmwDVo-1775201735.6976466-1.0.1.1-b0bMcahtO92yMRbE88WEEdMMkALSv5ce9C8.IIRuYOReW3PeydyovzM0Cochh_HAWfc6TsSKVs6XbaoMZZbDT1IHvstNJh5Kd2QX0ZO4R5cfkqFqZA8O_3y3pDWwnrvU
+      Host:
+      - api.openai.com
+      User-Agent:
+      - OpenAI/Python 1.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - 'false'
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 1.109.1
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.10.19
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdQkM8XUvyQAAAAD//4xTwW7bMAy95ysInVYg
+        CWzXaYbdBuzUFim261AYikTb2hxRleRuxZB/H2UntdNtwC4EzMf3RPLRmSu+1PfS33wucXt7Zx+y
+        j7ubWiwTg/bfUMUza62IeRgN2RFWHmXEpJpvt5siyzkMwIE0donWuLgq1/mqyIrNKitXeXlitmQU
+        Bi75yp8Av4aYerQaf3I6W54zBwxBNsi5cxEnPXUpI2QIJkRpo1hOoCIb0Q5t31Jr4RMhGPvUG48a
+        5J76CNKCCaFHIA9PPYY0E3js0jgQCWKLoKTXgFYb2zAdyjzPIb8Ia3i3o4gfYEcQHCpTGwUaozRd
+        AKoHlfHhF/iBHsF5ejYa9fpq3q/Hug8y7cv2XTcDpLUUZept2NTjCTm+7qajhiX34Q1V1Maa0FZs
+        T2CveA8hkhMDeuT4OHjQX6xVsNDBxSrSdxyeu74e5cTk+gSWJ39E5Aa7Kb89ky7UqtNOZh4KJVWL
+        emJOhsteG5oBi9nMfzbzN+1xbvbtf+QnQCl07H/l+E6Muhx4KvOY/ol/lb3ueGhYBPTPfOhVNOiT
+        Dxpr2XfjtYrwEiIeKjarQe+8GU+2dlW+Qawz+b5QYnFc/AYAAP//AwD2PEOVvAMAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9e6666209ca0b277-BLR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 03 Apr 2026 07:35:52 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-processing-ms:
+      - '607'
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29978'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 44ms
+      x-request-id:
+      - req_242e8e4a82ac4bfbb1792b266d287efb
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"user","content":"Summarize the inquiry from john.doe@example.com
+      about card 4111 1111 1111 1111."}],"model":"gpt-4.1","max_tokens":50}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '156'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=QUlp6xdsKss09Lv0eTebtp8whV4FabOXw2kv.zYDRJU-1775202346.6562366-1.0.1.1-cB83_7U_yYjz5YC1XMUDzNqrY.cHgnBY.OfQXXojkAFwdBjgf3KdIYk9KcPGVa.IKH1SVVbbMJOc8o0IIeF.K6dBQU0QrDqeZ2dOLyXhqEgGHMai2RqtSOKUjjwsrNEq
+      Host:
+      - api.openai.com
+      User-Agent:
+      - OpenAI/Python 1.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - 'false'
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 1.109.1
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.10.19
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdQkMCTcM9QEAAAD//41TTYvbMBC951cIXdpC
+        YuLE3mRvLbSXhX4cSiksi5Glsa2trfFK8pK05L93ZDux026hFyHPm3l6M/P85fiubb7J6u7T/sn9
+        /P5x/+HwOdd8GSowfwTpz1WRRKoDr9EMsLQgPATWeLdLN+vNNt31QIMK6lBWtn6VRPGKsHS1TlZx
+        MlZWqCU4SrmnT8Z+9WfQaBQcKLxeniMNOCdKoNg5iYIW6xDhwjntvDCeLydQovFgetl3WBn2HoG9
+        fqRbpBDewkGELkIzb5g2T522oJjIsfNMCquY6ZocLEviOGbx1RGxr8hai89aAROsQQtMgRe6JgbX
+        NY2wxyUjcuHgkucrYKMihna4HuhasLO4V27UcYzmbVgoOifCGE1X1zNAGINehDX0A3wYkdNlZDWW
+        9Hru/ijlhTbaVRltzdEKaTzOY8t79ETnQ7+a7mranIia1mcef0D/3HY70PHJDBOY3IygJ4H1FN/d
+        Ll9gy4bZudlquRSyAjVVTj4QndI4Axaznv8W8xL30Lc25f/QT4CU0JLLs5Z8ouV1w1OahfCr/Cvt
+        MuNeMHdgn8n/mddgwx4UFKKrBxNzd3QemoyWVYJtrR6cXLRZKtOb/eZ2rYAvTovfsJOl09MDAAA=
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9e6674edbdcc897b-MAA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 03 Apr 2026 07:45:58 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-processing-ms:
+      - '578'
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29978'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 44ms
+      x-request-id:
+      - req_7f040ee9f87f4d0d9471b927be1fd1d9
+    status:
+      code: 200
+      message: OK
+version: 1

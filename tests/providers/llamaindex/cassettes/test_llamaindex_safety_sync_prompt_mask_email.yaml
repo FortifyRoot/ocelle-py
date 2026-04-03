@@ -1,0 +1,107 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"user","content":"Summarize the following customer
+      inquiry from [PII.email] about their recent order."}],"model":"gpt-4.1","max_tokens":50,"stream":false,"temperature":0.1}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '193'
+      Content-Type:
+      - application/json
+      Host:
+      - api.openai.com
+      User-Agent:
+      - OpenAI/Python 1.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - 'false'
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 1.109.1
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.10.19
+      traceparent:
+      - 00-7a861eb6fed6988b5b4484f5cc439c45-1c09967a1e58ac5d-01
+      x-stainless-read-timeout:
+      - '60.0'
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdQkMqQowDwUAAAD//4xTwW7UMBC971cYX3rJ
+        rjZptkuPCAlRECoHbqiKXHuSNXXsYI9DF7T/zjjJNikUiYsVz5t5fjNv8lEH/FC8629L8aCa69tP
+        X5o3/ZFnqcLdfwOJ56qNdFQHqJ0dYelBICTWfL/fFdsy318PQOsUmFTWdLguN/m62Ba79bZc5+VU
+        eXBaQqCUr3Rl7NdwJo1WwSOFt9k50kIIogGKnZMo6J1JES5CIPnCIs9mUDqLYAfZb8Gj0NYcX7H3
+        7gf04DN2w5SzF8gCAMMDMBkDuhY80/Z71P7IEB6RLtJEBYo+2NFFzyYdG/bZgAjAOu96rSaK8UXm
+        6uE6EWVMWMVuLoxhIbat8PonYchq5xPlZqnZQx2DSDOz0ZgFIKx1KNLMh2ndTcjpaT7GNSTlPvxR
+        ymttdThUZFEgv2gW1GXHB/RE593gQ3w2Wk5EbYcVugcYnit2Ix2fnZ/By3wCkQSaOb67yl5gqxSQ
+        EyYsfORSyAOouXI2XUSl3QJYLXr+W8xL3GPf2jb/Qz8DUkJHK111HpSWzxue0zyk/+JfaU8zHgTz
+        AL6nZa9Qg08+KKhFNOPG8nAMCG1FZjXgO6/Hta27qr68gtc55HnBV6fVbwAAAP//AwCYnLZrwAMA
+        AA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9e66a166d9fca555-BLR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 03 Apr 2026 08:16:20 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-processing-ms:
+      - '614'
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - __cf_bm=dx7.g2aorbCyXgOd9V8uww.es99L2MH61VW_xQGje2w-1775204179.01926-1.0.1.1-CaxFngRcnjSt7LxHju6TI8AgvWGP5XIyxvpt_Kum3nH0AhDsaTnVQI3iuxxrRhqQpWtI8VNxvqGkmtHhsfGEc__MPH7O3o0yZC3htoTWPwoQtaKIdi4KQb2gNbZa4YeY;
+        HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 03 Apr 2026
+        08:46:20 GMT
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29977'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 46ms
+      x-request-id:
+      - req_5cfa25e8fff840c8b667f612a90c6c8e
+    status:
+      code: 200
+      message: OK
+version: 1
