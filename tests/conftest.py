@@ -20,6 +20,20 @@ from fortifyroot._vendor.opentelemetry.instrumentation.openai import OpenAIInstr
 from fortifyroot._vendor.opentelemetry.instrumentation.openai.shared.config import (
     Config as OpenAIConfig,
 )
+
+# Import additional instrumentors for proper test isolation (T5+)
+try:
+    from fortifyroot._vendor.opentelemetry.instrumentation.anthropic import AnthropicInstrumentor
+except ImportError:
+    AnthropicInstrumentor = None
+try:
+    from fortifyroot._vendor.opentelemetry.instrumentation.google_generativeai import GoogleGenerativeAiInstrumentor
+except ImportError:
+    GoogleGenerativeAiInstrumentor = None
+try:
+    from fortifyroot._vendor.opentelemetry.instrumentation.bedrock import BedrockInstrumentor
+except ImportError:
+    BedrockInstrumentor = None
 from fortifyroot._internal.safety.engine import set_udf_detectors_enabled
 from fortifyroot._internal.safety.runtime import shutdown_global_safety_runtime
 from fortifyroot._vendor.traceloop.sdk.logging.logging import LoggerWrapper
@@ -72,10 +86,17 @@ def _reset_singletons() -> None:
     otel_logs_internal._LOGGER_PROVIDER = None
     otel_logs_internal._LOGGER_PROVIDER_SET_ONCE = Once()
 
-    try:
-        OpenAIInstrumentor().uninstrument()
-    except Exception:
-        pass
+    for instrumentor_cls in (
+        OpenAIInstrumentor,
+        AnthropicInstrumentor,
+        GoogleGenerativeAiInstrumentor,
+        BedrockInstrumentor,
+    ):
+        if instrumentor_cls is not None:
+            try:
+                instrumentor_cls().uninstrument()
+            except Exception:
+                pass
 
     shutdown_global_safety_runtime()
     set_udf_detectors_enabled(False)

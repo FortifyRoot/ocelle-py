@@ -1,0 +1,46 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "Summarize the following
+      customer inquiry from [PII.email] about their recent order."}]}], "inferenceConfig":
+      {"maxTokens": 50}}'
+    headers:
+      Content-Length:
+      - '180'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - !!binary |
+        Qm90bzMvMS40Mi43NSBtZC9Cb3RvY29yZSMxLjQyLjc1IHVhLzIuMSBvcy9tYWNvcyMyNC42LjAg
+        bWQvYXJjaCN4ODZfNjQgbGFuZy9weXRob24jMy4xMC4xOSBtZC9weWltcGwjQ1B5dGhvbiBtL1os
+        RCxiLGcgY2ZnL3JldHJ5LW1vZGUjbGVnYWN5IEJvdG9jb3JlLzEuNDIuNzU=
+      amz-sdk-invocation-id:
+      - !!binary |
+        YTg5MzUyODUtNjIxNS00YTM5LTllYjAtYjJjYzAzYThhNGVl
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":973},"output":{"message":{"content":[{"text":"I
+        apologize, but I cannot access or summarize a customer inquiry without more
+        information. As an AI assistant, I do not have access to private customer
+        data or order details. If you are able to provide the actual customer inquiry
+        details in a non"}],"role":"assistant"}},"stopReason":"max_tokens","usage":{"inputTokens":26,"outputTokens":50,"serverToolUsage":{},"totalTokens":76}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '450'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 02 Apr 2026 13:38:15 GMT
+      x-amzn-RequestId:
+      - e808a0aa-bd29-4530-80c4-4b4605977980
+    status:
+      code: 200
+      message: OK
+version: 1

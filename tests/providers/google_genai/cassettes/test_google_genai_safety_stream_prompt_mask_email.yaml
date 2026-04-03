@@ -1,0 +1,72 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "Acknowledge receipt of message from
+      [PII.email] about [custom_compliance.project-phoenix]."}], "role": "user"}]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '147'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - google-genai-sdk/1.68.0 gl-python/3.10.19
+      x-goog-api-client:
+      - google-genai-sdk/1.68.0 gl-python/3.10.19
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1alpha/models/gemini-2.5-flash:streamGenerateContent?alt=sse
+  response:
+    body:
+      string: "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"Subject\"}],\"role\":
+        \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 25,\"candidatesTokenCount\":
+        1,\"totalTokenCount\": 1283,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        25}],\"thoughtsTokenCount\": 1257},\"modelVersion\": \"gemini-2.5-flash\",\"responseId\":
+        \"YG3OadvTC5vmjuMPxozl-Ao\"}\r\n\r\ndata: {\"candidates\": [{\"content\":
+        {\"parts\": [{\"text\": \": Acknowledgment of Your Message Regarding Project
+        Phoenix\\n\\nHello,\\n\\nThank you for your message regarding **Project Phoenix**.
+        We confirm receipt of your email from [PII.email].\\n\\nWe will be reviewing
+        the information you provided and will get back\"}],\"role\": \"model\"},\"index\":
+        0}],\"usageMetadata\": {\"promptTokenCount\": 25,\"candidatesTokenCount\":
+        51,\"totalTokenCount\": 1333,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        25}],\"thoughtsTokenCount\": 1257},\"modelVersion\": \"gemini-2.5-flash\",\"responseId\":
+        \"YG3OadvTC5vmjuMPxozl-Ao\"}\r\n\r\ndata: {\"candidates\": [{\"content\":
+        {\"parts\": [{\"text\": \" to you as soon as possible.\\n\\nBest regards,\\n\\nThe
+        Team\"}],\"role\": \"model\"},\"finishReason\": \"STOP\",\"index\": 0}],\"usageMetadata\":
+        {\"promptTokenCount\": 25,\"candidatesTokenCount\": 65,\"totalTokenCount\":
+        1347,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 25}],\"thoughtsTokenCount\":
+        1257},\"modelVersion\": \"gemini-2.5-flash\",\"responseId\": \"YG3OadvTC5vmjuMPxozl-Ao\"}\r\n\r\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Disposition:
+      - attachment
+      Content-Type:
+      - text/event-stream
+      Date:
+      - Thu, 02 Apr 2026 13:21:43 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=6925
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

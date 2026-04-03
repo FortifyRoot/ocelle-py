@@ -27,6 +27,13 @@ def openai_environment():
         os.environ["OPENAI_API_KEY"] = "test-key-for-vcr-replay"
 
 
+def _scrub_response_headers(response):
+    """Remove org/project identifiers from response headers."""
+    for header in ("openai-organization", "openai-project"):
+        response["headers"].pop(header, None)
+    return response
+
+
 @pytest.fixture(scope="module")
 def vcr_config():
     return {
@@ -39,6 +46,7 @@ def vcr_config():
         ],
         "filter_query_parameters": ["api_key"],
         "match_on": ["method", "scheme", "host", "port", "path", "query"],
+        "before_record_response": _scrub_response_headers,
     }
 
 

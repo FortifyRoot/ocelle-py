@@ -1,0 +1,70 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "Verify payment for card 4111 1111 1111
+      1111 was received."}], "role": "user"}]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '114'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - google-genai-sdk/1.68.0 gl-python/3.10.19
+      x-goog-api-client:
+      - google-genai-sdk/1.68.0 gl-python/3.10.19
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1alpha/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/2WUQW/TQBCF7/kVI1+QIhPaIqqqtxKq4kPUCkIBUQ4TexwP9e5au+u0pup/Z8au
+        U0fkEFm7b2fe+8brpxlAkqMtuMBIITmHX7IC8NT/656zkWyUjXFJFhv08VU7/J4mzyKJ9KiHkgyk
+        unURCvaUx7qDHXkuO2iwM1IYSucBITSUc8k55J4KjnLIF2BbsyG/uLN39iIAWrjIUsigcKAFK9wR
+        YJ5TCBAdNJ53EgFKtmhzxhokEaYQPdqAeWRnQRw4X4QUtKcVD+SDsyKVMq4VM2zFjkEVL2DViY0G
+        N1xzZBIDnqBmw5GKoaHT3my302OQvRFbGyKrndmKVhYFMGzJkheN6BVO2odgoevVnaw+cKwgUN76
+        aYrQhUgm9BTWbqTHpUAbET5g0GjEOypS6FwrpeoaLA1GdYTSAmJFIqtph3JGR6ihxrGca/3jBcB8
+        /tO1Hj6ivVdMy2EeS51HFkJL/nw+h2VF+b128pKulpSwEb2GaJyPWKdgnHCT+TRNTztHMSQGWB7b
+        EJ0hL1H9jnMaxwzripS4VcMle/N/yMaFF/h965epCZqT3rgUgBX5vJKA727JFq43m5U9E4MFab1W
+        BYHSAy65M42+ESpskEduvY2ovka+wHEYRUWB+ldCjwuEbhydzlowM24k/wN2YVprn2eRTO7L8/75
+        d/p6y7yrSa+QcQXVo/x5FCTyinCovhDKK6yyr+vrm2S/y7agR1k+mo0N+tJJG3BLK4qot2N/qxN5
+        mU0T1+6e7FKZys7J2VBs8nk42D8+PXoRRCcjP9w7Oh1PTyqHT9KX6+mXY/JRkZgoN63TLOvLH+tk
+        giIeGhtZzCbIkli5dlvFQ5NnZwqghzZwvJUrzwOwLRlB+PZk8eFtWWOo+oaJp9A4GygrVPPt+/tr
+        xN3llf9s/rSrGxf+XpmLkMyeZ/8Ac5TLXzsFAAA=
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 02 Apr 2026 13:21:28 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=6671
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Gemini-Service-Tier:
+      - standard
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

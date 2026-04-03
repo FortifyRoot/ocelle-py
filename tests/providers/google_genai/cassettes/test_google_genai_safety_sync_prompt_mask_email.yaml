@@ -1,0 +1,64 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "Summarize the following customer inquiry
+      from [PII.email] about their recent order."}], "role": "user"}]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '140'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - google-genai-sdk/1.68.0 gl-python/3.10.19
+      x-goog-api-client:
+      - google-genai-sdk/1.68.0 gl-python/3.10.19
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1alpha/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/2WRy07DMBBF9/mKkddtBOXRlh0CFhGCRhAQUtWFRSaJhe0JtgNNq/47TtK0qcgi
+        sudez+PMNgBgn1ynIuUOLbuBpY8AbNt/o5F2qJ0X+pAPlty4o7f7toOztzhcN49YLJFbhNLQj0gR
+        XIGwTwmUddfKOlJoQOjvSpgaMkMKlnEUhai4kKsQItCIaetu8vYvFVrLcx8jsJVS3IgNgnCQkYGa
+        qpANWtodzqvRcRBDEpsuFaUoe/uuN7BMaGGLFz8B6cb2mixidlCFTnHtw2dBX6BNzaqmqSd03CPl
+        B3DMI1ClS+gL9R1VLdLzeZdssIETfTLb644clyfS7PJi9C+vvfdVhRyuZrA1PySXwtXNJMnDR8IG
+        INxpWz2JYACMuYKqvHCnLU7n18EeWUfxHY0VHa4clQc4noRX40xyW7QFmUFbkrYYpY1nrjYLzqfq
+        8VnIfPYWT2lzVt/+smAX/AEZsVG5nAIAAA==
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 02 Apr 2026 13:19:55 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=5168
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Gemini-Service-Tier:
+      - standard
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1
