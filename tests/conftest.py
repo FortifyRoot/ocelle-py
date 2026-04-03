@@ -34,6 +34,18 @@ try:
     from fortifyroot._vendor.opentelemetry.instrumentation.bedrock import BedrockInstrumentor
 except ImportError:
     BedrockInstrumentor = None
+try:
+    from fortifyroot._vendor.opentelemetry.instrumentation.litellm import LiteLLMInstrumentor
+except ImportError:
+    LiteLLMInstrumentor = None
+try:
+    from fortifyroot._vendor.opentelemetry.instrumentation.langchain import LangchainInstrumentor
+except ImportError:
+    LangchainInstrumentor = None
+try:
+    from fortifyroot._vendor.opentelemetry.instrumentation.llamaindex import LlamaIndexInstrumentor
+except ImportError:
+    LlamaIndexInstrumentor = None
 from fortifyroot._internal.safety.engine import set_udf_detectors_enabled
 from fortifyroot._internal.safety.runtime import shutdown_global_safety_runtime
 from fortifyroot._vendor.traceloop.sdk.logging.logging import LoggerWrapper
@@ -91,6 +103,9 @@ def _reset_singletons() -> None:
         AnthropicInstrumentor,
         GoogleGenerativeAiInstrumentor,
         BedrockInstrumentor,
+        LiteLLMInstrumentor,
+        LangchainInstrumentor,
+        LlamaIndexInstrumentor,
     ):
         if instrumentor_cls is not None:
             try:

@@ -1,0 +1,308 @@
+interactions:
+- request:
+    body: '{"messages":[{"content":"You are a helpful assistant.","role":"system"},{"content":"Look
+      up the account for [PII.email] with card [PCI.credit_card] and summarize their
+      history.","role":"user"}],"model":"gpt-4.1","max_completion_tokens":50,"stream":false}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '254'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=Q2HOLd21HzNkFoLOP39C0z2uLw.Ki9S9pUaL68rechA-1775202537.144763-1.0.1.1-difzB79nI7swnA4WA.HU0KiqvtQVbHqETglPumW5RU3Ldts.rftG4mfnm.i7je4RnybxlgNJlirwcfpik7U_l3pcE39Q3FyBwLXxJKELSck0yiYykEnIkLfB4_LYyyU8
+      Host:
+      - api.openai.com
+      User-Agent:
+      - OpenAI/Python 1.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - 'false'
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 1.109.1
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.10.19
+      traceparent:
+      - 00-1f8cfe1c758fee23e47ce42f105a2a52-94a55d1deec72ff1-01
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdQkMiTIJDwAAAAD//41Sy07DMBC89yssX3pp
+        q6Qv4MwFJLhwQwhFrrNJXBzbeDdAhfrv2EnbpDwkLpayszOZnV3zsd09PLq7eWXza32zXizSS33P
+        J5FhN1uQdGTNpA08IGVNB0sPgiCqphcXq3kyXy3XLVDbHHSklY6my1k6jdg0WU7T5YFZWSUBQ8tT
+        +GTss32jR5PDRygnk2OlBkRRQqgdm0LRWx0rXCAqJGGIT3pQWkNgWtu345qh9X43YZuG2C2TwoyJ
+        dTT2rqhiFCZjHl4bQJoNZTwUDYo4hmm0HgDCGEsixtAO8HxA9ifL2pbO2w1+o/JCGYVVFlLDEGGw
+        h2Qdb9F9eJ/baJqzaXkQqh1lZF+g/d3iqpPj/TJ6ME0PIAWDuq+vDnGeq2U5kFAaB9FyKWQFec/s
+        9yCaXNkBMBrM/NPMb9rd3MqU/5HvASnBhSvLnIdcyfOB+zYP8VT/ajtl3BrmCP4t3F9GCnzcQw6F
+        aHR3RBx3SFBnYVkleOdVd0mFy9IVQJGIy7nko/3oCxWOG4FTAwAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9e66798bcab1c1b8-BLR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 03 Apr 2026 07:49:07 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-processing-ms:
+      - '264'
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29967'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 66ms
+      x-request-id:
+      - req_17c1de5869564cc58f6e8031f3c803b1
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"content":"You are a helpful assistant.","role":"system"},{"content":"Look
+      up the account for [PII.email] with card [PCI.credit_card] and summarize their
+      history.","role":"user"}],"model":"gpt-4.1","max_completion_tokens":50,"stream":false}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '254'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=tiQZtc17222SamrPNtuWjIe5l61pAiCagTJT_DBzze4-1775203525.962427-1.0.1.1-GLmog4xQWLJ2lO7hqy4iGDJT489P2ecImZ8bj6OB94HPZzbXEd1kjLYP.4AmrXKbfv9cT54JqOaWdb1rdNt93mUyOWPOg4JBh3oyn6M2wFlhPKJReVFWMg21yNRKbkCn
+      Host:
+      - api.openai.com
+      User-Agent:
+      - OpenAI/Python 1.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - 'false'
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 1.109.1
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.10.19
+      traceparent:
+      - 00-94cde0bc8c3a62b8b5b12fc3a724e4c4-08ef0a180c4286f8-01
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdQkMKTAsTQEAAAD//4xSy07DMBC89yssX3pp
+        q6RpeHwCQj2AkDggFLnOJjU4tvFueKr/jp20JOUhcbGUnZ3J7Oxer8/ek6vb6/fL9bnNHvRN5tzt
+        E59Fht08gKQDayFt4AEpa3pYehAEUTU9Pc2XSZZneQc0tgQdabWj+WqRzpfJMp8nq3m62jO3VknA
+        0HIXPhn76N7o0ZTwGsrJ7FBpAFHUEGqHplD0VscKF4gKSRjiswGU1hCYzvbFtGFovX+bsU1L7IJJ
+        YabEehp7UbRlFCZjHp5aQFqMZTxULYo4hmm1HgHCGEsixtANcL9Hdl+Wta2dtxv8RuWVMgq3RUgN
+        Q4TBHpJ1vEN34b3vommPpuVBqHFUkH2E7nfZeS/Hh2UMYJruQQoG9VDP93EeqxUlkFAaR9FyKeQW
+        yoE57EG0pbIjYDKa+aeZ37T7uZWp/yM/AFKCC1dWOA+lkscDD20e4qn+1faVcWeYI/jncH8FKfBx
+        DyVUotX9EXF8Q4KmCMuqwTuv+kuqXFFlJ3CWQpou+WQ3+QQAAP//AwBe+ni6UwMAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9e6691ae9aeca8b0-BLR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 03 Apr 2026 08:05:35 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-processing-ms:
+      - '400'
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29967'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 66ms
+      x-request-id:
+      - req_2fbff61441fa4345a987a3a2cccb99c6
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"content":"You are a helpful assistant.","role":"system"},{"content":"Look
+      up the account for [PII.email] with card [PCI.credit_card] and summarize their
+      history.","role":"user"}],"model":"gpt-4.1","max_completion_tokens":50,"stream":false}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '254'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=AW4fGsQVJEHvRpsjjCSSNMGPE3d4Tv8JoVsHVkrcdVs-1775203864.3242133-1.0.1.1-TJaQYY5DEDv8vDyM3VlA_d_DuRMmysbGjt74My3gDEPNX9tdaJdLj.6RE9UnxRyHKXNqq1PaJ9gv9H_bWu.ZBTUCr5ztdS9x.boZiIhvfwjdwulz0hAlKQgmm0RSXbiy
+      Host:
+      - api.openai.com
+      User-Agent:
+      - OpenAI/Python 1.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - 'false'
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 1.109.1
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.10.19
+      traceparent:
+      - 00-83ade1afb66c440e7e7105344a42ff74-a3f3286bd2672375-01
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdQkMKQ0NCgEAAAD//41Sy07DMBC89yssX7i0
+        VVMSWo5wQCDxOCCQAKHIdTapIbGNdwNUqP+OnbQk5SFxsZSdncns7F5e2bvr2/Ojm4vVxcvq+Ajh
+        9CS+58PAMIsnkLRljaXxPCBldAtLB4IgqEazWTKd7M9ncQNUJoMy0ApLo3gcjaaTaTKaxKMo3jCX
+        RklA3/LgPxn7aN7gUWfw7suT4bZSAaIowNe2Tb7oTBkqXCAqJKGJDztQGk2gG9tnexVD49xqyBY1
+        sTMmhd4j1tLYm6IlIz8Zc/BSA9K4L+Mgr1GEMXRdlj1AaG1IhBiaAR43yPrLcmkK68wCv1F5rrTC
+        ZepTQx+ht4dkLG/QtX8fm2jqnWm5F6ospWSeofnd/mErx7tldGAUbUDyBsuunmzi3FVLMyChSuxF
+        y6WQS8g6ZrcHUWfK9IBBb+afZn7TbudWuviPfAdICdZfWWodZEruDty1OQin+lfbV8aNYY7gXv39
+        paTAhT1kkIu6bI+I4woJqtQvqwBnnWovKbdpPp/ns+RgngAfrAefj2VsjlMDAAA=
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9e6699f319537679-BLR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 03 Apr 2026 08:11:14 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-processing-ms:
+      - '364'
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29967'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 66ms
+      x-request-id:
+      - req_9d8af589d132420dbd3d84dcc3788761
+    status:
+      code: 200
+      message: OK
+version: 1

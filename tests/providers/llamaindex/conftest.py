@@ -1,11 +1,10 @@
-"""LiteLLM-specific fixtures for provider safety cassette tests (Phase T6-A).
+"""LlamaIndex-specific fixtures for provider safety cassette tests (Phase T6-C).
 
-LiteLLM uses dual instrumentation:
-  - FR creates 'fortifyroot.litellm.safety' parent span
-  - LiteLLM's native OTel creates 'litellm_request' child span
+LlamaIndex uses an event-driven dispatcher for instrumentation.
+Safety is applied via method wrapping on BaseLLM subclasses.
 
-Cassettes are stored in tests/providers/litellm/cassettes/.
-VCR intercepts at the HTTP level (OpenAI API is the backend).
+Cassettes are stored in tests/providers/llamaindex/cassettes/.
+VCR intercepts at HTTP level (OpenAI API is the LLM backend via llama_index OpenAI).
 """
 
 from __future__ import annotations
@@ -19,15 +18,22 @@ import pytest
 import yaml
 
 _DEFAULT_MODEL = "gpt-4.1"
-_DEFAULT_BASE_URL = "https://api.openai.com"
+_DEFAULT_BASE_URL = "https://api.openai.com/v1"
 _CASSETTE_DIR = Path(__file__).parent / "cassettes"
 
 
 @pytest.fixture(autouse=True)
-def litellm_environment():
-    """Set dummy API key so LiteLLM/OpenAI doesn't fail during cassette replay."""
+def llamaindex_environment():
+    """Set dummy API key so LlamaIndex/OpenAI doesn't fail during cassette replay."""
     if "OPENAI_API_KEY" not in os.environ:
         os.environ["OPENAI_API_KEY"] = "test-key-for-vcr-replay"
+
+
+def _scrub_response_headers(response):
+    """Remove org/project identifiers from response headers."""
+    for header in ("openai-organization", "openai-project"):
+        response["headers"].pop(header, None)
+    return response
 
 
 @pytest.fixture(scope="module")
@@ -37,7 +43,6 @@ def vcr_config():
         "filter_headers": [
             "authorization",
             "x-api-key",
-            "api-key",
             "openai-organization",
             "openai-project-id",
         ],
@@ -47,11 +52,15 @@ def vcr_config():
     }
 
 
-def _scrub_response_headers(response):
-    """Remove org/project identifiers from response headers."""
-    for header in ("openai-organization", "openai-project"):
-        response["headers"].pop(header, None)
-    return response
+@pytest.fixture(autouse=True)
+def reset_sdk_state():
+    """Override the root conftest reset_sdk_state for LlamaIndex tests.
+
+    LlamaIndex's instrumentor uses wrapt wrappers on BaseLLM subclasses
+    that persist across tests. Re-instrumenting doesn't work reliably,
+    so we skip the full SDK reset.
+    """
+    yield
 
 
 def ensure_key_or_cassette(pytestconfig: pytest.Config, cassette_stem: str) -> None:
@@ -71,38 +80,24 @@ def ensure_key_or_cassette(pytestconfig: pytest.Config, cassette_stem: str) -> N
         )
 
 
-def cassette_defaults(cassette_stem: str) -> tuple[str | None, str | None]:
-    """Extract base_url and model from a recorded cassette."""
-    cassette = _CASSETTE_DIR / f"{cassette_stem}.yaml"
-    if not cassette.exists():
-        return None, None
-    try:
-        payload = yaml.safe_load(cassette.read_text())
-        interactions = payload.get("interactions") or []
-        if not interactions:
-            return None, None
-        request = interactions[0].get("request") or {}
-        uri = request.get("uri")
-        body = request.get("body")
-        if not uri or not body:
-            return None, None
-        parsed = urlparse(uri)
-        base_url = f"{parsed.scheme}://{parsed.netloc}"
-        body_json = json.loads(body)
-        model = body_json.get("model")
-        return base_url or None, model or None
-    except Exception:
-        return None, None
-
-
 def resolved_model(pytestconfig: pytest.Config, cassette_stem: str) -> str:
     """Resolve the model: env var > cassette > default."""
-    env_model = os.getenv("LITELLM_TEST_MODEL") or os.getenv("OPENAI_TEST_MODEL")
+    env_model = os.getenv("LLAMAINDEX_TEST_MODEL") or os.getenv("OPENAI_TEST_MODEL")
     if env_model:
         return env_model
     record_mode = (pytestconfig.getoption("--record-mode") or "none").lower()
     if record_mode == "none":
-        _, cassette_model = cassette_defaults(cassette_stem)
-        if cassette_model:
-            return cassette_model
+        cassette = _CASSETTE_DIR / f"{cassette_stem}.yaml"
+        if cassette.exists():
+            try:
+                payload = yaml.safe_load(cassette.read_text())
+                interactions = payload.get("interactions") or []
+                if interactions:
+                    body = interactions[0].get("request", {}).get("body")
+                    if body:
+                        model = json.loads(body).get("model")
+                        if model:
+                            return model
+            except Exception:
+                pass
     return _DEFAULT_MODEL

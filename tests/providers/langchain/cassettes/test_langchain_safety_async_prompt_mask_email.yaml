@@ -1,0 +1,317 @@
+interactions:
+- request:
+    body: '{"messages":[{"content":"Summarize the inquiry from [PII.email] about their
+      subscription renewal.","role":"user"}],"model":"gpt-4.1","max_completion_tokens":50,"stream":false}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '175'
+      Content-Type:
+      - application/json
+      Host:
+      - api.openai.com
+      User-Agent:
+      - AsyncOpenAI/Python 1.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 1.109.1
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.10.19
+      traceparent:
+      - 00-1f8cfe1c758fee23e47ce42f105a2a52-442aeaca45c6c766-01
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdQkMiTIs8wcAAAD//4xTTYvbMBC951cInZOQ
+        z0173EOhgUK7ZellCUaRxo52ZcmZkdqGkv/ekZ2snbYLvch43rw3H0+y6vmbebAfPh+36kF/un8M
+        4ePXjRxnRtg/g45X1lQH5kG0wXewRlARsup8s1kvZov1atkCdTDgMq1q4mQ1nU8yNpmtJvPVhXkI
+        VgNxyhP/CvGrPXOP3sBPDs/G10gNRKoCjl2TOIjB5YhURJai8lGOe1AHH8G3bT8eQFh/TBZPosRQ
+        i6cv2+0UamXdTnCeBvQkjgkoT0UCoVJorK9EZCaChx/KiVDmX4uC0p402iYnTwWLn4RCEATwkjnW
+        lwFrlVERUGin0JZWdwG1DyneyDYYeAc0FhGw5g9TeJaYqC+oE3J2vC08nBWhTKTyrn1ybgAo70Ns
+        K7db3l2Q8+teXai4gT39QZWl9ZYOBVtL7DPvkGJoZIue+dy1/qUbSyQL1U0sYniBttxi2cnJ/sb0
+        4HJzASM36Pr43cXzW7XCQGS3aOC/1EofwPTM/rKoZGwYAKPBzH838y/tbm5283/ke0BraPgpFA2C
+        sfp24D4NIb+nt9Jed9w2LAnwOz+SIlrA7IOBUiXX3XRJJ4pQF2xWBdig7a572RRrvb57t3g/MyBH
+        59FvAAAA//8DAFl67G34AwAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9e66797a093c755c-BLR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 03 Apr 2026 07:49:04 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-processing-ms:
+      - '451'
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - __cf_bm=znXvsEzyJSplnMMyAKHL3.FfCzPWAk.9KQzgd1u6z58-1775202543.6889193-1.0.1.1-X4s_NAPWSu8SYkQxJ.KtiH5qNsoH3BA9IH_Ba97W6vGjJeuuwmwAvJ5ABjSzmAecAgTuY5WRYs6hhiqjEFq9ePqA.ycIxt8LxqV.6_dvCEGJLILkVHqvUo7ASAQ8vbv6;
+        HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 03 Apr 2026
+        08:19:04 GMT
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29980'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 40ms
+      x-request-id:
+      - req_72fa242f9eb64bb3b5c7b9afb07baaad
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"content":"Summarize the inquiry from [PII.email] about their
+      subscription renewal.","role":"user"}],"model":"gpt-4.1","max_completion_tokens":50,"stream":false}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '175'
+      Content-Type:
+      - application/json
+      Host:
+      - api.openai.com
+      User-Agent:
+      - AsyncOpenAI/Python 1.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 1.109.1
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.10.19
+      traceparent:
+      - 00-94cde0bc8c3a62b8b5b12fc3a724e4c4-0264a6be69c0a104-01
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdQkMya90MwYAAAD//4xTTW/bMAy951doOidG
+        bCfp7u2lt2HYYUARGIpEOWxlyZPkbsaQ/z5KTur0Y0AvAsTH90Q+Us/qpx7lncWyxMfvuxJs7e4U
+        XyaGOzyCjBdWIR3xIKKzEyw9iAhJtby52VbreltXGeicApNobR9Xm6JcVetqu1pvVuXmzDw6lBAo
+        5YGujP3NZ6rRKvhD4fXyEukgBNECxS5JFPTOpAgXIWCIwka+nEHpbASby74FHwVaM35hP47A0P4a
+        0I9Me9exh2/39wV0As2eYWDi4IbIImWRYBwoYBVTQHQTmNMJQc/CcAjSY59MYB4s/BamSNojE56o
+        AE9oWyaN8KhRipznPL2sne/EmWaSbSy6SSER3qsX1y150EMQyVI7GHMFCGtdzLLZzP0ZOb3YZ1zb
+        e3cIb6hco8VwbGiCgcZJVoXoep7RE537PKbhlfOchLo+NtE9QX6uqic5Pi/GDNYXMFKBZo5vd8sP
+        1Jqz01dj5lLII6iZOe+EGBS6K2Bx1fP7Yj7Snvom5z8jPwNSQk+ja3oPCuXrhuc0D+nb/C/txeNc
+        MA/gn+kvNBHBpzko0GIw00LzMIYIXUPDasH3Hqet1n2j6x18LaEsK744Lf4BAAD//wMAzbvXYd8D
+        AAA=
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9e66919d7d43a45e-BLR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 03 Apr 2026 08:05:33 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-processing-ms:
+      - '592'
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - __cf_bm=7mvBNg8xGHVXrDkBen_sKAxV54.3ZdTSGeD2PGzFzD8-1775203532.3928924-1.0.1.1-hboVWzcDhTE1vcEWSAiQxzuw8WSDwR_fALmIKZhKPo1vhqZpaCvorlSCj.AkYv4wE8ZXCYdgsoHk9kP38fyfMkx2MextBcCyXbM5yTOM2sIgr3ziRJgbTH0eFlof1ZZ9;
+        HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 03 Apr 2026
+        08:35:33 GMT
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29980'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 40ms
+      x-request-id:
+      - req_fe709b65a56f4a75842958edfd031eb1
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"content":"Summarize the inquiry from [PII.email] about their
+      subscription renewal.","role":"user"}],"model":"gpt-4.1","max_completion_tokens":50,"stream":false}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '175'
+      Content-Type:
+      - application/json
+      Host:
+      - api.openai.com
+      User-Agent:
+      - AsyncOpenAI/Python 1.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 1.109.1
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.10.19
+      traceparent:
+      - 00-83ade1afb66c440e7e7105344a42ff74-b79693429506ea4c-01
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdQkMKQ0srgQAAAD//41TwW7bMAy95ysEnZMg
+        cZImvW4Fip62wzAMKAJDkWlHrSw5pNQtGPLvo+S0TtYO2EW2+MinRz7pPu5uF8Wn+7u62Rxevrsv
+        1Y+2+CzHqcLvnkCH16qp9lwHwXjXwxpBBUis8/V6VcwWm/UsA62vwKaypguT5XQ+KWbFajJbTubL
+        c+XeGw3EKY+8FeJ3XpNGV8EvDmeeHGmBSDXAsdckDqK3KSIVkaGgXJDjAdTeBXBZ9rc9COMO0eBR
+        1Ohb8fj14WEKrTJ2KxAahRWJQwRKTZHwKLhYA/K/2vkYOMfBT+MaEfZgUFDckUbTpfSpYPajUAiC
+        AJ5TkrYKTW20SnhiM6722PZbBJumJYJPZKJDzxOgsWD9IfKX0ysIrIx11B+c12tRdnrZK0IdSaVZ
+        u2jtBaCc8yEfnKe8PSOnt7la37CEHf1VKmvjDO1LtpbYZ54hBd/JjJ543Wb/4pUlkonaLpTBP0M+
+        rlj0dHK4MQO4WJ/BwALtEL85e37NVp5ncuG/1ErvoRoqh8uiYmX8BTC66Pm9mI+4+77ZzP+hHwCt
+        oWNzyw6hMvq64SENIb2nf6W9zTgLlgT4wo+kDAYw+VBBraLtb7qkIwVoSzarAezQ9Ne97sqVXt1s
+        ittZBXJ0Gv0BI1cZ2fgDAAA=
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9e6699dcfefd95be-BLR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 03 Apr 2026 08:11:11 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-processing-ms:
+      - '817'
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - __cf_bm=RIWyNtd6MbBoiPkdcj_E6zcoaL1YOL56YMeg21zkMng-1775203870.2340956-1.0.1.1-moM6zQ5YQXKbtSbG3QM3B3Zc.cc0sum3jHqhY2tA7yFTbleWYYK_qyDO9yqmlSAeUIJuztVwJM9HzoTZ3v8iaWvkLvWp.esmobgwevq69fKwsCvhXfb8FKEsbgDm8kbg;
+        HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Fri, 03 Apr 2026
+        08:41:11 GMT
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29980'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 40ms
+      x-request-id:
+      - req_8bc104179ea8447097028ad18004be4b
+    status:
+      code: 200
+      message: OK
+version: 1

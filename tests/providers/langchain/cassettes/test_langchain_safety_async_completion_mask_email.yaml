@@ -1,0 +1,308 @@
+interactions:
+- request:
+    body: '{"messages":[{"content":"Create a fictional business card for Tom Baker,
+      CTO of TechCo. Include a work email. Format: Name: ...\nEmail: ...","role":"user"}],"model":"gpt-4.1","max_completion_tokens":50,"stream":false}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '217'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=znXvsEzyJSplnMMyAKHL3.FfCzPWAk.9KQzgd1u6z58-1775202543.6889193-1.0.1.1-X4s_NAPWSu8SYkQxJ.KtiH5qNsoH3BA9IH_Ba97W6vGjJeuuwmwAvJ5ABjSzmAecAgTuY5WRYs6hhiqjEFq9ePqA.ycIxt8LxqV.6_dvCEGJLILkVHqvUo7ASAQ8vbv6
+      Host:
+      - api.openai.com
+      User-Agent:
+      - AsyncOpenAI/Python 1.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 1.109.1
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.10.19
+      traceparent:
+      - 00-1f8cfe1c758fee23e47ce42f105a2a52-5c6e71e7000e8cab-01
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/41SQW7bMBC8+xUEz5ZhKXLS+BTUaY8x0ro9tA0EmlpKbChSJikjRuC/d0nZkdIm
+        QC8CNLO7nJnd5wkhVJZ0SSivmedNq5Lb+82PbG2v13uzu3u6lPfb3bfP+6/fb/dfdoJOQ4fZ/gbu
+        z10zbrAPvDS6p7kF5iFMTa+uFtk8W+R5JBpTggptVeuTfJYmgUvmeZLmp87aSA4OS37iLyHP8Rs0
+        6hKeEJ5Pz0gDzrEKEDsXIWiNCghlzknnmfZ0OpDcaA86yr5jDSzJxjTkI3sES8gvvZFeIbaqJQiy
+        AV5ro0x1IGshUFIsWaFPpg/LSK9MgD41TKol8aaZbcOkG48UNyGS8dMWROdYsK47pUYE09p4FqKL
+        ph9OzPHFJmpordm6v1qpkFq6usCkHcaOlpw3LY3sEb8PMc7uVUIUBzWtL7x5hPjcRd6Po8MCBzJb
+        nEiPAtWAL66nb0wrSvCYhButg3LGayiHzmF3rCulGRGTked/xbw1u/ctdfU/4weCc2jxMovWQin5
+        a8NDmYVw3u+VvWQcBVMHdo8HUngJNuyhBME61R8edQfnoSlwWRXY1sr++kRbiItL+JBCmmZ0cpz8
+        AUJCj1GHAwAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9e66797f3ed9c183-BLR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 03 Apr 2026 07:49:05 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-processing-ms:
+      - '417'
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29969'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 62ms
+      x-request-id:
+      - req_24d710b1fdc34ea987487dfe5867ffe6
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"content":"Create a fictional business card for Tom Baker,
+      CTO of TechCo. Include a work email. Format: Name: ...\nEmail: ...","role":"user"}],"model":"gpt-4.1","max_completion_tokens":50,"stream":false}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '217'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=7mvBNg8xGHVXrDkBen_sKAxV54.3ZdTSGeD2PGzFzD8-1775203532.3928924-1.0.1.1-hboVWzcDhTE1vcEWSAiQxzuw8WSDwR_fALmIKZhKPo1vhqZpaCvorlSCj.AkYv4wE8ZXCYdgsoHk9kP38fyfMkx2MextBcCyXbM5yTOM2sIgr3ziRJgbTH0eFlof1ZZ9
+      Host:
+      - api.openai.com
+      User-Agent:
+      - AsyncOpenAI/Python 1.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 1.109.1
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.10.19
+      traceparent:
+      - 00-94cde0bc8c3a62b8b5b12fc3a724e4c4-6de50d6cc60d3e61-01
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdQkMya8yCgIAAAD//4xSTY/TMBC991dEPrdV
+        Pin0tEsFHJDgUrjAKnKdSWLWsSN7siJC/e+MnXaT/UDiEinvzYzfezO5jm/B4WccH75ptfs0fv9Y
+        twNb+w5z+gUCr11bYagPUBo90cICR/BTk92uSOOsyLJAdKYC5duaHjf5NtmkcVps4nyT5JfO1kgB
+        jkp+0G8U/Qlfr1FX8JvgeH1FOnCON0DYtYhAa5RHGHdOOuQa2XomhdEIOsj+wjvYR0fTRe/5Pdgo
+        +qmPEhVhh1ZCHR1BtNoo04zR17omSaHkQD65HveBPhgPfei4VPsITbc9+Uk3SJQwPpLl0xbqwXFv
+        XQ9KLQiutUHuowum7y7M+dEmaeitOblnrayWWrq2pKQdxU6WHJqeBfZM37sQ5/AkIUaDuh5LNPcQ
+        nsvyaRybFziTaXEhkQSqGS/erV+ZVlaAlIRbrIMJLlqo5s55d3yopFkQq4Xnl2Jemz35lrr5n/Ez
+        IQT0dJllb6GS4qnhucyCP+9/lT1mHAQzB/aBDqRECdbvoYKaD2o6POZGh9CVtKwGbG/ldH11X9bZ
+        G3ibQJKkbHVe/QUAAP//AwDLQ4JAhwMAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9e6691a39d0557c8-BLR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 03 Apr 2026 08:05:34 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-processing-ms:
+      - '457'
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29969'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 62ms
+      x-request-id:
+      - req_cf05141012eb4ad3911fa658ee2bf98c
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"content":"Create a fictional business card for Tom Baker,
+      CTO of TechCo. Include a work email. Format: Name: ...\nEmail: ...","role":"user"}],"model":"gpt-4.1","max_completion_tokens":50,"stream":false}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '217'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=RIWyNtd6MbBoiPkdcj_E6zcoaL1YOL56YMeg21zkMng-1775203870.2340956-1.0.1.1-moM6zQ5YQXKbtSbG3QM3B3Zc.cc0sum3jHqhY2tA7yFTbleWYYK_qyDO9yqmlSAeUIJuztVwJM9HzoTZ3v8iaWvkLvWp.esmobgwevq69fKwsCvhXfb8FKEsbgDm8kbg
+      Host:
+      - api.openai.com
+      User-Agent:
+      - AsyncOpenAI/Python 1.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 1.109.1
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.10.19
+      traceparent:
+      - 00-83ade1afb66c440e7e7105344a42ff74-938d4bebe0c74c4f-01
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdQkMKQ1y8QUAAAD//4xSwW7bMAy95ysMnZPA
+        ceMmzalbsB22YQW63LbCUGTa1iqLhsQUC4b8+yg5qd2tA3ox4PdI6r1Hfvp4Z76t0dx3lF5/fvdE
+        q2P55V5MQwfuf4KiS9dcIfcBabQ9rRxIgjB1sVrlWXq1Xi0i0WIJJrTVHc2W88UsS7N8li5ni+W5
+        s0GtwHPJd/5Nkt/xGzTaEn4xnE4vSAveyxoYuxQx6NAEREjvtSdpSUwHUqElsFH2V9nCJtlhm7yX
+        j+CS5IfdaTKMbRsNVbID1Vg0WB+Tu6piSbFkyz6lPW4ivcUAfWilNpuEsJ3vw6RbYkphiGT8tIPq
+        4GWwbg/GjAhpLZIM0UXTD2fm9GyTNXQO9/6vVlFpq31TcNKeY2dLnrATkT3x9yHGeXiRkOBBbUcF
+        4SPE566W/TgxLHAgs/xMEgs0A57fTF+ZVpRAnIQfrUMoqRooh85hd/JQahwRk5Hnf8W8Nrv3rW39
+        lvEDoRR0fJlF56DU6qXhocxBOO//lT1nHAULD+6JD6QgDS7soYRKHkx/eMIfPUFb8LJqcJ3T/fVV
+        XZGr/Hqd3aQliMlp8gcAAP//AwDZ/BPLhwMAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9e6699e47e468087-BLR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 03 Apr 2026 08:11:12 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-processing-ms:
+      - '908'
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29969'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 62ms
+      x-request-id:
+      - req_3270185c06924319b2af1d82369ebcaf
+    status:
+      code: 200
+      message: OK
+version: 1
