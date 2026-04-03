@@ -1,0 +1,46 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "Summarize the inquiry
+      from john.doe@example.com about card 4111 1111 1111 1111."}]}], "inferenceConfig":
+      {"maxTokens": 50}}'
+    headers:
+      Content-Length:
+      - '176'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - !!binary |
+        Qm90bzMvMS40Mi43NSBtZC9Cb3RvY29yZSMxLjQyLjc1IHVhLzIuMSBvcy9tYWNvcyMyNC42LjAg
+        bWQvYXJjaCN4ODZfNjQgbGFuZy9weXRob24jMy4xMC4xOSBtZC9weWltcGwjQ1B5dGhvbiBtL1os
+        RCxiIGNmZy9yZXRyeS1tb2RlI2xlZ2FjeSBCb3RvY29yZS8xLjQyLjc1
+      amz-sdk-invocation-id:
+      - !!binary |
+        ZDE3ZDIxOTUtM2M2Ni00NTgxLTlhODktYzM0ZTZjYTYwYjQx
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":1284},"output":{"message":{"content":[{"text":"I
+        apologize, but I do not have access to any real email inquiries or credit
+        card information. As an AI assistant, I do not have the capability to access
+        or summarize private user data. I can only provide general information about
+        credit cards"}],"role":"assistant"}},"stopReason":"max_tokens","usage":{"inputTokens":35,"outputTokens":50,"serverToolUsage":{},"totalTokens":85}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '447'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 02 Apr 2026 13:38:36 GMT
+      x-amzn-RequestId:
+      - e11d7dad-ab5a-4cd2-ab18-30f37ac45362
+    status:
+      code: 200
+      message: OK
+version: 1

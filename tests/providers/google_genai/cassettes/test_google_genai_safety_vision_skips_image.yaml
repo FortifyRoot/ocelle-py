@@ -1,0 +1,65 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "What is in this image? Reply to [PII.email]
+      with the answer."}, {"inlineData": {"data": "iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAIAAAD_gAIDAAABFUlEQVR4nO3OUQkAIABEsetfWiv4Nx4IC7Cd7XvkByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIX4Q4gchfhDiByF-EOIHIReeLesrH9s1agAAAABJRU5ErkJggg==",
+      "mimeType": "image/png"}}]}]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '604'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - google-genai-sdk/1.68.0 gl-python/3.10.19
+      x-goog-api-client:
+      - google-genai-sdk/1.68.0 gl-python/3.10.19
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1alpha/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/3VRy27CMBC85ytWPiJAQKGvGyqozQFBW9SCSg8LXhIXx0a204cQ/14n4RFa4YNl
+        7Yxnd2c2AQBboOKCoyPLbuHNVwA2+Z1hWjlSzgP7ki+u0bgjtzib0ttTHH1nn9g4JhAJRgSZEgpl
+        AcFqKTjMpV6sQC+hUjHEPS61qVTqMzVTXc9S0A2rEAImkCqcSwKnwZLiQAkKaesFtjb6U3ChInC+
+        FSr7RQZiMgRcGFo4+VNnpdG2h/d79biQ0ZKyaRPNSe7p2z2BLYUSNn4itFpltOfxcMQOqFCcvn25
+        Eewb5NIstX7tATn01uLBQOYHTtZurFek7nSaW9u6uizUSlGcEC6aO9xph/IEardvqv+Ebc+39R6V
+        MirF57dEKdxPnk9/MmYlJ1xZu3n914ozKuGge98/K9PqHHSCkvPMxTqNYne6arPdCnYNizheyFhR
+        +B5R4pOoteqd2lKijfOOzJBda2Up5DnnYT7Eae95EH6+fqSDUTxNJtFjgwXb4BeZcTfG7QIAAA==
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 02 Apr 2026 14:00:36 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=3924
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Gemini-Service-Tier:
+      - standard
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

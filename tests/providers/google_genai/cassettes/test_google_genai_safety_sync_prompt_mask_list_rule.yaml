@@ -1,0 +1,115 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "Compare our product roadmap with [PII.competitor_org]''s
+      latest offering and [PII.competitor_org]'' pricing strategy."}], "role": "user"}]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '172'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - google-genai-sdk/1.68.0 gl-python/3.10.19
+      x-goog-api-client:
+      - google-genai-sdk/1.68.0 gl-python/3.10.19
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1alpha/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: !!binary |
+        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
+        ruwXb569+Nf95NGfj/4Ht6Fn6lcgAAA=
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 02 Apr 2026 13:21:06 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=16035
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Gemini-Service-Tier:
+      - standard
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

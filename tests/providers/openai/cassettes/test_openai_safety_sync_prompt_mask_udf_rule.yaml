@@ -1,0 +1,109 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"user","content":"Prepare a status update for [custom_compliance.[custom_compliance.[custom_compliance.[custom_compliance.project-phoenix]]]]
+      and [custom_compliance.[custom_compliance.[custom_compliance.[custom_compliance.operation-atlas]]]]
+      including timeline and budget."}],"model":"gpt-4.1","max_tokens":50}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '331'
+      Content-Type:
+      - application/json
+      Host:
+      - api.openai.com
+      User-Agent:
+      - OpenAI/Python 1.109.1
+      X-Stainless-Arch:
+      - x64
+      X-Stainless-Async:
+      - 'false'
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 1.109.1
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.10.19
+      traceparent:
+      - 00-26970a6242f5b8054bd4ccfd0c0600f4-2fe6423b2095d568-01
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdQl0MfMyKAYAAAD//41T247TMBB9368w7lvU
+        rJq22V7eoNweQKwESEjsKnLtSWJw7Mh2ql1Q/52x02xaLhIvucyZM3PGZ7xxi3fvX77azV5/Kd+0
+        6x/5YeluXtBpYJj9N+B+YF1zgzzw0uge5haYh1A1W63ybLGZ55sINEaACrSq9enyOkvns3mezpZp
+        tjwxayM5OEz5ir+E/IzPoFELeMDwbDpEGnCOVYCxIQmD1qgQocw56TzTnk5HkBvtQUfZO7CeSa0e
+        n5G3YIFIRxhx3nbcdxYEfjLfOdK1AgchpbHE10Baa8LcjiTJbf9JbmsDWj4kCWFaYPxDC5aFkyDP
+        vWIuSaaEmwNYqSviZQNKaoip+05U4Kdkzxz2w/wgVzArhi7EQmusD0Ts3zDvtnf6TqdpGl6TCfnY
+        a/wcNfaxCTnp2gaJg7SAJcmnU/dtCKSI7zpr4fKELJSdY8Eh3Sl1BjCtjY9zRW/uT8jxyQ1lKtS9
+        d79RaSm1dHWBC+FwO/DkFejK1zTiR3zeR9+7CysplmpaX3jzHWLDm6wvSMdNG8H8tBPUo0Q1xrNs
+        YF2UKwSg9cqdLQ7ljNcgRuq4ZawT0pwBV2dj/6nmb7X70dHG/yk/ApxDi3eoaHEdJb+ceEyzENz+
+        V9rTIUfB1IE94O0qvAQbrBBQsk71C0Ddo/PQFOhXBbbFfY33pGyLVb5ZrNf7OZvTq+PVL9DON80x
+        BAAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9e60706d69c1f473-BLR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 02 Apr 2026 14:14:19 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-processing-ms:
+      - '522'
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - __cf_bm=jVnjjicW5WQ6SMnpaLG9N6Zl4YW1WbM8Uoh7eEJFzik-1775139258.4664905-1.0.1.1-gHGxrTSWOJzNwoOMZmfv6e06o60.N8ntXVVvUkHeVdbEj7hsQOlj0Jh9AC5bQIVOf3lIKDRK.42btr3SXeg92o74LQhjpYVWs_bu_MruGI8N6PlW3IKfWcUN457WBhqe;
+        HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Thu, 02 Apr 2026
+        14:44:19 GMT
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29934'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 132ms
+      x-request-id:
+      - req_2fa1971741054327b3d453591e3b3013
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,0 +1,46 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "Forward this message
+      from alice.jones@example.org to the support team."}]}], "inferenceConfig": {"maxTokens":
+      50}}'
+    headers:
+      Content-Length:
+      - '167'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - !!binary |
+        Qm90bzMvMS40Mi43NSBtZC9Cb3RvY29yZSMxLjQyLjc1IHVhLzIuMSBvcy9tYWNvcyMyNC42LjAg
+        bWQvYXJjaCN4ODZfNjQgbGFuZy9weXRob24jMy4xMC4xOSBtZC9weWltcGwjQ1B5dGhvbiBtL1os
+        RCxiIGNmZy9yZXRyeS1tb2RlI2xlZ2FjeSBCb3RvY29yZS8xLjQyLjc1
+      amz-sdk-invocation-id:
+      - !!binary |
+        ZGM0NDYwN2EtMWY2NS00YWMzLTkwZjItYzEwMTYzYzU0YmE0
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":1061},"output":{"message":{"content":[{"text":"I
+        apologize, but I cannot forward emails on your behalf. As an AI assistant,
+        I do not have the capability to send or forward emails. I can only provide
+        information and have conversations. If you need to forward a message, you
+        would nee"}],"role":"assistant"}},"stopReason":"max_tokens","usage":{"inputTokens":23,"outputTokens":50,"serverToolUsage":{},"totalTokens":73}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '440'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 02 Apr 2026 13:38:26 GMT
+      x-amzn-RequestId:
+      - 8812add7-73e6-411a-b78c-0a6cc32735f5
+    status:
+      code: 200
+      message: OK
+version: 1

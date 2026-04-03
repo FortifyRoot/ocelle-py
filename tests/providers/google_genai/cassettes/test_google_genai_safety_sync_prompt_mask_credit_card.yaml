@@ -1,0 +1,69 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "Check if order for card [PCI.credit_card]
+      was processed."}], "role": "user"}]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '113'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - google-genai-sdk/1.68.0 gl-python/3.10.19
+      x-goog-api-client:
+      - google-genai-sdk/1.68.0 gl-python/3.10.19
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1alpha/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/31Ty27bMBC8+ysWuqQ1bCNtmgdyC9IcjKZI0Bp9pgeGWpuEKVIlV06MIP/eXUqy
+        5Ut9MATucHZmdvkyAii08qUtFWEqLuE3nwC85H+pBU/oiQv9ER/WKtIe2/5eBt8MIXyWS8UcmN0H
+        gtJG1OS2oA3qNZBBqGPQmJL1K0ikqEkQlqA8hFhiBOs3wW2kqEBHLC0xVSxncJUEdDWfwBzK4I8I
+        jNogKC1kQAEiKjclW2HHlLaJsGJ2/kSfLFmGL61XXlvlgJ0rcHaNwzbgm+oRY5pwrxIsHXFTlwJD
+        mnxpyWTb0AijbqKlLTtSJEesCcRwMioipEYbtsLwSpENHp4smVb/7ME/+EUYBLJPIVNn9RP5PnIO
+        PGIp7mQiSlO+UGHURnlqrcWN1TnVjRXbu8SfDLISkVY7pYXFdNHM4DaEdTYTapGXchCXomzMYxyP
+        FwZtpwQoKr2WgdRqheMxsBvK5Sd85FRx1l/6Kep5HqFhacYmCnH7P3zbRDcMrHDvpHPKN9/UJnic
+        AFbKuom4Zdv0NifIzThUDkiUs9uc0z6/bpB5jHXgbXt02xxA5gJVllHWRtJpEt+ULPJyNhJtwlkx
+        WOzX3fefyf45xOBQdr0KJboe/toDCt40m8wXVCl4gX1d3N0Xu6r1JT7z8fGob5CpiyZxyJ+RlKzn
+        7vkVPN2qpkVYo7+WeLny7qwlG7zjw/rpSQegQMod1C7O+9qAOH3kttYNX/jg8bNL5Xjhxcri5sei
+        GCRBh7r6KEaDxAoyoVkZOtR4fvxh1GXWxviN355t81phxQlO389Op0unkskNC55azfuK81Iwt99P
+        7hT+Pbv+pejD9OaeS5+aq4ti9Dr6B3vIjzPjBAAA
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 02 Apr 2026 13:20:50 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=5398
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Gemini-Service-Tier:
+      - standard
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

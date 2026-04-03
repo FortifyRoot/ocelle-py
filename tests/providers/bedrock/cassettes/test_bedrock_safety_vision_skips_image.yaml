@@ -1,0 +1,47 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "What is in this image?
+      Reply to [PII.email] with the answer."}, {"image": {"format": "png", "source":
+      {"bytes": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/58BAwAI/AL+hc2rNAAAAABJRU5ErkJggg=="}}}]}],
+      "inferenceConfig": {"maxTokens": 60}}'
+    headers:
+      Content-Length:
+      - '308'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - !!binary |
+        Qm90bzMvMS40Mi43NSBtZC9Cb3RvY29yZSMxLjQyLjc1IHVhLzIuMSBvcy9tYWNvcyMyNC42LjAg
+        bWQvYXJjaCN4ODZfNjQgbGFuZy9weXRob24jMy4xMC4xOSBtZC9weWltcGwjQ1B5dGhvbiBtL1os
+        RCxiIGNmZy9yZXRyeS1tb2RlI2xlZ2FjeSBCb3RvY29yZS8xLjQyLjc1
+      amz-sdk-invocation-id:
+      - !!binary |
+        ZDRmZTE3YmItZmExNS00ZDFhLThkNzUtYzc2YzVjNzI3YTgz
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":1622},"output":{"message":{"content":[{"text":"I
+        apologize, but I cannot send the contents of this image to the email address
+        you provided, as that would involve sharing personal information (PII). However,
+        I can describe what I see in the image without identifying any individuals.\n\nThe
+        image shows a person''s face in close-up."}],"role":"assistant"}},"stopReason":"max_tokens","usage":{"inputTokens":29,"outputTokens":60,"serverToolUsage":{},"totalTokens":89}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '488'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 02 Apr 2026 13:38:38 GMT
+      x-amzn-RequestId:
+      - b4fbb767-664e-4f81-9c67-352d10429333
+    status:
+      code: 200
+      message: OK
+version: 1

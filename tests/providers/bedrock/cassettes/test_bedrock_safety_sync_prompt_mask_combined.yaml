@@ -1,0 +1,46 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "Send the [custom_compliance.project-phoenix]
+      briefing to [PII.email] and CC the [PII.competitor_org] team."}]}], "inferenceConfig":
+      {"maxTokens": 50}}'
+    headers:
+      Content-Length:
+      - '203'
+      Content-Type:
+      - !!binary |
+        YXBwbGljYXRpb24vanNvbg==
+      User-Agent:
+      - !!binary |
+        Qm90bzMvMS40Mi43NSBtZC9Cb3RvY29yZSMxLjQyLjc1IHVhLzIuMSBvcy9tYWNvcyMyNC42LjAg
+        bWQvYXJjaCN4ODZfNjQgbGFuZy9weXRob24jMy4xMC4xOSBtZC9weWltcGwjQ1B5dGhvbiBtL1os
+        RCxiIGNmZy9yZXRyeS1tb2RlI2xlZ2FjeSBCb3RvY29yZS8xLjQyLjc1
+      amz-sdk-invocation-id:
+      - !!binary |
+        ZWFhYWQxMWMtNjI1MS00YTk5LWExZWItYzU4ODVmNGI2ODI0
+      amz-sdk-request:
+      - !!binary |
+        YXR0ZW1wdD0x
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":932},"output":{"message":{"content":[{"text":"I
+        apologize, but I cannot send confidential information or personally identifiable
+        information (PII) without authorization. That would be a breach of privacy
+        and potentially violate data protection regulations. I cannot proceed with
+        this request. However, I''m happy"}],"role":"assistant"}},"stopReason":"max_tokens","usage":{"inputTokens":40,"outputTokens":50,"serverToolUsage":{},"totalTokens":90}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '469'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 02 Apr 2026 13:38:22 GMT
+      x-amzn-RequestId:
+      - d7f71897-33b7-41fa-b84b-92e390966ccd
+    status:
+      code: 200
+      message: OK
+version: 1
