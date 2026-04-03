@@ -840,6 +840,7 @@ class TestFluentConfig:
                 .config_profile_id("cfg-123")
                 .config_poll_interval_seconds(15)
                 .stream_holdback_chars(256)
+                .allow_udf_detectors(True)
                 .init()
             )
 
@@ -867,6 +868,7 @@ class TestFluentConfig:
             config_profile_id="cfg-123",
             config_poll_interval_seconds=15,
             stream_holdback_chars=256,
+            allow_udf_detectors=True,
         )
 
 
