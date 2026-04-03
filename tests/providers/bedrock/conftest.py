@@ -30,12 +30,12 @@ def bedrock_environment():
     if key_id:
         os.environ["AWS_ACCESS_KEY_ID"] = key_id
     elif "AWS_ACCESS_KEY_ID" not in os.environ:
-        os.environ["AWS_ACCESS_KEY_ID"] = "AKIAIOSFODNN7EXAMPLE"
+        os.environ["AWS_ACCESS_KEY_ID"] = "testing-only-not-a-real-key"
 
     if secret_key:
         os.environ["AWS_SECRET_ACCESS_KEY"] = secret_key
     elif "AWS_SECRET_ACCESS_KEY" not in os.environ:
-        os.environ["AWS_SECRET_ACCESS_KEY"] = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+        os.environ["AWS_SECRET_ACCESS_KEY"] = "testing-only-not-a-real-secret"
 
     os.environ["AWS_DEFAULT_REGION"] = region
 
