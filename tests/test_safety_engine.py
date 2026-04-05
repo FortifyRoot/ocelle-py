@@ -351,6 +351,42 @@ def test_compile_snapshot_skips_invalid_matchers_and_applies_default_action():
     assert result.text == "[SECRET.secret_word]"
 
 
+def test_compile_snapshot_treats_unspecified_rule_action_as_default_override():
+    payload = {
+        "config_profile": {
+            "id": "cfg-unspecified-action",
+            "version": 1,
+            "etag": "etag-unspecified-action",
+            "config": {
+                "safety_config": {
+                    "enabled": True,
+                    "default_action": "MASK",
+                    "rules": [
+                        {
+                            "name": "email",
+                            "category": "PII",
+                            "severity": "HIGH",
+                            "action": "SAFETY_ACTION_UNSPECIFIED",
+                            "enabled": True,
+                            "regex": r"[a-z]+@[a-z]+\.com",
+                        },
+                    ],
+                }
+            },
+        }
+    }
+
+    parsed = parse_sdk_config_response(payload)
+    snapshot = compile_snapshot(parsed.config_profile)
+    result = snapshot.evaluate_text("email jane@acme.com")
+
+    assert [rule.name for rule in snapshot.rules] == ["email"]
+    assert parsed.config_profile.safety.rules[0].action is None
+    assert result is not None
+    assert result.overall_action == SafetyDecision.MASK.value
+    assert result.text == "email [PII.email]"
+
+
 def test_compile_snapshot_masks_overlaps_deterministically():
     payload = {
         "config_profile": {
@@ -677,7 +713,7 @@ def test_parse_sdk_config_response_handles_invalid_rule_shapes_and_scalar_values
     assert isinstance(parsed.config_profile.safety.rules[1].matcher, UdfMatcher)
 
 
-def test_parse_sdk_config_response_dedupes_list_values_and_drops_unknown_actions():
+def test_parse_sdk_config_response_dedupes_list_values_and_tolerates_unspecified_action():
     parsed = parse_sdk_config_response(
         {
             "config_profile": {
@@ -706,6 +742,14 @@ def test_parse_sdk_config_response_dedupes_list_values_and_drops_unknown_actions
                                 "action": "QUARANTINE",
                                 "enabled": True,
                                 "regex": "secret",
+                            },
+                            {
+                                "name": "unspecified_action",
+                                "category": "SECRET",
+                                "severity": "LOW",
+                                "action": "SAFETY_ACTION_UNSPECIFIED",
+                                "enabled": True,
+                                "regex": "secret",
                             }
                         ],
                     }
@@ -714,12 +758,13 @@ def test_parse_sdk_config_response_dedupes_list_values_and_drops_unknown_actions
         }
     )
 
-    rule = parsed.config_profile.safety.rules[0]
+    names = [item.name for item in parsed.config_profile.safety.rules]
 
-    assert [item.name for item in parsed.config_profile.safety.rules] == ["secret_words"]
-    assert rule.action is None
-    assert isinstance(rule.matcher, StringListMatcher)
-    assert rule.matcher.values == ("secret", "token")
+    assert names == ["secret_words", "unspecified_action"]
+    assert parsed.config_profile.safety.rules[0].action is None
+    assert isinstance(parsed.config_profile.safety.rules[0].matcher, StringListMatcher)
+    assert parsed.config_profile.safety.rules[0].matcher.values == ("secret", "token")
+    assert parsed.config_profile.safety.rules[1].action is None
 
 
 def test_compile_snapshot_skips_oversized_regex_patterns_and_caps_regex_matches():
