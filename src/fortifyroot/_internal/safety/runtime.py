@@ -40,7 +40,7 @@ MAX_CONFIG_RESPONSE_BYTES = 1_048_576  # 1 MB
 DEFAULT_CONFIG_POLL_INTERVAL_SECONDS = 60
 DEFAULT_STREAM_HOLDBACK_CHARS = 128
 SDK_VERSION_HEADER = "X-FortifyRoot-SDK-Version"
-AUTHORIZATION_HEADER = "Authorization"
+API_KEY_HEADER = "X-API-Key"
 REQUEST_TIMEOUT_SECONDS = 5
 FORTIFYROOT_API_BASE_URL = "https://api.fortifyroot.com"
 LOCAL_FORTIFYROOT_DEV_HOSTS = {"localhost", "host.docker.internal"}
@@ -92,7 +92,7 @@ class SafetyConfigClient:
         request = urllib.request.Request(
             url,
             headers={
-                AUTHORIZATION_HEADER: f"Bearer {self._api_key}",
+                API_KEY_HEADER: self._api_key,
                 SDK_VERSION_HEADER: __version__,
             },
             method="GET",
