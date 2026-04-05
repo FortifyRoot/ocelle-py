@@ -713,7 +713,7 @@ def test_parse_sdk_config_response_handles_invalid_rule_shapes_and_scalar_values
     assert isinstance(parsed.config_profile.safety.rules[1].matcher, UdfMatcher)
 
 
-def test_parse_sdk_config_response_dedupes_list_values_and_tolerates_invalid_actions():
+def test_parse_sdk_config_response_dedupes_list_values_and_tolerates_unspecified_action():
     parsed = parse_sdk_config_response(
         {
             "config_profile": {
@@ -760,12 +760,11 @@ def test_parse_sdk_config_response_dedupes_list_values_and_tolerates_invalid_act
 
     names = [item.name for item in parsed.config_profile.safety.rules]
 
-    assert names == ["secret_words", "unsupported_action", "unspecified_action"]
+    assert names == ["secret_words", "unspecified_action"]
     assert parsed.config_profile.safety.rules[0].action is None
     assert isinstance(parsed.config_profile.safety.rules[0].matcher, StringListMatcher)
     assert parsed.config_profile.safety.rules[0].matcher.values == ("secret", "token")
     assert parsed.config_profile.safety.rules[1].action is None
-    assert parsed.config_profile.safety.rules[2].action is None
 
 
 def test_compile_snapshot_skips_oversized_regex_patterns_and_caps_regex_matches():

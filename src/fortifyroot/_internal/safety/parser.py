@@ -77,7 +77,10 @@ def parse_safety_rule(payload: Mapping[str, Any]) -> SafetyRule | None:
     if not name or not category:
         return None
 
-    action = _normalize_optional_action(_get_value(payload, "action"))
+    raw_action = _get_value(payload, "action")
+    action = _normalize_optional_action(raw_action)
+    if raw_action is not None and action is None and not _is_unspecified_action(raw_action):
+        return None
 
     matcher = _parse_matcher(payload)
     if matcher is None:
@@ -191,6 +194,11 @@ def _normalize_optional_action(value: Any) -> str | None:
     if normalized in {"ALLOW", "MASK"}:
         return normalized
     return None
+
+
+def _is_unspecified_action(value: Any) -> bool:
+    normalized = _normalize_enum(value, "SAFETY_ACTION_")
+    return normalized in {"UNSPECIFIED", "0"}
 
 
 def _normalize_language(value: Any) -> str | None:
