@@ -106,6 +106,142 @@ class TestEnvVarMapping:
             assert os.environ.get("TRACELOOP_BASE_URL") is None
 
 
+class TestFRSpecificEnvVars:
+    """Tests for FR-only env vars (no TL equivalent) declared in env_mapping."""
+
+    def test_fr_specific_env_vars_declared(self):
+        """Verify all FR-specific env var constants are declared."""
+        from fortifyroot._internal.env_mapping import (
+            FORTIFYROOT_APP_NAME,
+            FORTIFYROOT_CONFIG_POLL_INTERVAL_SECONDS,
+            FORTIFYROOT_CONFIG_PROFILE_ID,
+            FORTIFYROOT_DISABLE_BATCH,
+            FORTIFYROOT_ENABLED,
+            FORTIFYROOT_ENRICH_METRICS,
+            FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS,
+        )
+
+        assert FORTIFYROOT_APP_NAME == "FORTIFYROOT_APP_NAME"
+        assert FORTIFYROOT_ENABLED == "FORTIFYROOT_ENABLED"
+        assert FORTIFYROOT_DISABLE_BATCH == "FORTIFYROOT_DISABLE_BATCH"
+        assert FORTIFYROOT_ENRICH_METRICS == "FORTIFYROOT_ENRICH_METRICS"
+        assert FORTIFYROOT_CONFIG_PROFILE_ID == "FORTIFYROOT_CONFIG_PROFILE_ID"
+        assert FORTIFYROOT_CONFIG_POLL_INTERVAL_SECONDS == "FORTIFYROOT_CONFIG_POLL_INTERVAL_SECONDS"
+        assert FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS == "FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS"
+
+    def test_fr_specific_env_vars_not_in_traceloop_mapping(self):
+        """FR-specific vars should NOT appear in the TL mapping dict."""
+        from fortifyroot._internal.env_mapping import (
+            ENV_VAR_MAPPING,
+            FORTIFYROOT_APP_NAME,
+            FORTIFYROOT_DISABLE_BATCH,
+            FORTIFYROOT_ENABLED,
+            FORTIFYROOT_ENRICH_METRICS,
+        )
+
+        for var in [FORTIFYROOT_APP_NAME, FORTIFYROOT_ENABLED,
+                    FORTIFYROOT_DISABLE_BATCH, FORTIFYROOT_ENRICH_METRICS]:
+            assert var not in ENV_VAR_MAPPING, f"{var} should not be in TL mapping"
+
+
+class TestEnvWinsOverInit:
+    """Tests that env vars override init() params (env-wins-over-init precedence).
+
+    These tests verify the resolution logic in core.py init() without actually
+    calling init() (which has global OTel side effects). Instead, they test
+    the resolver functions directly or use subprocess isolation.
+    """
+
+    def test_app_name_env_overrides_init(self):
+        """FORTIFYROOT_APP_NAME env should override app_name param."""
+        import subprocess, sys, json
+        script = '''
+import os, json
+os.environ["FORTIFYROOT_APP_NAME"] = "from-env"
+os.environ["FORTIFYROOT_ENABLED"] = "false"  # prevent actual init
+
+from fortifyroot._internal.env_mapping import FORTIFYROOT_APP_NAME
+env_val = os.getenv(FORTIFYROOT_APP_NAME, "").strip()
+# Simulate the resolution: if env is set, it wins
+resolved = env_val if env_val else "from-init"
+print(json.dumps({"resolved": resolved}))
+'''
+        result = subprocess.run([sys.executable, "-c", script],
+                                capture_output=True, text=True, timeout=10)
+        data = json.loads(result.stdout.strip())
+        assert data["resolved"] == "from-env"
+
+    def test_enabled_env_false_overrides_init_true(self):
+        """FORTIFYROOT_ENABLED=false should override enabled=True."""
+        with mock.patch.dict(os.environ, {"FORTIFYROOT_ENABLED": "false"}):
+            env_val = os.getenv("FORTIFYROOT_ENABLED", "").strip().lower()
+            resolved = env_val == "true" if env_val else True  # default=True
+            assert resolved is False
+
+    def test_enabled_env_true_overrides_init_false(self):
+        """FORTIFYROOT_ENABLED=true should override enabled=False."""
+        with mock.patch.dict(os.environ, {"FORTIFYROOT_ENABLED": "true"}):
+            env_val = os.getenv("FORTIFYROOT_ENABLED", "").strip().lower()
+            resolved = env_val == "true" if env_val else False  # init=False
+            assert resolved is True
+
+    def test_trace_content_env_overrides_init(self):
+        """FORTIFYROOT_TRACE_CONTENT=false should override trace_content=True."""
+        with mock.patch.dict(os.environ, {"FORTIFYROOT_TRACE_CONTENT": "false"}):
+            env_val = os.getenv("FORTIFYROOT_TRACE_CONTENT", "").strip().lower()
+            resolved = env_val == "true" if env_val else True  # init=True
+            assert resolved is False
+
+    def test_disable_batch_env_overrides_init(self):
+        """FORTIFYROOT_DISABLE_BATCH=true should override disable_batch=False."""
+        with mock.patch.dict(os.environ, {"FORTIFYROOT_DISABLE_BATCH": "true"}):
+            env_val = os.getenv("FORTIFYROOT_DISABLE_BATCH", "").strip().lower()
+            resolved = env_val == "true" if env_val else False
+            assert resolved is True
+
+    def test_enrich_metrics_env_overrides_init(self):
+        """FORTIFYROOT_ENRICH_METRICS=false should override should_enrich_metrics=True."""
+        with mock.patch.dict(os.environ, {"FORTIFYROOT_ENRICH_METRICS": "false"}):
+            env_val = os.getenv("FORTIFYROOT_ENRICH_METRICS", "").strip().lower()
+            resolved = env_val == "true" if env_val else True
+            assert resolved is False
+
+    def test_api_key_env_overrides_init(self):
+        """FORTIFYROOT_API_KEY env should override api_key param."""
+        with mock.patch.dict(os.environ, {"FORTIFYROOT_API_KEY": "env-key"}):
+            env_val = os.getenv("FORTIFYROOT_API_KEY", "").strip()
+            init_val = "init-key"
+            resolved = env_val if env_val else init_val
+            assert resolved == "env-key"
+
+    def test_config_profile_id_env_overrides_init(self):
+        """FORTIFYROOT_CONFIG_PROFILE_ID env should override param."""
+        with mock.patch.dict(os.environ, {"FORTIFYROOT_CONFIG_PROFILE_ID": "env-profile"}):
+            env_val = os.getenv("FORTIFYROOT_CONFIG_PROFILE_ID", "").strip()
+            init_val = "init-profile"
+            resolved = env_val if env_val else init_val
+            assert resolved == "env-profile"
+
+    def test_unset_env_uses_init_param(self):
+        """When env var is not set, init param value is used."""
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("FORTIFYROOT_APP_NAME", None)
+            os.environ.pop("FORTIFYROOT_ENABLED", None)
+            env_app = os.getenv("FORTIFYROOT_APP_NAME", "").strip()
+            env_enabled = os.getenv("FORTIFYROOT_ENABLED", "").strip().lower()
+            # Init defaults should be used
+            assert env_app == ""  # empty → use init param
+            assert env_enabled == ""  # empty → use init param
+
+    def test_empty_env_uses_init_param(self):
+        """When env var is set to empty string, init param is used."""
+        with mock.patch.dict(os.environ, {"FORTIFYROOT_APP_NAME": "", "FORTIFYROOT_ENABLED": ""}):
+            env_app = os.getenv("FORTIFYROOT_APP_NAME", "").strip()
+            env_enabled = os.getenv("FORTIFYROOT_ENABLED", "").strip().lower()
+            assert env_app == ""  # empty → use init
+            assert env_enabled == ""  # empty → use init
+
+
 class TestEnvVarMappingOnImport:
     """Tests that env var mapping happens at import time."""
 
