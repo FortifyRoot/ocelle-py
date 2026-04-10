@@ -24,6 +24,7 @@ from fortifyroot._vendor.traceloop.sdk import Traceloop
 
 from fortifyroot._internal.constants import FORTIFYROOT_SDK_VERSION_ATTRIBUTE
 from fortifyroot._internal.env_mapping import (
+    FORTIFYROOT_ALLOW_UDF_DETECTORS,
     FORTIFYROOT_APP_NAME,
     FORTIFYROOT_CONFIG_POLL_INTERVAL_SECONDS,
     FORTIFYROOT_CONFIG_PROFILE_ID,
@@ -572,6 +573,10 @@ def init(
     env_enrich_metrics = os.getenv(FORTIFYROOT_ENRICH_METRICS, "").strip().lower()
     if env_enrich_metrics:
         should_enrich_metrics = env_enrich_metrics == "true"
+
+    env_allow_udf = os.getenv(FORTIFYROOT_ALLOW_UDF_DETECTORS, "").strip().lower()
+    if env_allow_udf:
+        allow_udf_detectors = env_allow_udf == "true"
     # ── End env resolution ────────────────────────────────────────────
 
     api_endpoint = _resolve_api_endpoint(api_endpoint)
@@ -731,9 +736,7 @@ def init(
         # propagator=propagator,
         **tl_kwargs,
     )
-    if allow_udf_detectors or _is_enabled_from_env(
-        "FORTIFYROOT_ALLOW_UDF_DETECTORS", False
-    ):
+    if allow_udf_detectors:
         set_udf_detectors_enabled(True)
 
     configure_global_safety_runtime(
