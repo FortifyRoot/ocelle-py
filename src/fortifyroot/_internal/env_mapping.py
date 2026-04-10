@@ -8,6 +8,13 @@ FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS = (
     "FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS"
 )
 
+# FR-specific env vars with 1:1 init() param mapping (no TL equivalent).
+# These are resolved in core.py init(), env takes precedence over init param.
+FORTIFYROOT_APP_NAME = "FORTIFYROOT_APP_NAME"
+FORTIFYROOT_ENABLED = "FORTIFYROOT_ENABLED"
+FORTIFYROOT_DISABLE_BATCH = "FORTIFYROOT_DISABLE_BATCH"
+FORTIFYROOT_ENRICH_METRICS = "FORTIFYROOT_ENRICH_METRICS"
+
 # Mapping of FortifyRoot environment variables to Traceloop equivalents
 ENV_VAR_MAPPING: dict[str, str] = {
     # Core configuration

@@ -24,8 +24,12 @@ from fortifyroot._vendor.traceloop.sdk import Traceloop
 
 from fortifyroot._internal.constants import FORTIFYROOT_SDK_VERSION_ATTRIBUTE
 from fortifyroot._internal.env_mapping import (
+    FORTIFYROOT_APP_NAME,
     FORTIFYROOT_CONFIG_POLL_INTERVAL_SECONDS,
     FORTIFYROOT_CONFIG_PROFILE_ID,
+    FORTIFYROOT_DISABLE_BATCH,
+    FORTIFYROOT_ENABLED,
+    FORTIFYROOT_ENRICH_METRICS,
     FORTIFYROOT_SAFETY_STREAM_HOLDBACK_CHARS,
 )
 from fortifyroot._internal.synthetic_logs import (
@@ -387,9 +391,15 @@ def init(
     This function initializes the OpenTelemetry tracing infrastructure and
     auto-instruments supported LLM libraries (OpenAI, Anthropic, LangChain, etc.).
 
+    Environment variable precedence:
+        For all primitive-type parameters with a ``FORTIFYROOT_*`` counterpart,
+        the environment variable **wins** over the init() parameter when set.
+        This allows ops/CI to override SDK behavior without code changes.
+
     Args:
         app_name: Name of your application. Defaults to the script name.
             This becomes the service.name in OpenTelemetry.
+            Can be overridden by FORTIFYROOT_APP_NAME environment variable.
 
         api_endpoint: FortifyRoot API endpoint URL.
             Defaults to "https://api.fortifyroot.com".
@@ -400,6 +410,7 @@ def init(
 
         enabled: Whether to enable tracing. Set to False to disable all tracing.
             Defaults to True.
+            Can be overridden by FORTIFYROOT_ENABLED environment variable.
 
         headers: Custom headers to send with trace exports.
             If api_key is provided and Authorization is missing, a bearer
@@ -407,11 +418,12 @@ def init(
 
         disable_batch: If True, use SimpleSpanProcessor instead of BatchSpanProcessor.
             Useful for debugging. Defaults to False.
+            Can be overridden by FORTIFYROOT_DISABLE_BATCH environment variable.
 
         trace_content: Whether to capture prompt/response content in traces.
             Set to False to only capture metadata without actual content.
-            Can be overridden by FORTIFYROOT_TRACE_CONTENT environment variable.
             Defaults to True.
+            Can be overridden by FORTIFYROOT_TRACE_CONTENT environment variable.
 
         exporter: Custom SpanExporter to use instead of the default OTLP exporter.
             Use this for custom export destinations.
@@ -441,6 +453,7 @@ def init(
 
         should_enrich_metrics: Whether to add trace context to metrics.
             Defaults to True.
+            Can be overridden by FORTIFYROOT_ENRICH_METRICS environment variable.
 
         resource_attributes: Additional OpenTelemetry resource attributes to attach
             to all telemetry. FortifyRoot SDK version is automatically added.
@@ -536,12 +549,39 @@ def init(
                 span_postprocess_callback=span_callback,
             )
     """
+    # ── Resolve env-wins-over-init for primitive params ──────────────
+    # For each param with a FORTIFYROOT_* env var counterpart, the env var
+    # takes precedence when set.  This allows ops/CI to override SDK init
+    # without code changes.
+    env_app_name = os.getenv(FORTIFYROOT_APP_NAME, "").strip()
+    if env_app_name:
+        app_name = env_app_name
+
+    env_enabled = os.getenv(FORTIFYROOT_ENABLED, "").strip().lower()
+    if env_enabled:
+        enabled = env_enabled == "true"
+
+    env_trace_content = os.getenv("FORTIFYROOT_TRACE_CONTENT", "").strip().lower()
+    if env_trace_content:
+        trace_content = env_trace_content == "true"
+
+    env_disable_batch = os.getenv(FORTIFYROOT_DISABLE_BATCH, "").strip().lower()
+    if env_disable_batch:
+        disable_batch = env_disable_batch == "true"
+
+    env_enrich_metrics = os.getenv(FORTIFYROOT_ENRICH_METRICS, "").strip().lower()
+    if env_enrich_metrics:
+        should_enrich_metrics = env_enrich_metrics == "true"
+    # ── End env resolution ────────────────────────────────────────────
+
     api_endpoint = _resolve_api_endpoint(api_endpoint)
-    if api_key is None:
-        api_key = os.getenv("FORTIFYROOT_API_KEY")
+    env_api_key = os.getenv("FORTIFYROOT_API_KEY", "").strip()
+    if env_api_key:
+        api_key = env_api_key
     api_key = _resolve_api_key(api_key)
-    if config_profile_id is None:
-        config_profile_id = os.getenv(FORTIFYROOT_CONFIG_PROFILE_ID)
+    env_config_profile_id = os.getenv(FORTIFYROOT_CONFIG_PROFILE_ID, "").strip()
+    if env_config_profile_id:
+        config_profile_id = env_config_profile_id
     config_poll_interval_seconds = _resolve_config_poll_interval_seconds(
         config_poll_interval_seconds
     )
@@ -579,10 +619,9 @@ def init(
         logging_headers=resolved_logging_headers,
     )
 
-    # Set TRACELOOP_TRACE_CONTENT based on trace_content parameter
-    # This needs to be set before Traceloop.init() is called
-    if not trace_content:
-        os.environ.setdefault("TRACELOOP_TRACE_CONTENT", "false")
+    # Propagate resolved trace_content to Traceloop (its only mechanism is env var).
+    # May have been overridden by FORTIFYROOT_TRACE_CONTENT env above.
+    os.environ["TRACELOOP_TRACE_CONTENT"] = str(trace_content).lower()
 
     # Prepare resource attributes with FR SDK version
     if resource_attributes is None:
