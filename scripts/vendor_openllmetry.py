@@ -483,6 +483,39 @@ def rewrite_all_imports(vendor_root: Path, vendor_prefix: str) -> int:
     return modified_count
 
 
+def rebrand_traceloop_attribute_strings(vendor_root: Path) -> int:
+    """Replace 'traceloop.' attribute string literals with 'fortifyroot.' in semconv files.
+
+    This is a safety net: even if the fork already has the correct values,
+    this pass ensures no 'traceloop.' attribute key strings survive vendoring.
+    Only targets semantic convention and SDK source files (not test files).
+    """
+    print("==> Rebranding traceloop attribute strings to fortifyroot")
+
+    target_dirs = [
+        vendor_root / 'opentelemetry' / 'semconv_ai',
+        vendor_root / 'traceloop' / 'sdk',
+    ]
+
+    modified_count = 0
+    for target_dir in target_dirs:
+        if not target_dir.exists():
+            continue
+        for py_file in target_dir.rglob('*.py'):
+            try:
+                content = py_file.read_text(encoding='utf-8')
+            except UnicodeDecodeError:
+                continue
+            new_content = content.replace('"traceloop.', '"fortifyroot.')
+            if new_content != content:
+                py_file.write_text(new_content, encoding='utf-8')
+                modified_count += 1
+                print(f"    Rebranded: {py_file.relative_to(vendor_root)}")
+
+    print(f"    Total files rebranded: {modified_count}")
+    return modified_count
+
+
 def get_ol_version(ol_repo: Path) -> str:
     """Extract version from OpenLLMetry repository."""
     pyproject = ol_repo / 'packages' / 'traceloop-sdk' / 'pyproject.toml'
@@ -710,6 +743,9 @@ def main():
 
         # Rewrite imports
         rewrite_all_imports(vendor_root, args.vendor_prefix)
+
+        # Rebrand traceloop attribute strings to fortifyroot (safety net)
+        rebrand_traceloop_attribute_strings(vendor_root)
 
         # Extract dependencies
         if args.extract_deps:

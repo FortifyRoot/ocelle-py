@@ -1,9 +1,9 @@
 {
-  "vendored_at": "2026-04-10T13:30:29.586739",
+  "vendored_at": "2026-04-16T19:03:17.567139",
   "openllmetry_version": "0.52.6",
-  "git_commit": "0c667b8afdf8",
+  "git_commit": "3a247b968352",
   "git_branch": "HEAD",
-  "git_tag": "fr-v0.52.6.10",
+  "git_tag": "fr-v0.52.6.11",
   "packages": {
     "traceloop-sdk": "0.52.6",
     "opentelemetry-semantic-conventions-ai": "0.52.6",
