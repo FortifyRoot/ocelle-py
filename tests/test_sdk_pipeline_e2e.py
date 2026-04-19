@@ -951,7 +951,9 @@ class TestInitParameterCombinations:
         span = _get_span(span_exporter)
         resource_attrs = dict(span.resource.attributes) if span.resource else {}
         assert resource_attrs.get("team") == "ml-safety"
-        assert resource_attrs.get("environment") == "test"
+        # SDK normalizes shorthand "environment" → OTEL canonical "deployment.environment"
+        assert resource_attrs.get("deployment.environment") == "test"
+        assert resource_attrs.get("environment") is None
         # SDK version should also be present (injected by init())
         assert FORTIFYROOT_SDK_VERSION_ATTRIBUTE in resource_attrs
 

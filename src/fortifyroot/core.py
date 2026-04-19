@@ -634,6 +634,14 @@ def init(
     else:
         resource_attributes = dict(resource_attributes)  # Make a copy
 
+    # Normalize shorthand keys to OTEL canonical before building the resource.
+    # Keeps older client code working without polluting the attribute cache with
+    # non-standard keys.
+    _RESOURCE_KEY_ALIASES = {"environment": "deployment.environment"}
+    for shorthand, canonical in _RESOURCE_KEY_ALIASES.items():
+        if shorthand in resource_attributes and canonical not in resource_attributes:
+            resource_attributes[canonical] = resource_attributes.pop(shorthand)
+
     # Inject FortifyRoot SDK version into resource attributes
     resource_attributes[FORTIFYROOT_SDK_VERSION_ATTRIBUTE] = __version__
 
