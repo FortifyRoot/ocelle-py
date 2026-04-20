@@ -10402,7 +10402,7 @@ haystack = ["haystack-ai"]
 lancedb = ["lancedb"]
 langchain = ["langchain", "langchain-openai"]
 litellm = ["litellm"]
-llamaindex = ["inflection", "llama-index"]
+llamaindex = ["llama-index"]
 marqo = ["marqo"]
 mcp = ["mcp"]
 milvus = ["pymilvus"]
@@ -10423,4 +10423,4 @@ writer = ["writer-sdk"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "a5e02f09f7184cc724207e57b077ee62d85b9301b5754403f085b757388272f4"
+content-hash = "1161ac3f009757e332863e594807063caafbf548683ecc0e9863f3c278b7d46a"

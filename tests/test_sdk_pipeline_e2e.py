@@ -754,11 +754,18 @@ class TestPipelineEdgeCases:
         assert "[PCI." not in prompt
         assert "Hello, what is 2+2?" in prompt
 
-        # No safety events should fire
+        # The prompt does not match the configured CC rule, so prompt-side
+        # masking/findings must not occur. This cassette's completion does
+        # include a CC-like string, so completion-side findings remain valid.
         events = _safety_events(span)
-        assert len(events) == 0, (
-            f"Expected no safety events for non-matching rule. Got: "
-            f"{[e.name for e in events]}"
+        prompt_events = [
+            e
+            for e in events
+            if e.attributes.get("fortifyroot.safety.location") == "PROMPT"
+        ]
+        assert len(prompt_events) == 0, (
+            "Expected no prompt safety events for non-matching rule. Got: "
+            f"{[e.attributes for e in prompt_events]}"
         )
 
         shutdown_global_safety_runtime()
