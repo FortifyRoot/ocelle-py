@@ -184,12 +184,47 @@ def _normalize_http_otlp_endpoint(endpoint: str, suffix: str) -> str:
     return normalized
 
 
+def _cumulative_preferred_temporality() -> Dict[type, "AggregationTemporality"]:
+    """Force CUMULATIVE temporality for Counter / Histogram / ObservableCounter.
+
+    The FortifyRoot managed backend stores customer metrics in Prometheus /
+    Grafana Mimir, whose OTLP receiver rejects Counter + Histogram data points
+    arriving with DELTA temporality ("invalid temporality and type
+    combination"). OpenTelemetry Python's OTLPMetricExporter defaults Counter
+    and Histogram to DELTA, so every metric emitted via the SDK's default
+    pipeline is silently dropped at the Prom ingester. Pinning these
+    instruments to CUMULATIVE makes the on-wire temporality match what the
+    backend's time-series store requires. UpDownCounter / ObservableGauge
+    stay at their library defaults (CUMULATIVE) because those are already
+    correct.
+    """
+    from opentelemetry.sdk.metrics import (
+        Counter,
+        Histogram,
+        ObservableCounter,
+        ObservableGauge,
+        ObservableUpDownCounter,
+        UpDownCounter,
+    )
+    from opentelemetry.sdk.metrics.export import AggregationTemporality
+
+    return {
+        Counter: AggregationTemporality.CUMULATIVE,
+        Histogram: AggregationTemporality.CUMULATIVE,
+        ObservableCounter: AggregationTemporality.CUMULATIVE,
+        UpDownCounter: AggregationTemporality.CUMULATIVE,
+        ObservableUpDownCounter: AggregationTemporality.CUMULATIVE,
+        ObservableGauge: AggregationTemporality.CUMULATIVE,
+    }
+
+
 def _init_default_metrics_exporter(
     endpoint: str,
     headers: Dict[str, str],
 ) -> MetricExporter:
     """Create a scheme-aware default OTLP metrics exporter."""
     parsed = urlsplit(endpoint.strip())
+    preferred_temporality = _cumulative_preferred_temporality()
 
     match parsed.scheme.lower():
         case "http" | "https":
@@ -202,6 +237,7 @@ def _init_default_metrics_exporter(
                 HTTPMetricExporter(
                     endpoint=_normalize_http_otlp_endpoint(endpoint, "/v1/metrics"),
                     headers=headers,
+                    preferred_temporality=preferred_temporality,
                 ),
             )
         case "grpc":
@@ -215,6 +251,7 @@ def _init_default_metrics_exporter(
                     endpoint=parsed.netloc,
                     headers=headers,
                     insecure=True,
+                    preferred_temporality=preferred_temporality,
                 ),
             )
         case "grpcs":
@@ -228,6 +265,7 @@ def _init_default_metrics_exporter(
                     endpoint=parsed.netloc,
                     headers=headers,
                     insecure=False,
+                    preferred_temporality=preferred_temporality,
                 ),
             )
         case _:
@@ -241,6 +279,7 @@ def _init_default_metrics_exporter(
                     endpoint=endpoint.strip(),
                     headers=headers,
                     insecure=True,
+                    preferred_temporality=preferred_temporality,
                 ),
             )
 
