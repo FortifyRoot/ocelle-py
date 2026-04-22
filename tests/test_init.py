@@ -6,11 +6,21 @@ from unittest import mock
 import pytest
 
 from fortifyroot.core import (
+    _cumulative_preferred_temporality,
     _get_authorization_header,
     _normalize_http_otlp_endpoint,
     _resolve_signal_headers,
     _resolve_stream_holdback_chars,
 )
+
+
+# Expected temporality mapping passed to every OTLP metrics exporter
+# construction — see `fortifyroot.core._cumulative_preferred_temporality`
+# and the Issue-I1 banner in st_phase_8.txt for why this must be
+# CUMULATIVE across the board. Computed once here so all nine existing
+# `metric_exporter_cls.assert_called_once_with(...)` sites stay consistent
+# if the mapping ever legitimately changes.
+_EXPECTED_TEMPORALITY = _cumulative_preferred_temporality()
 
 
 class TestInit:
@@ -346,6 +356,7 @@ class TestInitOptionalPaths:
         metric_exporter_cls.assert_called_once_with(
             endpoint="https://api.fortifyroot.com/v1/metrics",
             headers=auth_headers,
+            preferred_temporality=_EXPECTED_TEMPORALITY,
         )
         logging_exporter_cls.assert_called_once_with(
             endpoint="https://api.fortifyroot.com/v1/logs",
@@ -418,6 +429,7 @@ class TestInitOptionalPaths:
         metric_exporter_cls.assert_called_once_with(
             endpoint="http://localhost:4318/v1/metrics",
             headers={},
+            preferred_temporality=_EXPECTED_TEMPORALITY,
         )
         _, kwargs = traceloop_init_mock.call_args
         assert kwargs["headers"] == {}
@@ -470,6 +482,7 @@ class TestInitOptionalPaths:
         metric_exporter_cls.assert_called_once_with(
             endpoint="https://api.fortifyroot.com/v1/metrics",
             headers={"x-metrics": "2", "Authorization": "Bearer explicit"},
+            preferred_temporality=_EXPECTED_TEMPORALITY,
         )
         logging_exporter_cls.assert_called_once_with(
             endpoint="https://api.fortifyroot.com/v1/logs",
@@ -535,6 +548,7 @@ class TestInitOptionalPaths:
         metric_exporter_cls.assert_called_once_with(
             endpoint="https://metrics.example.com/v1/metrics",
             headers=auth_headers,
+            preferred_temporality=_EXPECTED_TEMPORALITY,
         )
         logging_exporter_cls.assert_called_once_with(
             endpoint="https://logs.example.com/v1/logs",
@@ -610,6 +624,7 @@ class TestInitOptionalPaths:
         metric_exporter_cls.assert_called_once_with(
             endpoint="https://metrics.example.com/v1/metrics",
             headers={},
+            preferred_temporality=_EXPECTED_TEMPORALITY,
         )
         _, kwargs = traceloop_init_mock.call_args
         assert kwargs["metrics_exporter"] is created_metrics_exporter
@@ -651,6 +666,7 @@ class TestInitOptionalPaths:
             endpoint="metrics.example.com:4317",
             headers={"Authorization": "Bearer fr-key"},
             insecure=False,
+            preferred_temporality=_EXPECTED_TEMPORALITY,
         )
 
     def test_init_uses_grpc_logging_exporter_for_grpc_logging_endpoint(self):
@@ -755,6 +771,7 @@ class TestInitOptionalPaths:
                 "x-metrics": "2",
                 "Authorization": "Bearer fr-key",
             },
+            preferred_temporality=_EXPECTED_TEMPORALITY,
         )
         _, kwargs = traceloop_init_mock.call_args
         assert kwargs["api_endpoint"] == "https://env.fortifyroot.dev"
@@ -990,6 +1007,7 @@ class TestMetricsExporterSchemes:
             endpoint="metrics.example.com:4317",
             headers={"Authorization": "Bearer fr-key"},
             insecure=True,
+            preferred_temporality=_EXPECTED_TEMPORALITY,
         )
 
     def test_unknown_scheme_creates_insecure_grpc_metrics_exporter(self):
@@ -1028,6 +1046,7 @@ class TestMetricsExporterSchemes:
             endpoint="custom://metrics.example.com:4317",
             headers={"Authorization": "Bearer fr-key"},
             insecure=True,
+            preferred_temporality=_EXPECTED_TEMPORALITY,
         )
 
 
