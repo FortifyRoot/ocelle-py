@@ -52,6 +52,22 @@ jobs:
 
           echo "No hardcoded secrets or credentials detected."
 
+  # ---------------------------------------------------------------------
+  # Actionlint — lint .github/workflows/*.yml for GHA semantic errors +
+  # embedded `run:` shellcheck issues. Pinned to a specific image tag
+  # for reproducibility.
+  # ---------------------------------------------------------------------
+  actionlint:
+    name: Actionlint (workflow lint)
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run actionlint
+        uses: docker://rhysd/actionlint:1.7.12
+        with:
+          args: -no-color -oneline
+
   tests:
     name: Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
