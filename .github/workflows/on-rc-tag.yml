@@ -1,0 +1,122 @@
+name: SDK rc tag — dispatch Tier 2
+
+# Per RELEASE_GATE.md §2.4 + §4.4. Triggered by:
+#   1. Pushing an rc tag matching v-*-rc.* on this repo.
+#   2. workflow_dispatch with the rc_tag input (lets you re-run the gate
+#      after a manual dev-pin without cutting a new tag).
+#
+# Body:
+#   1. Read fr-backend's env/targets.yaml via the public GitHub raw URL.
+#   2. Pre-flight: dev.image_tag must equal prod.image_tag (so the rc SDK
+#      is validated against the backend version customers actually run).
+#      If they differ, FAIL FAST with an actionable error message.
+#   3. If they match (or prod is in `bootstrap` mode), dispatch
+#      event_type=sdk_rc to fr-system-tests with rc_tag in the payload.
+
+on:
+  push:
+    tags:
+      - 'v-*-rc.*'
+  workflow_dispatch:
+    inputs:
+      rc_tag:
+        description: 'rc tag to validate (e.g. v-1.2.0-rc.1)'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdk-rc-${{ github.event.inputs.rc_tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  preflight-and-dispatch:
+    name: Preflight (dev==prod) and dispatch Tier 2
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Resolve rc tag
+        id: vars
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            RC_TAG="${{ inputs.rc_tag }}"
+          else
+            RC_TAG="${{ github.ref_name }}"
+          fi
+          if [[ ! "$RC_TAG" =~ ^v-.*-rc\..*$ ]]; then
+            echo "::error::Refusing to run on non-rc tag '$RC_TAG' (expected v-X.Y.Z-rc.N)"
+            exit 1
+          fi
+          echo "rc_tag=$RC_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Read fr-backend env/targets.yaml
+        id: targets
+        run: |
+          set -euo pipefail
+          # Public read — no token needed. We pull from `main` because that
+          # is the GitOps source of truth.
+          URL="https://raw.githubusercontent.com/FortifyRoot/fr-backend/main/env/targets.yaml"
+          if ! curl -sSfL -o targets.yaml "$URL"; then
+            echo "::error::Could not fetch $URL"
+            exit 1
+          fi
+          # `yq` (mikefarah/yq) is preinstalled on GitHub-hosted runners.
+          # Guard so the failure mode is loud if a future runner image drops it.
+          command -v yq >/dev/null || { echo "::error::yq is required but not installed on this runner"; exit 1; }
+          DEV="$(yq -r '.dev.image_tag' targets.yaml)"
+          PROD="$(yq -r '.prod.image_tag' targets.yaml)"
+          echo "dev=$DEV"
+          echo "prod=$PROD"
+          echo "dev_tag=$DEV" >> "$GITHUB_OUTPUT"
+          echo "prod_tag=$PROD" >> "$GITHUB_OUTPUT"
+
+      - name: Pre-flight (dev == prod, or prod is bootstrap)
+        env:
+          DEV: ${{ steps.targets.outputs.dev_tag }}
+          PROD: ${{ steps.targets.outputs.prod_tag }}
+        run: |
+          set -euo pipefail
+          if [[ "$PROD" == "bootstrap" ]]; then
+            echo "Bootstrap mode — prod has no deployed image yet. Proceeding."
+            exit 0
+          fi
+          if [[ "$DEV" != "$PROD" ]]; then
+            cat <<EOF
+          ::error::SDK rc Tier-2 pre-flight FAILED.
+            dev.image_tag  = $DEV
+            prod.image_tag = $PROD
+          Dev must match prod for SDK rc validation. To fix:
+            1. Open a PR on fr-backend that sets env/targets.yaml:
+                 dev.image_tag = $PROD
+            2. Merge it. deploy-dev.yml will roll dev-api back to '$PROD'
+               and run Tier 1.
+            3. Wait for Tier 1 green, then re-run THIS workflow via
+               workflow_dispatch with rc_tag = ${{ steps.vars.outputs.rc_tag }}.
+          EOF
+            exit 1
+          fi
+          echo "Pre-flight OK — dev == prod == $DEV"
+
+      - name: Dispatch sdk_rc to fr-system-tests
+        env:
+          # SYSTEM_TEST_DISPATCH_TOKEN is REQUIRED for cross-repo dispatch.
+          # GITHUB_TOKEN cannot fire `repository_dispatch` on a foreign repo.
+          # See CICD_SETUP.md §5.3.
+          GH_TOKEN: ${{ secrets.SYSTEM_TEST_DISPATCH_TOKEN }}
+          RC_TAG: ${{ steps.vars.outputs.rc_tag }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "::error::SYSTEM_TEST_DISPATCH_TOKEN secret is required to dispatch sdk_rc to fr-system-tests."
+            echo "::error::Add a fine-grained PAT with 'actions: write' on FortifyRoot/fr-system-tests."
+            echo "::error::See fr-meta/docs/CICD_SETUP.md §5.3."
+            exit 1
+          fi
+          gh api -X POST \
+            repos/FortifyRoot/fr-system-tests/dispatches \
+            -f event_type=sdk_rc \
+            -F "client_payload[rc_tag]=${RC_TAG}" \
+            -F "client_payload[repo]=${{ github.repository }}"
+          echo "sdk_rc dispatched. Watch fr-system-tests Actions for result."
