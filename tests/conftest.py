@@ -12,6 +12,30 @@ from opentelemetry._logs import _internal as otel_logs_internal
 from opentelemetry.metrics import _internal as otel_metrics_internal
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+
+# ST-10.4 (2026-05-17): legacy SDK tests assert exact span names /
+# counts (e.g. ``assert span.name == "anthropic.chat"``). ST-10.4
+# emits per-attempt ``fortifyroot.*.retry_attempt`` sibling spans
+# under every direct-SDK LLM call. Filter those out of the standard
+# ``span_exporter`` fixture so upstream assertions remain valid.
+# ST-10.4-specific tests can read the raw exporter or filter by role
+# themselves (e.g. ``_single_span`` in ``tests/openai/test_vcr.py``
+# already filters retry_attempt by ``fortifyroot.span.role``).
+# Mirrors the same pattern used by the fr-openllmetry-py per-package
+# test conftests (added 2026-05-16 + 2026-05-17 for openai and
+# anthropic upstream tests respectively).
+class _NoFortifyRootSpanExporter(InMemorySpanExporter):
+    """Filter spans by ROLE (not by name prefix) so that
+    longstanding ``fortifyroot.litellm.safety`` etc. spans which
+    upstream tests actually want to see remain visible; only
+    ST-10.4-emitted retry_attempt siblings are dropped."""
+
+    def get_finished_spans(self):  # type: ignore[override]
+        return tuple(
+            s for s in super().get_finished_spans()
+            if (s.attributes or {}).get("fortifyroot.span.role") != "retry_attempt"
+        )
 from opentelemetry.util._once import Once
 
 from fortifyroot import Instruments, init
@@ -157,7 +181,7 @@ def reset_sdk_state() -> Iterator[None]:
 
 @pytest.fixture
 def span_exporter() -> InMemorySpanExporter:
-    return InMemorySpanExporter()
+    return _NoFortifyRootSpanExporter()
 
 
 @pytest.fixture

@@ -23,6 +23,12 @@ from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot.safety import
     run_prompt_safety_async,
     set_object_value,
 )
+from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot.retry_registry import (
+    clear_for_thread as clear_framework_attempts_for_thread,
+    is_framework_owned,
+    register_framework_attempt,
+    unregister_framework_attempt,
+)
 from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot.text_streaming import (
     CompletionTextStreamGroup,
 )
@@ -40,6 +46,10 @@ from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot.streaming imp
 __all__ = [
     "SAFETY_EVENT_NAME",
     "HANDLER_LOCK",
+    "clear_framework_attempts_for_thread",
+    "is_framework_owned",
+    "register_framework_attempt",
+    "unregister_framework_attempt",
     "SafetyContext",
     "SafetyDecision",
     "SafetyFinding",

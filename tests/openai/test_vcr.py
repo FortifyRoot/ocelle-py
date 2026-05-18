@@ -119,9 +119,27 @@ def _openai_client(pytestconfig: pytest.Config, cassette_stem: str) -> openai.Op
     )
 
 
+# ST-10.4 (review-driven 2026-05-16): filter ``fortifyroot.*.retry_attempt``
+# sibling spans out of legacy single-span assertions. ST-10.4 added
+# per-attempt retry_attempt siblings under every openai/anthropic/bedrock
+# logical call; these tests pre-date that and assume the only span in
+# the exporter is the logical ``openai.chat`` span. Role-based filter
+# so every provider's retry_attempt is dropped uniformly. See
+# fr-system-tests/docs/development/ai-logs/st_phase_10.txt addendum
+# 2026-05-16 for context.
+_FR_SPAN_ROLE_KEY = "fortifyroot.span.role"
+_FR_SPAN_ROLE_RETRY_ATTEMPT = "retry_attempt"
+
+
 def _single_span(span_exporter):
-    spans = span_exporter.get_finished_spans()
-    assert len(spans) == 1
+    spans = [
+        s for s in span_exporter.get_finished_spans()
+        if (s.attributes or {}).get(_FR_SPAN_ROLE_KEY) != _FR_SPAN_ROLE_RETRY_ATTEMPT
+    ]
+    assert len(spans) == 1, (
+        f"expected exactly 1 logical span (after filtering fortifyroot retry_attempt "
+        f"siblings); got {len(spans)} — names: {[s.name for s in spans]}"
+    )
     return spans[0]
 
 
