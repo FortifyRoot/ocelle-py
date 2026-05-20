@@ -257,3 +257,100 @@ class TestEnvVarMappingOnImport:
         # Just verify the mapping exists and is a dict
         assert isinstance(ENV_VAR_MAPPING, dict)
         assert len(ENV_VAR_MAPPING) > 0
+
+
+class TestOTelBSPScheduleDelayDefault:
+    """ST-10 MVP stopgap: fortifyroot.init() sets OTEL_BSP_SCHEDULE_DELAY=15000
+    when unset, so direct-SDK retry chains buffer into one OTLP batch and
+    produce a RetryLoopEvent via the per-batch detector.
+
+    See ``fr-backend/docs/development/RETRY_LOOP.md`` §1.1 (MVP scope
+    summary) for the customer-facing behaviour this default supports,
+    and ``ST-10-FOLLOWUP-cross-batch-retry-detection`` in
+    ``fr-system-tests/SYSTEM_TESTS_PLAN.md`` for the proper backend fix
+    that lets us revert this default later.
+    """
+
+    def test_default_set_when_env_unset(self):
+        """When OTEL_BSP_SCHEDULE_DELAY is not set, fortifyroot.init()
+        sets it to '15000'. Uses subprocess isolation so the
+        ``setdefault`` side effect doesn't leak between tests."""
+        import subprocess, sys, json
+        script = '''
+import os, json, sys
+
+# Ensure starting state is clean — no schedule-delay env var.
+os.environ.pop("OTEL_BSP_SCHEDULE_DELAY", None)
+
+# fortifyroot.init() does global OTel setup. We disable tracing so the
+# OTLP exporter doesn't try to connect; only the env-default side effect
+# matters for this test.
+os.environ["FORTIFYROOT_ENABLED"] = "false"
+
+import fortifyroot
+fortifyroot.init(app_name="test-bsp-default", api_endpoint="https://example.invalid", api_key="sk-test")
+
+result = {"after_init": os.environ.get("OTEL_BSP_SCHEDULE_DELAY", "<unset>")}
+print(json.dumps(result))
+'''
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True, text=True, timeout=30,
+        )
+        assert result.returncode == 0, (
+            f"Subprocess failed:\nstdout={result.stdout!r}\nstderr={result.stderr!r}"
+        )
+        # The subprocess emits a single JSON line. Find it (there may be
+        # other init-side stdout from the SDK).
+        json_line = None
+        for line in result.stdout.strip().splitlines():
+            line = line.strip()
+            if line.startswith("{") and line.endswith("}"):
+                json_line = line
+                break
+        assert json_line is not None, f"No JSON output found in:\n{result.stdout!r}"
+        data = json.loads(json_line)
+        assert data["after_init"] == "15000", (
+            f"Expected OTEL_BSP_SCHEDULE_DELAY='15000' after init, got "
+            f"{data['after_init']!r}. ST-10 MVP stopgap regressed — see "
+            f"fortifyroot/core.py and RETRY_LOOP.md §1.1."
+        )
+
+    def test_customer_override_preserved(self):
+        """When the customer has set OTEL_BSP_SCHEDULE_DELAY before
+        fortifyroot.init(), the customer value is preserved (we use
+        ``os.environ.setdefault`` precisely so customer overrides win)."""
+        import subprocess, sys, json
+        script = '''
+import os, json
+
+# Customer pre-sets a different value before importing fortifyroot.
+os.environ["OTEL_BSP_SCHEDULE_DELAY"] = "30000"
+os.environ["FORTIFYROOT_ENABLED"] = "false"
+
+import fortifyroot
+fortifyroot.init(app_name="test-bsp-customer-override", api_endpoint="https://example.invalid", api_key="sk-test")
+
+result = {"after_init": os.environ.get("OTEL_BSP_SCHEDULE_DELAY", "<unset>")}
+print(json.dumps(result))
+'''
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True, text=True, timeout=30,
+        )
+        assert result.returncode == 0, (
+            f"Subprocess failed:\nstdout={result.stdout!r}\nstderr={result.stderr!r}"
+        )
+        json_line = None
+        for line in result.stdout.strip().splitlines():
+            line = line.strip()
+            if line.startswith("{") and line.endswith("}"):
+                json_line = line
+                break
+        assert json_line is not None, f"No JSON output found in:\n{result.stdout!r}"
+        data = json.loads(json_line)
+        assert data["after_init"] == "30000", (
+            f"Customer override of OTEL_BSP_SCHEDULE_DELAY was clobbered. "
+            f"Expected '30000' (preserved), got {data['after_init']!r}. "
+            f"setdefault contract regressed in fortifyroot/core.py."
+        )

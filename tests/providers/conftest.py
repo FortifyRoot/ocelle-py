@@ -98,10 +98,24 @@ def mock_safety_rules() -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
+class _NoFortifyRootSpanExporter(InMemorySpanExporter):
+    """ST-10.4 (2026-05-17): filter ST-10.4 retry_attempt sibling
+    spans (role=retry_attempt) from upstream provider-test exporter.
+    Role-based, NOT name-prefix-based, so legitimate
+    ``fortifyroot.litellm.safety`` etc. spans that tests actually
+    inspect remain visible. Mirrors top-level conftest's filter."""
+
+    def get_finished_spans(self):  # type: ignore[override]
+        return tuple(
+            s for s in super().get_finished_spans()
+            if (s.attributes or {}).get("fortifyroot.span.role") != "retry_attempt"
+        )
+
+
 @pytest.fixture
 def span_exporter() -> InMemorySpanExporter:
     """Fresh in-memory span exporter for each test."""
-    return InMemorySpanExporter()
+    return _NoFortifyRootSpanExporter()
 
 
 @pytest.fixture
