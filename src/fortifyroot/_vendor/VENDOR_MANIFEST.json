@@ -1,9 +1,9 @@
 {
-  "vendored_at": "2026-05-18T19:25:09.430426",
+  "vendored_at": "2026-05-20T11:38:41.481921",
   "openllmetry_version": "0.52.6",
-  "git_commit": "ae104d28a312",
-  "git_branch": "phase-st-10/framework-wrappers",
-  "git_tag": "unknown",
+  "git_commit": "bd7390643d0d",
+  "git_branch": "HEAD",
+  "git_tag": "fr-v0.52.6.13",
   "packages": {
     "traceloop-sdk": "0.52.6",
     "opentelemetry-semantic-conventions-ai": "0.52.6",
