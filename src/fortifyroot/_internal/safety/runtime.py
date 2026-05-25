@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import ipaddress
 import logging
+import platform
 import random
 import threading
 import urllib.error
@@ -14,6 +15,12 @@ from dataclasses import dataclass, field
 
 from opentelemetry.metrics import get_meter
 
+from fortifyroot._internal.constants import (
+    FORTIFYROOT_SDK_LANGUAGE,
+    FORTIFYROOT_SDK_LANGUAGE_HEADER,
+    FORTIFYROOT_SDK_LANGUAGE_VERSION_HEADER,
+    FORTIFYROOT_SDK_VERSION_HEADER,
+)
 from fortifyroot._internal.safety.engine import CompiledSafetySnapshot, compile_snapshot
 from fortifyroot._internal.safety.parser import parse_sdk_config_response
 from fortifyroot._internal.safety.streaming import CompletionSafetyStream
@@ -39,7 +46,6 @@ _CONFIG_FETCH_FAILURE_COUNTER = _METER.create_counter(
 MAX_CONFIG_RESPONSE_BYTES = 1_048_576  # 1 MB
 DEFAULT_CONFIG_POLL_INTERVAL_SECONDS = 60
 DEFAULT_STREAM_HOLDBACK_CHARS = 128
-SDK_VERSION_HEADER = "X-FortifyRoot-SDK-Version"
 API_KEY_HEADER = "X-API-Key"
 REQUEST_TIMEOUT_SECONDS = 5
 FORTIFYROOT_API_BASE_URL = "https://api.fortifyroot.com"
@@ -93,7 +99,9 @@ class SafetyConfigClient:
             url,
             headers={
                 API_KEY_HEADER: self._api_key,
-                SDK_VERSION_HEADER: __version__,
+                FORTIFYROOT_SDK_VERSION_HEADER: __version__,
+                FORTIFYROOT_SDK_LANGUAGE_HEADER: FORTIFYROOT_SDK_LANGUAGE,
+                FORTIFYROOT_SDK_LANGUAGE_VERSION_HEADER: platform.python_version(),
             },
             method="GET",
         )

@@ -515,6 +515,7 @@ def test_anthropic_safety_stream_prompt_mask_email(
     ) as stream:
         for _text in stream.text_stream:
             pass
+        stream.get_final_message()
 
     span = _get_span(span_exporter)
     assert span.name == "anthropic.chat"
@@ -557,11 +558,13 @@ def test_anthropic_safety_stream_completion_mask(
     ) as stream:
         for _text in stream.text_stream:
             pass
+        stream.get_final_message()
 
-    span = _get_span(span_exporter)
-    assert span.name == "anthropic.chat"
+    spans = span_exporter.get_finished_spans()
+    assert spans, "Expected at least one Anthropic streaming span"
+    span = next((s for s in spans if _completion_content(s) is not None), spans[0])
+    _assert_telemetry(span)
 
-    # Completion content should be captured (streamed response assembled)
     completion = _completion_content(span)
     assert completion is not None, "Streaming completion should be captured"
     # Verify basic telemetry is present (response model, tokens)

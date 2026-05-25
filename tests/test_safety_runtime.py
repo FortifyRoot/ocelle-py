@@ -127,6 +127,8 @@ def test_safety_config_client_fetch_sends_sdk_version_and_etag():
     assert "current_etag=etag-current" in captured_request.full_url
     assert captured_request.get_header("X-api-key") == "fr-key"
     assert captured_request.get_header("X-fortifyroot-sdk-version") is not None
+    assert captured_request.get_header("X-fortifyroot-sdk-language") == "python"
+    assert captured_request.get_header("X-fortifyroot-sdk-language-version") is not None
 
 
 def test_safety_config_client_fetch_returns_none_on_http_error():

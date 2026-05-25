@@ -11,6 +11,8 @@ from fortifyroot.core import (
     _normalize_http_otlp_endpoint,
     _resolve_signal_headers,
     _resolve_stream_holdback_chars,
+    _sdk_metadata_headers,
+    _with_sdk_metadata_headers,
 )
 
 
@@ -21,6 +23,10 @@ from fortifyroot.core import (
 # `metric_exporter_cls.assert_called_once_with(...)` sites stay consistent
 # if the mapping ever legitimately changes.
 _EXPECTED_TEMPORALITY = _cumulative_preferred_temporality()
+
+
+def _headers_with_sdk_metadata(headers=None):
+    return _with_sdk_metadata_headers(headers or {})
 
 
 class TestInit:
@@ -84,6 +90,17 @@ class TestVersion:
         from fortifyroot.version import __version__ as module_version
 
         assert __version__ == module_version
+
+    def test_version_matches_package_metadata_from_pyproject(self):
+        """Test that __version__ resolves to pyproject's package version."""
+        import re
+        from pathlib import Path
+        from fortifyroot import __version__
+
+        pyproject = Path(__file__).parents[1] / "pyproject.toml"
+        match = re.search(r'(?m)^version = "([^"]+)"', pyproject.read_text())
+        assert match is not None
+        assert __version__ == match.group(1)
 
 
 class TestPublicAPI:
@@ -346,7 +363,7 @@ class TestInitOptionalPaths:
                     api_key="fr-key",
                 )
 
-        auth_headers = {"Authorization": "Bearer fr-key"}
+        auth_headers = _headers_with_sdk_metadata({"Authorization": "Bearer fr-key"})
         default_processor_mock.assert_called_once_with(
             disable_batch=False,
             api_endpoint="https://api.fortifyroot.com",
@@ -383,6 +400,28 @@ class TestInitOptionalPaths:
                 match="default FortifyRoot traces, metrics export",
             ):
                 init(app_name="fortifyroot-test")
+
+        default_processor_mock.assert_not_called()
+        traceloop_init_mock.assert_not_called()
+        runtime_mock.assert_not_called()
+
+    def test_init_rejects_x_api_key_as_managed_export_auth(self):
+        """Test that managed FortifyRoot OTLP export requires Authorization auth."""
+        from fortifyroot import init
+
+        with (
+            mock.patch("fortifyroot.core.Traceloop.get_default_span_processor") as default_processor_mock,
+            mock.patch("fortifyroot.core.Traceloop.init") as traceloop_init_mock,
+            mock.patch("fortifyroot.core.configure_global_safety_runtime") as runtime_mock,
+        ):
+            with pytest.raises(
+                ValueError,
+                match="default FortifyRoot traces, metrics export",
+            ):
+                init(
+                    app_name="fortifyroot-test",
+                    headers={"X-API-Key": "fr-key"},
+                )
 
         default_processor_mock.assert_not_called()
         traceloop_init_mock.assert_not_called()
@@ -477,26 +516,30 @@ class TestInitOptionalPaths:
             disable_batch=False,
             api_endpoint="https://api.fortifyroot.com",
             api_key=None,
-            headers={"Authorization": "Bearer explicit", "x-trace": "1"},
+            headers=_headers_with_sdk_metadata(
+                {"Authorization": "Bearer explicit", "x-trace": "1"}
+            ),
         )
         metric_exporter_cls.assert_called_once_with(
             endpoint="https://api.fortifyroot.com/v1/metrics",
-            headers={"x-metrics": "2", "Authorization": "Bearer explicit"},
+            headers=_headers_with_sdk_metadata(
+                {"x-metrics": "2", "Authorization": "Bearer explicit"}
+            ),
             preferred_temporality=_EXPECTED_TEMPORALITY,
         )
         logging_exporter_cls.assert_called_once_with(
             endpoint="https://api.fortifyroot.com/v1/logs",
-            headers={"x-logs": "3", "Authorization": "Bearer explicit"},
+            headers=_headers_with_sdk_metadata({"x-logs": "3", "Authorization": "Bearer explicit"}),
         )
         _, kwargs = traceloop_init_mock.call_args
-        assert kwargs["metrics_headers"] == {
+        assert kwargs["metrics_headers"] == _headers_with_sdk_metadata({
             "x-metrics": "2",
             "Authorization": "Bearer explicit",
-        }
-        assert kwargs["logging_headers"] == {
+        })
+        assert kwargs["logging_headers"] == _headers_with_sdk_metadata({
             "x-logs": "3",
             "Authorization": "Bearer explicit",
-        }
+        })
 
     def test_init_uses_api_key_for_custom_collector_trace_metrics_and_logging_auth(self):
         """Test that api_key bearer auth is applied consistently for non-FortifyRoot collectors."""
@@ -726,9 +769,9 @@ class TestInitOptionalPaths:
         with mock.patch.dict(
             os.environ,
             {
-                "FORTIFYROOT_BASE_URL": "https://env.fortifyroot.dev",
+                "FORTIFYROOT_BASE_URL": "https://env.fortifyroot.com",
                 "FORTIFYROOT_METRICS_ENABLED": "true",
-                "FORTIFYROOT_METRICS_ENDPOINT": "https://metrics.fortifyroot.dev",
+                "FORTIFYROOT_METRICS_ENDPOINT": "https://metrics.fortifyroot.com",
             },
             clear=False,
         ):
@@ -758,36 +801,33 @@ class TestInitOptionalPaths:
 
         default_processor_mock.assert_called_once_with(
             disable_batch=False,
-            api_endpoint="https://env.fortifyroot.dev",
+            api_endpoint="https://env.fortifyroot.com",
             api_key="fr-key",
             headers={
                 "x-trace": "1",
                 "Authorization": "Bearer fr-key",
-            },
+            } | _sdk_metadata_headers(),
         )
         metric_exporter_cls.assert_called_once_with(
-            endpoint="https://metrics.fortifyroot.dev/v1/metrics",
+            endpoint="https://metrics.fortifyroot.com/v1/metrics",
             headers={
                 "x-metrics": "2",
                 "Authorization": "Bearer fr-key",
-            },
+            } | _sdk_metadata_headers(),
             preferred_temporality=_EXPECTED_TEMPORALITY,
         )
         _, kwargs = traceloop_init_mock.call_args
-        assert kwargs["api_endpoint"] == "https://env.fortifyroot.dev"
+        assert kwargs["api_endpoint"] == "https://env.fortifyroot.com"
         assert kwargs["headers"] == {
             "x-trace": "1",
             "Authorization": "Bearer fr-key",
-        }
+        } | _sdk_metadata_headers()
         assert kwargs["logging_exporter"] is logging_exporter
-        assert kwargs["logging_headers"] == {
-            "x-logs": "3",
-            "Authorization": "Bearer fr-key",
-        }
+        assert "logging_headers" not in kwargs
         assert kwargs["metrics_headers"] == {
             "x-metrics": "2",
             "Authorization": "Bearer fr-key",
-        }
+        } | _sdk_metadata_headers()
         assert kwargs["metrics_exporter"] is created_metrics_exporter
         assert kwargs["propagator"] is propagator
         assert trace_content_value == "false"
@@ -835,7 +875,7 @@ class TestFluentConfig:
             (
                 configure()
                 .app_name("builder-app")
-                .api_endpoint("https://api.fortifyroot.dev")
+                .api_endpoint("https://api.fortifyroot.com")
                 .api_key("fr-key")
                 .enabled(False)
                 .headers({"x-trace": "1"})
@@ -863,7 +903,7 @@ class TestFluentConfig:
 
         init_mock.assert_called_once_with(
             app_name="builder-app",
-            api_endpoint="https://api.fortifyroot.dev",
+            api_endpoint="https://api.fortifyroot.com",
             api_key="fr-key",
             enabled=False,
             headers={"x-trace": "1"},
@@ -917,9 +957,11 @@ class TestResolveSignalHeaders:
             headers={"Authorization": "Bearer signal-key", "x-signal": "1"},
             fallback_headers={"Authorization": "Bearer fallback-key", "x-trace": "2"},
             api_key=None,
+            include_sdk_metadata=True,
         )
         assert result["Authorization"] == "Bearer signal-key"
         assert result["x-signal"] == "1"
+        assert result["X-FortifyRoot-SDK-Language"] == "python"
         # Fallback headers should NOT be merged in
         assert "x-trace" not in result
 
@@ -929,8 +971,9 @@ class TestResolveSignalHeaders:
             headers={"x-signal": "1"},
             fallback_headers={"x-trace": "2"},
             api_key=None,
+            include_sdk_metadata=True,
         )
-        assert result == {"x-signal": "1"}
+        assert result == _headers_with_sdk_metadata({"x-signal": "1"})
         assert "Authorization" not in result
 
     def test_signal_headers_without_auth_inherits_from_fallback_and_applies_api_key(self):
@@ -939,8 +982,86 @@ class TestResolveSignalHeaders:
             headers={"x-signal": "1"},
             fallback_headers={"x-trace": "2"},
             api_key="my-key",
+            include_sdk_metadata=True,
         )
-        assert result == {"x-signal": "1", "Authorization": "Bearer my-key"}
+        assert result == _headers_with_sdk_metadata(
+            {"x-signal": "1", "Authorization": "Bearer my-key"}
+        )
+
+    def test_signal_headers_strip_fallback_sdk_metadata_for_custom_endpoint(self):
+        """Test custom signal endpoints inherit auth without leaking SDK metadata."""
+        result = _resolve_signal_headers(
+            headers=None,
+            fallback_headers=_headers_with_sdk_metadata(
+                {"Authorization": "Bearer trace-key", "x-trace": "2"}
+            ),
+            api_key=None,
+            include_sdk_metadata=False,
+        )
+
+        assert result == {"Authorization": "Bearer trace-key", "x-trace": "2"}
+
+
+class TestSDKMetadataHeaders:
+    """Tests for SDK metadata export headers."""
+
+    def test_sdk_metadata_headers_include_expected_values(self):
+        import platform
+        from fortifyroot import __version__
+
+        assert _sdk_metadata_headers() == {
+            "X-FortifyRoot-SDK-Version": __version__,
+            "X-FortifyRoot-SDK-Language": "python",
+            "X-FortifyRoot-SDK-Language-Version": platform.python_version(),
+        }
+
+    def test_sdk_metadata_headers_override_stale_values_case_insensitively(self):
+        result = _with_sdk_metadata_headers(
+            {
+                "x-fortifyroot-sdk-version": "stale",
+                "X-FortifyRoot-SDK-Language": "ruby",
+                "X-FortifyRoot-SDK-Language-Version": "3.7.0",
+            }
+        )
+
+        assert "x-fortifyroot-sdk-version" not in result
+        assert result["X-FortifyRoot-SDK-Version"] != "stale"
+        assert result["X-FortifyRoot-SDK-Language"] == "python"
+        assert result["X-FortifyRoot-SDK-Language-Version"] != "3.7.0"
+
+    def test_sdk_metadata_and_x_api_key_do_not_count_as_export_auth(self):
+        from fortifyroot.core import _has_authorization_header
+
+        assert not _has_authorization_header(_sdk_metadata_headers())
+        assert _has_authorization_header(
+            _headers_with_sdk_metadata({"Authorization": "Bearer fr-key"})
+        )
+        assert not _has_authorization_header(
+            _headers_with_sdk_metadata({"X-API-Key": "fr-key"})
+        )
+
+
+class TestIsManagedFortifyRootEndpoint:
+    """Boundary tests for managed-endpoint detection."""
+
+    @pytest.mark.parametrize(
+        "endpoint,expected",
+        [
+            ("https://api.fortifyroot.com", True),
+            ("https://fortifyroot.com", True),
+            ("https://metrics.fortifyroot.com/v1/metrics", True),
+            ("https://evilfortifyroot.com", False),
+            ("https://fortifyroot.com.attacker.net", False),
+            ("https://fortifyroot.dev", False),
+            ("https://api.fortifyroot.dev", False),
+            ("http://localhost:4318", False),
+            ("", False),
+        ],
+    )
+    def test_managed_endpoint_boundaries(self, endpoint, expected):
+        from fortifyroot.core import _is_managed_fortifyroot_endpoint
+
+        assert _is_managed_fortifyroot_endpoint(endpoint) is expected
 
 
 class TestNormalizeHttpOtlpEndpoint:
