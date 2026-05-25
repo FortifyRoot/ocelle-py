@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import logging
+import importlib
+import sys
 from collections.abc import Iterator
 
 import pytest
@@ -48,8 +50,25 @@ from fortifyroot._vendor.opentelemetry.instrumentation.openai.shared.config impo
 # Import additional instrumentors for proper test isolation (T5+)
 try:
     from fortifyroot._vendor.opentelemetry.instrumentation.anthropic import AnthropicInstrumentor
+    from fortifyroot._vendor.opentelemetry.instrumentation.anthropic.config import (
+        Config as AnthropicConfig,
+    )
 except ImportError:
     AnthropicInstrumentor = None
+    AnthropicConfig = None
+if AnthropicConfig is not None:
+    _ANTHROPIC_DEFAULTS = {
+        name: getattr(AnthropicConfig, name)
+        for name in (
+            "enrich_token_usage",
+            "exception_logger",
+            "get_common_metrics_attributes",
+            "upload_base64_image",
+            "use_legacy_attributes",
+        )
+    }
+else:
+    _ANTHROPIC_DEFAULTS = {}
 try:
     from fortifyroot._vendor.opentelemetry.instrumentation.google_generativeai import GoogleGenerativeAiInstrumentor
 except ImportError:
@@ -81,6 +100,7 @@ from fortifyroot._vendor.traceloop.sdk.tracing.tracing import TracerWrapper
 
 
 _ENV_PREFIXES = ("FORTIFYROOT_", "TRACELOOP_", "OTEL_")
+_LOGGER = logging.getLogger(__name__)
 
 
 def _is_test_env_key(key: str) -> bool:
@@ -132,8 +152,40 @@ def _reset_singletons() -> None:
         LlamaIndexInstrumentor,
     ):
         if instrumentor_cls is not None:
+            instrumentor = instrumentor_cls()
             try:
-                instrumentor_cls().uninstrument()
+                instrumentor.uninstrument()
+            except Exception as exc:
+                _LOGGER.debug(
+                    "uninstrument failed for %s: %s", instrumentor_cls.__name__, exc
+                )
+            try:
+                instrumentor._uninstrument()
+            except Exception as exc:
+                _LOGGER.debug(
+                    "_uninstrument failed for %s: %s", instrumentor_cls.__name__, exc
+                )
+            # Instrumentor classes are singletons, so this resets the shared
+            # instance state returned by future instrumentor_cls() calls.
+            instrumentor._is_instrumented_by_opentelemetry = False
+
+    # Anthropic instrumentor monkey-patches methods on these resource modules.
+    # Plain uninstrument() does not always restore them when tests run in
+    # order, so reload the concrete resources and client imports to drop
+    # monkey-patched versions. Safe here because every test reconstructs its
+    # instrumentor after the reset.
+    for module_name in (
+        "anthropic.resources.messages.messages",
+        "anthropic.resources.messages",
+        "anthropic.resources.completions",
+        "anthropic.resources.beta.messages.messages",
+        "anthropic._client",
+        "anthropic",
+    ):
+        module = sys.modules.get(module_name)
+        if module is not None:
+            try:
+                importlib.reload(module)
             except Exception:
                 pass
 
@@ -165,6 +217,9 @@ def _reset_singletons() -> None:
 
     OpenAIConfig.enrich_assistant = False
     OpenAIConfig.use_legacy_attributes = True
+    if AnthropicConfig is not None:
+        for name, value in _ANTHROPIC_DEFAULTS.items():
+            setattr(AnthropicConfig, name, value)
 
 
 @pytest.fixture(autouse=True)

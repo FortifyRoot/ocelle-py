@@ -9,6 +9,7 @@ for the FortifyRoot SDK, including:
 
 import logging
 import os
+import platform
 import sys
 from urllib.parse import urlsplit
 from typing import Callable, Dict, List, Optional, Set, TypedDict, cast
@@ -22,7 +23,13 @@ from opentelemetry.propagators.textmap import TextMapPropagator
 
 from fortifyroot._vendor.traceloop.sdk import Traceloop
 
-from fortifyroot._internal.constants import FORTIFYROOT_SDK_VERSION_ATTRIBUTE
+from fortifyroot._internal.constants import (
+    FORTIFYROOT_SDK_LANGUAGE,
+    FORTIFYROOT_SDK_LANGUAGE_HEADER,
+    FORTIFYROOT_SDK_LANGUAGE_VERSION_HEADER,
+    FORTIFYROOT_SDK_VERSION_ATTRIBUTE,
+    FORTIFYROOT_SDK_VERSION_HEADER,
+)
 from fortifyroot._internal.env_mapping import (
     FORTIFYROOT_ALLOW_UDF_DETECTORS,
     FORTIFYROOT_APP_NAME,
@@ -53,6 +60,11 @@ logger = logging.getLogger(__name__)
 # Default API endpoint for FortifyRoot
 DEFAULT_API_ENDPOINT = "https://api.fortifyroot.com"
 AUTHORIZATION_HEADER = "Authorization"
+SDK_METADATA_HEADERS = {
+    FORTIFYROOT_SDK_VERSION_HEADER.lower(),
+    FORTIFYROOT_SDK_LANGUAGE_HEADER.lower(),
+    FORTIFYROOT_SDK_LANGUAGE_VERSION_HEADER.lower(),
+}
 
 
 def _resolve_api_endpoint(value: str) -> str:
@@ -121,7 +133,9 @@ def _is_enabled_from_env(env_var: str, default: bool) -> bool:
 def _has_authorization_header(headers: Dict[str, str]) -> bool:
     """Check whether explicit headers already provide authorization."""
     return any(
-        key.lower() == AUTHORIZATION_HEADER.lower() and str(value).strip()
+        key.lower() == AUTHORIZATION_HEADER.lower()
+        and value is not None
+        and str(value).strip()
         for key, value in headers.items()
     )
 
@@ -134,14 +148,56 @@ def _get_authorization_header(headers: Dict[str, str]) -> Optional[tuple[str, st
     return None
 
 
+def _sdk_metadata_headers() -> Dict[str, str]:
+    """Return SDK metadata headers for FortifyRoot backend observability."""
+    return {
+        FORTIFYROOT_SDK_VERSION_HEADER: __version__,
+        FORTIFYROOT_SDK_LANGUAGE_HEADER: FORTIFYROOT_SDK_LANGUAGE,
+        FORTIFYROOT_SDK_LANGUAGE_VERSION_HEADER: platform.python_version(),
+    }
+
+
+def _set_header_case_insensitive(
+    headers: Dict[str, str],
+    key: str,
+    value: str,
+) -> None:
+    """Set a header while removing stale variants with different casing."""
+    for existing_key in list(headers):
+        if existing_key.lower() == key.lower() and existing_key != key:
+            del headers[existing_key]
+    headers[key] = value
+
+
+def _with_sdk_metadata_headers(headers: Dict[str, str]) -> Dict[str, str]:
+    """Attach SDK-owned metadata headers, overriding stale caller values."""
+    resolved = dict(headers)
+    for key, value in _sdk_metadata_headers().items():
+        _set_header_case_insensitive(resolved, key, value)
+    return resolved
+
+
+def _without_sdk_metadata_headers(headers: Dict[str, str]) -> Dict[str, str]:
+    """Remove SDK-owned metadata headers from a header set."""
+    return {
+        key: value
+        for key, value in headers.items()
+        if key.lower() not in SDK_METADATA_HEADERS
+    }
+
+
 def _resolve_export_headers(
     headers: Optional[Dict[str, str]],
     api_key: Optional[str],
+    *,
+    include_sdk_metadata: bool,
 ) -> Dict[str, str]:
     """Add bearer auth from the API key unless explicit auth headers are provided."""
     resolved = dict(headers or {})
     if api_key and not _has_authorization_header(resolved):
         resolved[AUTHORIZATION_HEADER] = f"Bearer {api_key}"
+    if include_sdk_metadata:
+        resolved = _with_sdk_metadata_headers(resolved)
     return resolved
 
 
@@ -149,10 +205,17 @@ def _resolve_signal_headers(
     headers: Optional[Dict[str, str]],
     fallback_headers: Dict[str, str],
     api_key: Optional[str],
+    *,
+    include_sdk_metadata: bool,
 ) -> Dict[str, str]:
     """Resolve signal-specific headers, inheriting trace auth by default."""
     if headers is None:
-        return dict(fallback_headers)
+        resolved = dict(fallback_headers)
+        if include_sdk_metadata:
+            resolved = _with_sdk_metadata_headers(resolved)
+        else:
+            resolved = _without_sdk_metadata_headers(resolved)
+        return resolved
 
     resolved = dict(headers)
     if not _has_authorization_header(resolved):
@@ -160,14 +223,18 @@ def _resolve_signal_headers(
         if inherited_authorization is not None:
             key, value = inherited_authorization
             resolved[key] = value
-    return _resolve_export_headers(resolved, api_key)
+    return _resolve_export_headers(
+        resolved,
+        api_key,
+        include_sdk_metadata=include_sdk_metadata,
+    )
 
 
 def _is_managed_fortifyroot_endpoint(api_endpoint: str) -> bool:
     """Return True for hosted FortifyRoot API endpoints that require FortifyRoot auth."""
     parsed = urlsplit((api_endpoint or "").strip())
     host = (parsed.hostname or "").lower()
-    return bool(host) and host.endswith("fortifyroot.com")
+    return bool(host) and (host == "fortifyroot.com" or host.endswith(".fortifyroot.com"))
 
 
 def _resolve_signal_endpoint(env_var: str, fallback_endpoint: str) -> str:
@@ -371,7 +438,7 @@ def _validate_default_export_auth(
         exporter is None
         and processors is None
         and _is_managed_fortifyroot_endpoint(trace_endpoint)
-        and not trace_headers
+        and not _has_authorization_header(trace_headers)
     ):
         missing_signals.append("traces")
     if (
@@ -379,7 +446,7 @@ def _validate_default_export_auth(
         and metrics_exporter is None
         and metrics_enabled
         and _is_managed_fortifyroot_endpoint(metrics_endpoint)
-        and not metrics_headers
+        and not _has_authorization_header(metrics_headers)
     ):
         missing_signals.append("metrics")
     if (
@@ -387,7 +454,7 @@ def _validate_default_export_auth(
         and logging_exporter is None
         and logging_enabled
         and _is_managed_fortifyroot_endpoint(logging_endpoint)
-        and not logging_headers
+        and not _has_authorization_header(logging_headers)
     ):
         missing_signals.append("logs")
 
@@ -638,16 +705,22 @@ def init(
         "FORTIFYROOT_LOGGING_ENDPOINT",
         api_endpoint,
     )
-    resolved_headers = _resolve_export_headers(headers, api_key)
+    resolved_headers = _resolve_export_headers(
+        headers,
+        api_key,
+        include_sdk_metadata=_is_managed_fortifyroot_endpoint(api_endpoint),
+    )
     resolved_metrics_headers = _resolve_signal_headers(
         metrics_headers,
         resolved_headers,
         api_key,
+        include_sdk_metadata=_is_managed_fortifyroot_endpoint(metrics_endpoint),
     )
     resolved_logging_headers = _resolve_signal_headers(
         logging_headers,
         resolved_headers,
         api_key,
+        include_sdk_metadata=_is_managed_fortifyroot_endpoint(logging_endpoint),
     )
     _validate_default_export_auth(
         enabled=enabled,
@@ -743,6 +816,8 @@ def init(
         )
         final_processors = [AttributeRenamingProcessor(default_processor)]
 
+    metrics_enabled = _is_enabled_from_env("FORTIFYROOT_METRICS_ENABLED", True)
+
     # FIX: When we create a default processor (final_processors), Traceloop interprets
     # this as a "custom pipeline" and requires a matching metrics_exporter.
     # If metrics are enabled but no metrics_exporter is provided, create a default one.
@@ -750,7 +825,6 @@ def init(
         # Check if metrics are enabled via environment variable
         # Note: We read FORTIFYROOT_* vars directly for consistency; env_mapping.py
         # handles translation to TRACELOOP_* for the vendored SDK internals.
-        metrics_enabled = _is_enabled_from_env("FORTIFYROOT_METRICS_ENABLED", True)
         if metrics_enabled:
             metrics_exporter = _init_default_metrics_exporter(
                 metrics_endpoint,
@@ -781,11 +855,11 @@ def init(
 
     if metrics_exporter is not None:
         tl_kwargs["metrics_exporter"] = metrics_exporter
-    if resolved_metrics_headers:
+    if metrics_enabled and resolved_metrics_headers:
         tl_kwargs["metrics_headers"] = resolved_metrics_headers
     if logging_exporter is not None:
         tl_kwargs["logging_exporter"] = logging_exporter
-    if resolved_logging_headers:
+    if logging_enabled and resolved_logging_headers:
         tl_kwargs["logging_headers"] = resolved_logging_headers
     if propagator is not None:
         tl_kwargs["propagator"] = propagator
