@@ -11,15 +11,19 @@ from unittest import mock
 import pytest
 
 from fortifyroot._internal.safety import runtime as safety_runtime
-from fortifyroot._internal.safety.engine import compile_snapshot
-from fortifyroot._internal.safety.models import ConfigProfile, SafetyConfig, SafetyRule
+from fortifyroot._internal.safety.engine import CompiledSafetySnapshot, compile_snapshot
+from fortifyroot._internal.safety.models import (
+    ConfigProfile,
+    RegexMatcher,
+    SafetyConfig,
+    SafetyRule,
+)
 from fortifyroot._internal.safety.runtime import (
     FORTIFYROOT_API_BASE_URL,
     LOCAL_FORTIFYROOT_DEV_HOSTS,
-    SafetyConfigFetchError,
     SafetyConfigClient,
+    SafetyConfigFetchError,
     SafetyFetchResult,
-    SafetyHandler,
     SafetyRuntime,
     SafetySnapshotStore,
     SafetyStreamFactory,
@@ -28,7 +32,6 @@ from fortifyroot._internal.safety.runtime import (
     configure_global_safety_runtime,
     shutdown_global_safety_runtime,
 )
-from fortifyroot._internal.safety.models import RegexMatcher
 from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (
     SafetyContext,
     SafetyLocation,
@@ -151,6 +154,39 @@ def test_safety_config_client_fetch_returns_none_on_http_error():
     ):
         with pytest.raises(SafetyConfigFetchError, match="HTTP status 500"):
             client.fetch("")
+
+
+@pytest.mark.parametrize("status_code", [401, 403])
+def test_safety_config_client_fetch_surfaces_auth_warning(status_code):
+    client = SafetyConfigClient(
+        "https://api.fortifyroot.com",
+        "fr-key",
+        "cfg-1",
+    )
+
+    error = urllib.error.HTTPError(
+        url="https://api.fortifyroot.com/v1/sdk/config/cfg-1",
+        code=status_code,
+        msg="auth failed",
+        hdrs=None,
+        fp=None,
+    )
+    with mock.patch(
+        "fortifyroot._internal.safety.runtime.urllib.request.urlopen",
+        side_effect=error,
+    ):
+        with pytest.raises(
+            SafetyConfigFetchError,
+            match=(
+                "FortifyRoot SDK auth warning: safety config fetch was rejected "
+                f"with HTTP status {status_code}"
+            ),
+        ) as exc_info:
+            client.fetch("")
+
+    message = str(exc_info.value)
+    assert "invalid, revoked, deleted, or missing permissions" in message
+    assert "valid SDK API key" in message
 
 
 def test_safety_config_client_fetch_returns_none_on_generic_fetch_error():
@@ -361,6 +397,42 @@ def test_safety_runtime_starts_with_empty_snapshot_when_initial_fetch_fails(capl
     assert prompt_result is None
 
     runtime.stop()
+
+
+def test_safety_runtime_dedupes_repeated_auth_fetch_warnings(caplog):
+    runtime = SafetyRuntime(
+        api_endpoint="https://api.fortifyroot.com",
+        api_key="fr-key",
+        config_profile_id="cfg-1",
+        poll_interval_seconds=60,
+        stream_holdback_chars=128,
+    )
+    error = SafetyConfigFetchError(
+        "FortifyRoot SDK auth warning: safety config fetch was rejected with HTTP status 401.",
+        auth_status_code=401,
+    )
+
+    with (
+        caplog.at_level(logging.DEBUG),
+        mock.patch.object(runtime._client, "fetch", side_effect=[error, error]),
+    ):
+        runtime._refresh_once(initial=False)
+        runtime._refresh_once(initial=False)
+
+    warning_records = [
+        record
+        for record in caplog.records
+        if record.levelno == logging.WARNING
+        and "FortifyRoot SDK auth warning" in record.getMessage()
+    ]
+    debug_records = [
+        record
+        for record in caplog.records
+        if record.levelno == logging.DEBUG
+        and "FortifyRoot SDK auth warning" in record.getMessage()
+    ]
+    assert len(warning_records) == 1
+    assert len(debug_records) == 1
 
 
 def test_configure_global_safety_runtime_clears_handlers_when_disabled():
@@ -1107,7 +1179,7 @@ def test_concurrent_poll_and_handler_is_thread_safe():
     errors: list[str] = []
     duration = 0.5
 
-    def _make_snapshot(version: int) -> "CompiledSafetySnapshot":
+    def _make_snapshot(version: int) -> CompiledSafetySnapshot:
         from fortifyroot._internal.safety.engine import compile_snapshot as _compile
 
         return _compile(

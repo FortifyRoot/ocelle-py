@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import json
 import ipaddress
+import json
 import logging
 import platform
 import random
@@ -51,10 +51,20 @@ REQUEST_TIMEOUT_SECONDS = 5
 FORTIFYROOT_API_BASE_URL = "https://api.fortifyroot.com"
 LOCAL_FORTIFYROOT_DEV_HOSTS = {"localhost", "host.docker.internal"}
 FORTIFYROOT_API_HOST_SUFFIX = "api.fortifyroot.com"
+AUTH_HTTP_STATUS_CODES = {401, 403}
 
 
 class SafetyConfigFetchError(RuntimeError):
     """Raised when the backend safety config fetch cannot be completed."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        auth_status_code: int | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.auth_status_code = auth_status_code
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,6 +132,13 @@ class SafetyConfigClient:
                 1,
                 attributes={**fetch_attributes, "error_type": "http_error"},
             )
+            if exc.code in AUTH_HTTP_STATUS_CODES:
+                raise SafetyConfigFetchError(
+                    f"FortifyRoot SDK auth warning: safety config fetch was rejected with HTTP status {exc.code}. "
+                    "The SDK API key may be invalid, revoked, deleted, or missing permissions. "
+                    "Safety config updates will not be applied until a valid SDK API key is configured.",
+                    auth_status_code=exc.code,
+                ) from exc
             raise SafetyConfigFetchError(
                 f"Safety config fetch failed with HTTP status {exc.code}"
             ) from exc
@@ -236,6 +253,7 @@ class SafetyRuntime:
         )
         self._warned_no_rules = False
         self._warned_no_enabled_rules = False
+        self._warned_auth_fetch_status_codes: set[int] = set()
         handler = SafetyHandler(self._snapshot_store)
         self._prompt_handler = handler
         self._completion_handler = handler
@@ -274,13 +292,7 @@ class SafetyRuntime:
         try:
             result = self._client.fetch(current_etag)
         except SafetyConfigFetchError as exc:
-            if initial:
-                logger.warning(
-                    "Initial FortifyRoot safety config fetch failed; starting with empty safety snapshot: %s",
-                    exc,
-                )
-                return
-            logger.warning("%s", exc)
+            self._log_fetch_error(exc, initial=initial)
             return
 
         if result.not_modified:
@@ -290,6 +302,31 @@ class SafetyRuntime:
 
         self._snapshot_store.set(result.snapshot)
         self._maybe_warn_about_snapshot(result)
+
+    def _log_fetch_error(
+        self,
+        exc: SafetyConfigFetchError,
+        *,
+        initial: bool,
+    ) -> None:
+        if exc.auth_status_code is not None:
+            with self._warning_lock:
+                already_warned = (
+                    exc.auth_status_code in self._warned_auth_fetch_status_codes
+                )
+                if not already_warned:
+                    self._warned_auth_fetch_status_codes.add(exc.auth_status_code)
+            if already_warned:
+                logger.debug("%s", exc)
+                return
+
+        if initial:
+            logger.warning(
+                "Initial FortifyRoot safety config fetch failed; starting with empty safety snapshot: %s",
+                exc,
+            )
+            return
+        logger.warning("%s", exc)
 
     def _maybe_warn_about_snapshot(self, result: SafetyFetchResult) -> None:
         snapshot = result.snapshot
