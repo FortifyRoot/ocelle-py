@@ -36,6 +36,8 @@ FortifyRoot automatically instruments the following libraries when they are inst
 - **Frameworks**: LangChain, LlamaIndex, Haystack, CrewAI, OpenAI Agents
 - **Vector Databases**: Pinecone, Chroma, Milvus, Qdrant, Weaviate, LanceDB, Marqo
 
+For the current launch-certified provider-role matrix and support tiers, see [Provider Support](docs/PROVIDERS.md).
+
 ## Configuration
 
 ### Environment Variables
