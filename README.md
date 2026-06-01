@@ -28,15 +28,20 @@ response = openai.chat.completions.create(
 )
 ```
 
-## Supported LLM Libraries
+## Auto-Instrumented LLM Libraries
 
-FortifyRoot automatically instruments the following libraries when they are installed:
+FortifyRoot can automatically instrument the following libraries when they are
+installed. This is the broader SDK instrumentation surface, not the
+launch-certified provider-role matrix:
 
 - **LLM Providers**: OpenAI, Anthropic, Cohere, Google Generative AI, Mistral AI, Groq, Ollama, AWS Bedrock, Azure OpenAI, Vertex AI, Replicate, Together AI, Watsonx
 - **Frameworks**: LangChain, LlamaIndex, Haystack, CrewAI, OpenAI Agents
 - **Vector Databases**: Pinecone, Chroma, Milvus, Qdrant, Weaviate, LanceDB, Marqo
 
-For the current launch-certified provider-role matrix and support tiers, see [Provider Support](docs/PROVIDERS.md).
+For the current launch-certified provider-role matrix and support tiers, see
+[Provider Support](docs/PROVIDERS.md). If this broader list and
+`PROVIDERS.md` differ, treat `PROVIDERS.md` as the source of truth for launch
+claims.
 
 ## Configuration
 
