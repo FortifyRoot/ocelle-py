@@ -1,7 +1,7 @@
 import pytest
 from grpc import RpcError, StatusCode
 
-from fortifyroot._vendor.traceloop.sdk.exporters.auth_warnings import (
+from fortifyroot._vendor.tracer.sdk.exporters.auth_warnings import (
     _AuthWarningClientProxy,
     reset_auth_warning_state_for_tests,
 )
@@ -29,19 +29,19 @@ def _rejecting_post(status_code):
 
 
 def _make_traces_http_exporter():
-    from fortifyroot._vendor.traceloop.sdk.tracing.tracing import init_spans_exporter
+    from fortifyroot._vendor.tracer.sdk.tracing.tracing import init_spans_exporter
 
     return init_spans_exporter("http://localhost:4318", {})
 
 
 def _make_metrics_http_exporter():
-    from fortifyroot._vendor.traceloop.sdk.metrics.metrics import init_metrics_exporter
+    from fortifyroot._vendor.tracer.sdk.metrics.metrics import init_metrics_exporter
 
     return init_metrics_exporter("http://localhost:4318", {})
 
 
 def _make_logs_http_exporter():
-    from fortifyroot._vendor.traceloop.sdk.logging.logging import init_logging_exporter
+    from fortifyroot._vendor.tracer.sdk.logging.logging import init_logging_exporter
 
     return init_logging_exporter("http://localhost:4318", {})
 
@@ -86,7 +86,7 @@ def test_vendored_http_exporters_warn_on_auth_failure_once(
 def test_vendored_grpc_exporter_warns_on_auth_failure(caplog):
     reset_auth_warning_state_for_tests()
 
-    from fortifyroot._vendor.traceloop.sdk.tracing.tracing import init_spans_exporter
+    from fortifyroot._vendor.tracer.sdk.tracing.tracing import init_spans_exporter
 
     class FakeClient:
         def Export(self, *args, **kwargs):  # noqa: N802

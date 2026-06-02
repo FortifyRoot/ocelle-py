@@ -91,12 +91,12 @@ except ImportError:
     LlamaIndexInstrumentor = None
 from fortifyroot._internal.safety.engine import set_udf_detectors_enabled
 from fortifyroot._internal.safety.runtime import shutdown_global_safety_runtime
-from fortifyroot._vendor.traceloop.sdk.logging.logging import LoggerWrapper
-from fortifyroot._vendor.traceloop.sdk.logging.logging import (
+from fortifyroot._vendor.tracer.sdk.logging.logging import LoggerWrapper
+from fortifyroot._vendor.tracer.sdk.logging.logging import (
     is_fortifyroot_logging_handler,
 )
-from fortifyroot._vendor.traceloop.sdk.metrics.metrics import MetricsWrapper
-from fortifyroot._vendor.traceloop.sdk.tracing.tracing import TracerWrapper
+from fortifyroot._vendor.tracer.sdk.metrics.metrics import MetricsWrapper
+from fortifyroot._vendor.tracer.sdk.tracing.tracing import TracerWrapper
 
 
 _ENV_PREFIXES = ("FORTIFYROOT_", "TRACELOOP_", "OTEL_")

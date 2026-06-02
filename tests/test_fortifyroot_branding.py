@@ -89,12 +89,12 @@ class TestMetricsCommonAttributes:
 
     def test_workflow_name_uses_fortifyroot_key(self):
         from unittest.mock import patch
-        from fortifyroot._vendor.traceloop.sdk.tracing.tracing import (
+        from fortifyroot._vendor.tracer.sdk.tracing.tracing import (
             metrics_common_attributes,
         )
 
         with patch(
-            "fortifyroot._vendor.traceloop.sdk.tracing.tracing.get_value"
+            "fortifyroot._vendor.tracer.sdk.tracing.tracing.get_value"
         ) as mock_get:
             mock_get.side_effect = lambda key: {
                 "workflow_name": "test-wf",
@@ -110,12 +110,12 @@ class TestMetricsCommonAttributes:
 
     def test_entity_name_uses_fortifyroot_key(self):
         from unittest.mock import patch
-        from fortifyroot._vendor.traceloop.sdk.tracing.tracing import (
+        from fortifyroot._vendor.tracer.sdk.tracing.tracing import (
             metrics_common_attributes,
         )
 
         with patch(
-            "fortifyroot._vendor.traceloop.sdk.tracing.tracing.get_value"
+            "fortifyroot._vendor.tracer.sdk.tracing.tracing.get_value"
         ) as mock_get:
             mock_get.side_effect = lambda key: {
                 "workflow_name": None,
@@ -131,12 +131,12 @@ class TestMetricsCommonAttributes:
 
     def test_association_properties_use_fortifyroot_prefix(self):
         from unittest.mock import patch
-        from fortifyroot._vendor.traceloop.sdk.tracing.tracing import (
+        from fortifyroot._vendor.tracer.sdk.tracing.tracing import (
             metrics_common_attributes,
         )
 
         with patch(
-            "fortifyroot._vendor.traceloop.sdk.tracing.tracing.get_value"
+            "fortifyroot._vendor.tracer.sdk.tracing.tracing.get_value"
         ) as mock_get:
             mock_get.side_effect = lambda key: {
                 "workflow_name": None,
@@ -156,12 +156,12 @@ class TestMetricsCommonAttributes:
 
     def test_all_attributes_combined(self):
         from unittest.mock import patch
-        from fortifyroot._vendor.traceloop.sdk.tracing.tracing import (
+        from fortifyroot._vendor.tracer.sdk.tracing.tracing import (
             metrics_common_attributes,
         )
 
         with patch(
-            "fortifyroot._vendor.traceloop.sdk.tracing.tracing.get_value"
+            "fortifyroot._vendor.tracer.sdk.tracing.tracing.get_value"
         ) as mock_get:
             mock_get.side_effect = lambda key: {
                 "workflow_name": "checkout",
@@ -210,9 +210,9 @@ class TestVendorDirectoryScan:
         )
 
     def test_no_traceloop_attribute_strings_in_sdk_source(self):
-        """traceloop/sdk/ source (excluding client/) must have zero 'traceloop.' string literals."""
+        """tracer/sdk/ source (excluding client/) must have zero 'traceloop.' string literals."""
         vendor_root = self._get_vendor_root()
-        sdk_dir = vendor_root / "traceloop" / "sdk"
+        sdk_dir = vendor_root / "tracer" / "sdk"
 
         violations = []
         for py_file in sdk_dir.rglob("*.py"):

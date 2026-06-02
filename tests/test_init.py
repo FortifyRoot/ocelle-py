@@ -379,12 +379,18 @@ class TestInitOptionalPaths:
             endpoint="https://api.fortifyroot.com/v1/logs",
             headers=auth_headers,
         )
+        from fortifyroot.instruments import SUPPORTED_INSTRUMENTS
+        from fortifyroot._vendor.tracer.sdk.instruments import Instruments as TLInstruments
+
         _, kwargs = traceloop_init_mock.call_args
         assert kwargs["headers"] == auth_headers
         assert kwargs["metrics_headers"] == auth_headers
         assert kwargs["logging_headers"] == auth_headers
         assert kwargs["metrics_exporter"] is created_metrics_exporter
         assert kwargs["logging_exporter"] is created_logging_exporter
+        assert kwargs["instruments"] == {
+            TLInstruments(instrument.value) for instrument in SUPPORTED_INSTRUMENTS
+        }
 
     def test_init_requires_auth_for_default_managed_fortifyroot_exports(self):
         """Test that hosted FortifyRoot exports fail fast without auth."""
@@ -892,7 +898,7 @@ class TestFluentConfig:
                 .should_enrich_metrics(False)
                 .resource_attributes({"team": "ml"})
                 .instruments({Instruments.OPENAI})
-                .block_instruments({Instruments.COHERE})
+                .block_instruments({Instruments.BEDROCK})
                 .span_postprocess_callback(callback)
                 .config_profile_id("cfg-123")
                 .config_poll_interval_seconds(15)
@@ -920,7 +926,7 @@ class TestFluentConfig:
             should_enrich_metrics=False,
             resource_attributes={"team": "ml"},
             instruments={Instruments.OPENAI},
-            block_instruments={Instruments.COHERE},
+            block_instruments={Instruments.BEDROCK},
             span_postprocess_callback=callback,
             config_profile_id="cfg-123",
             config_poll_interval_seconds=15,

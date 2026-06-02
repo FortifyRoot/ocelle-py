@@ -3,7 +3,7 @@ FortifyRoot SDK for LLM Observability.
 
 FortifyRoot provides automatic instrumentation and observability for LLM applications.
 Simply call `fortifyroot.init()` to start capturing traces from supported LLM libraries
-including OpenAI, Anthropic, LangChain, LlamaIndex, and more.
+including OpenAI, Anthropic, Google GenAI, Bedrock, LangChain, LiteLLM, and LlamaIndex.
 
 Example:
     Basic usage::

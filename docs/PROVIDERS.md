@@ -2,7 +2,7 @@
 
 This page is the current launch-certified support matrix for FortifyRoot SDK provider and framework instrumentation.
 
-The SDK README lists the broader set of libraries FortifyRoot can instrument as they are installed. This page is narrower: it documents the provider-role behavior and support tier that has been validated for launch.
+The MVP SDK vendors and exposes only launch-supported instrumentation packages. Planned rows below document roadmap/provider-role direction, not libraries currently exposed by `fortifyroot.Instruments` or SDK extras.
 
 ## Status Terms
 
@@ -32,11 +32,11 @@ Raw SDK/request values can differ from these roles. FortifyRoot keeps raw values
 | OpenAI | `live-tested` | Yes | Direct calls: none | Direct calls: `openai` | OpenAI-compatible routes can change routing/billing provider; see OpenRouter. |
 | Anthropic | `live-tested` | Yes | Direct calls: none | Direct calls: `anthropic` | Also appears as model provider for Claude models routed through OpenRouter or LiteLLM. |
 | Google GenAI | `live-tested` | Yes | Direct calls: none | Direct calls: `google` | Launch validation covers Gemini-style traffic. |
-| xAI | `live-tested` | Yes | Direct calls: none in current launch matrix | Direct calls: `xai`; OpenRouter-routed calls: `openrouter` | Launch validation includes Grok models routed through OpenRouter. |
+| xAI | `live-tested` | Yes | Direct calls: none in current launch matrix | Direct calls: `xai`; OpenRouter-routed calls: `openrouter` | Recognized through OpenAI-compatible/OpenRouter paths and provider-role mapping; not a dedicated vendored instrument. |
 | AWS Bedrock | `live-tested` | Yes | `bedrock` where Bedrock is the platform route | `bedrock` where Bedrock pricing applies | Includes Bedrock-native and Bedrock-routed provider-role behavior in the launch validation path. |
-| Azure OpenAI | `mapper-supported` | Usually `openai` | `azure` | `azure` where Azure pricing applies | Supported by FortifyRoot provider-role mapping; launch live matrix may be narrower than direct OpenAI. |
-| Cohere | `planned` | Planned | Direct calls: none | Provider pricing when certified | Listed in SDK instrumentation direction, not launch-certified here. |
-| Mistral AI | `planned` | Planned | Direct calls: none | Provider pricing when certified | Listed in SDK instrumentation direction, not launch-certified here. |
+| Azure OpenAI | `mapper-supported` | Usually `openai` | `azure` | `azure` where Azure pricing applies | Recognized through the OpenAI-compatible instrumentation path and provider-role mapping; not a dedicated vendored instrument. |
+| Cohere | `planned` | Planned | Direct calls: none | Provider pricing when certified | Not bundled or exposed in the MVP SDK. |
+| Mistral AI | `planned` | Planned | Direct calls: none | Provider pricing when certified | Not bundled or exposed in the MVP SDK. |
 | Groq | `planned` | Planned | Direct calls: none | Provider pricing when certified | Future certification item. |
 | Ollama | `planned` | Planned | Direct calls: none | Local/provider-specific pricing when supported | Future certification item. |
 | Vertex AI | `planned` | Planned | Platform route when supported | Provider/platform pricing when certified | Future certification item. |
@@ -65,15 +65,15 @@ Raw SDK/request values can differ from these roles. FortifyRoot keeps raw values
 | LangGraph | `live-tested` | Same provider-role behavior as the LangChain/OpenAI path in the launch matrix. | Treated as part of the LangChain framework path for launch validation. |
 | LlamaIndex | `live-tested` | Preserves the underlying provider for supported OpenAI-backed paths. | Launch matrix covers the certified LlamaIndex paths, not every possible LlamaIndex model integration. |
 | LiteLLM | `live-tested` | Preserves `routing_provider=litellm` and identifies model/billing provider deterministically. | Unknown routed providers are not guessed. |
-| Haystack | `planned` | Planned | Listed in README as broader instrumentation direction, not launch-certified here. |
-| CrewAI | `planned` | Planned | Listed in README as broader instrumentation direction, not launch-certified here. |
-| OpenAI Agents | `planned` | Planned | Listed in README as broader instrumentation direction, not launch-certified here. |
-| MCP | `planned` | Planned | Listed in SDK instrumentation enum, not launch-certified here. |
-| Agno | `planned` | Planned | Listed in SDK instrumentation enum, not launch-certified here. |
+| Haystack | `planned` | Planned | Not bundled or exposed in the MVP SDK. |
+| CrewAI | `planned` | Planned | Not bundled or exposed in the MVP SDK. |
+| OpenAI Agents | `planned` | Planned | Not bundled or exposed in the MVP SDK. |
+| MCP | `planned` | Planned | Not bundled or exposed in the MVP SDK. |
+| Agno | `planned` | Planned | Not bundled or exposed in the MVP SDK. |
 
 ## Vector Databases
 
-Vector database instrumentation is separate from LLM provider-role attribution. The SDK can instrument vector database libraries listed in the README, but those integrations do not set Model Provider, Routing Provider, or Billing Provider for LLM cost attribution.
+Vector database instrumentation is separate from LLM provider-role attribution and is not bundled in the MVP SDK.
 
 ## Caveats
 

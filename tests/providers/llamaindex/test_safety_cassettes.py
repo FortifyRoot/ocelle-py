@@ -65,7 +65,7 @@ def _ensure_sdk_initialized():
     if _MODULE_INITIALIZED:
         return
 
-    from fortifyroot._vendor.traceloop.sdk.tracing.tracing import TracerWrapper
+    from fortifyroot._vendor.tracer.sdk.tracing.tracing import TracerWrapper
 
     os.environ.setdefault("FORTIFYROOT_METRICS_ENABLED", "false")
     os.environ.setdefault("FORTIFYROOT_LOGGING_ENABLED", "false")

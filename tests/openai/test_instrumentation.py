@@ -28,9 +28,9 @@ from fortifyroot._vendor.opentelemetry.instrumentation.openai.utils import (
     should_send_prompts,
 )
 from fortifyroot._vendor.opentelemetry.semconv_ai import SpanAttributes
-from fortifyroot._vendor.traceloop.sdk.logging.logging import LoggerWrapper
-from fortifyroot._vendor.traceloop.sdk.metrics.metrics import MetricsWrapper
-from fortifyroot._vendor.traceloop.sdk.tracing.tracing import TracerWrapper
+from fortifyroot._vendor.tracer.sdk.logging.logging import LoggerWrapper
+from fortifyroot._vendor.tracer.sdk.metrics.metrics import MetricsWrapper
+from fortifyroot._vendor.tracer.sdk.tracing.tracing import TracerWrapper
 
 
 class _FakeModel:

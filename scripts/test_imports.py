@@ -154,11 +154,11 @@ def test_imports():
     print("Testing vendored packages...")
     
     try:
-        from fortifyroot._vendor.traceloop.sdk import Traceloop
-        print("  ✓ fortifyroot._vendor.traceloop.sdk.Traceloop")
+        from fortifyroot._vendor.tracer.sdk import Traceloop
+        print("  ✓ fortifyroot._vendor.tracer.sdk.Traceloop")
     except ImportError as e:
-        errors.append(f"vendored traceloop: {e}")
-        print(f"  ✗ fortifyroot._vendor.traceloop.sdk: {e}")
+        errors.append(f"vendored tracer SDK: {e}")
+        print(f"  ✗ fortifyroot._vendor.tracer.sdk: {e}")
     
     try:
         from fortifyroot._vendor.opentelemetry.semconv_ai import SpanAttributes

@@ -9,7 +9,7 @@ Usage:
     python scripts/vendor_openllmetry.py --ol-repo /path/to/fr-openllmetry-py
 
 The script will:
-1. Copy traceloop-sdk and OpenLLMetry instrumentation packages into _vendor/
+1. Copy traceloop-sdk into _vendor/tracer and enabled OpenLLMetry instrumentation packages into _vendor/
 2. Rewrite import paths for namespace isolation (mechanical, non-functional)
 3. Extract and mirror required runtime dependencies
 4. Generate a manifest file for tracking vendored OpenLLMetry versions
@@ -40,15 +40,51 @@ except ModuleNotFoundError:
     import tomli as tomllib  # type: ignore[import-not-found]
 
 
-# OpenLLMetry instrumentation packages (these will be vendored)
+# OpenLLMetry instrumentation packages.
+#
+# Keep every known package here as the source of truth. True means vendor the
+# package into the FortifyRoot SDK; False means keep it visible for future
+# enablement but skip it for the MVP wheel.
 OL_INSTRUMENTATION_PACKAGES = {
-    "agno", "alephalpha", "anthropic", "bedrock", "chromadb", "cohere",
-    "crewai", "fortifyroot", "google_generativeai", "groq", "haystack", "lancedb",
-    "langchain", "llamaindex", "litellm", "marqo", "mcp", "milvus", "mistralai",
-    "ollama", "openai", "openai_agents", "pinecone", "qdrant", "replicate",
-    "sagemaker", "together", "transformers", "vertexai", "voyageai", "watsonx",
-    "weaviate", "writer"
+    "agno": False,
+    "alephalpha": False,
+    "anthropic": True,
+    "bedrock": True,
+    "chromadb": False,
+    "cohere": False,
+    "crewai": False,
+    "fortifyroot": True,
+    "google_generativeai": True,
+    "groq": False,
+    "haystack": False,
+    "lancedb": False,
+    "langchain": True,
+    "llamaindex": True,
+    "litellm": True,
+    "marqo": False,
+    "mcp": False,
+    "milvus": False,
+    "mistralai": False,
+    "ollama": False,
+    "openai": True,
+    "openai_agents": False,
+    "pinecone": False,
+    "qdrant": False,
+    "replicate": False,
+    "sagemaker": False,
+    "together": False,
+    "transformers": False,
+    "vertexai": False,
+    "voyageai": False,
+    "watsonx": False,
+    "weaviate": False,
+    "writer": False,
 }
+
+KNOWN_OL_INSTRUMENTATION_PACKAGES = frozenset(OL_INSTRUMENTATION_PACKAGES)
+VENDORED_OL_INSTRUMENTATION_PACKAGES = frozenset(
+    pkg for pkg, should_vendor in OL_INSTRUMENTATION_PACKAGES.items() if should_vendor
+)
 
 # Package directory name to Python module name mapping
 PKG_DIR_TO_MODULE = {
@@ -64,7 +100,7 @@ SKIP_DEPS = {
 }
 
 # Add prefix for all OL instrumentation packages
-for pkg in OL_INSTRUMENTATION_PACKAGES:
+for pkg in KNOWN_OL_INSTRUMENTATION_PACKAGES:
     SKIP_DEPS.add(f"opentelemetry-instrumentation-{pkg}")
     SKIP_DEPS.add(f"opentelemetry-instrumentation-{pkg.replace('_', '-')}")
 
@@ -74,10 +110,10 @@ def get_import_rewrite_rules(vendor_prefix: str) -> List[Tuple[re.Pattern, str]]
 
     rules = []
 
-    # Rule 1: Rewrite traceloop imports
+    # Rule 1: Rewrite traceloop imports to the rebranded vendored namespace.
     rules.append((
         re.compile(r'^(\s*)(from|import)\s+traceloop\.'),
-        rf'\1\2 {vendor_prefix}.traceloop.'
+        rf'\1\2 {vendor_prefix}.tracer.'
     ))
 
     # Rule 2: Rewrite opentelemetry.semconv_ai imports (OL package)
@@ -87,7 +123,7 @@ def get_import_rewrite_rules(vendor_prefix: str) -> List[Tuple[re.Pattern, str]]
     ))
 
     # Rule 3: Rewrite OpenLLMetry instrumentation imports
-    ol_packages_pattern = '|'.join(sorted(OL_INSTRUMENTATION_PACKAGES))
+    ol_packages_pattern = '|'.join(sorted(KNOWN_OL_INSTRUMENTATION_PACKAGES))
     rules.append((
         re.compile(rf'^(\s*)(from|import)\s+opentelemetry\.instrumentation\.({ol_packages_pattern})'),
         rf'\1\2 {vendor_prefix}.opentelemetry.instrumentation.\3'
@@ -354,7 +390,7 @@ def extract_all_deps(ol_repo: Path) -> Dict[str, Dict[str, str]]:
     packages_to_scan = ['traceloop-sdk', 'opentelemetry-semantic-conventions-ai']
     packages_to_scan.extend(
         f"opentelemetry-instrumentation-{pkg.replace('_', '-')}"
-        for pkg in OL_INSTRUMENTATION_PACKAGES
+        for pkg in VENDORED_OL_INSTRUMENTATION_PACKAGES
     )
 
     for pkg_name in packages_to_scan:
@@ -381,16 +417,26 @@ def extract_all_deps(ol_repo: Path) -> Dict[str, Dict[str, str]]:
 def write_deps_manifest(vendor_root: Path, deps: Dict[str, Dict[str, str]]) -> None:
     """Write extracted dependencies to a manifest file."""
     manifest_file = vendor_root / 'VENDOR_DEPENDENCIES.json'
-    manifest_file.write_text(json.dumps(deps, indent=2, sort_keys=True))
+    manifest = {
+        '_meta': {
+            'note': (
+                'Informational manifest extracted from vendored OpenLLMetry package '
+                'metadata. pyproject.toml is the authoritative dependency source '
+                'for the FortifyRoot SDK package.'
+            ),
+        },
+        **deps,
+    }
+    manifest_file.write_text(json.dumps(manifest, indent=2, sort_keys=True))
     print(f"    Dependencies manifest written to: {manifest_file}")
 
 
 def vendor_traceloop_sdk(ol_repo: Path, vendor_root: Path) -> None:
-    """Vendor the traceloop-sdk package."""
-    print("==> Vendoring traceloop-sdk")
+    """Vendor the traceloop-sdk package under the internal tracer namespace."""
+    print("==> Vendoring traceloop-sdk as tracer")
 
     src = ol_repo / 'packages' / 'traceloop-sdk' / 'traceloop'
-    dest = vendor_root / 'traceloop'
+    dest = vendor_root / 'tracer'
 
     if not src.exists():
         raise FileNotFoundError(f"traceloop-sdk not found at {src}")
@@ -400,7 +446,7 @@ def vendor_traceloop_sdk(ol_repo: Path, vendor_root: Path) -> None:
 
 
 def vendor_instrumentation_packages(ol_repo: Path, vendor_root: Path) -> List[str]:
-    """Vendor all OpenLLMetry instrumentation packages."""
+    """Vendor enabled OpenLLMetry instrumentation packages."""
     print("==> Vendoring OpenTelemetry instrumentation packages")
 
     vendored = []
@@ -416,8 +462,12 @@ def vendor_instrumentation_packages(ol_repo: Path, vendor_root: Path) -> List[st
         pkg_name = pkg_dir.name.replace('opentelemetry-instrumentation-', '')
         module_name = PKG_DIR_TO_MODULE.get(pkg_name, pkg_name.replace('-', '_'))
 
-        if module_name not in OL_INSTRUMENTATION_PACKAGES:
+        if module_name not in KNOWN_OL_INSTRUMENTATION_PACKAGES:
             print(f"    Skipping unknown package: {pkg_name}")
+            continue
+
+        if module_name not in VENDORED_OL_INSTRUMENTATION_PACKAGES:
+            print(f"    Skipping disabled package: {pkg_name}")
             continue
 
         src = pkg_dir / 'opentelemetry' / 'instrumentation' / module_name
@@ -494,7 +544,7 @@ def rebrand_traceloop_attribute_strings(vendor_root: Path) -> int:
 
     target_dirs = [
         vendor_root / 'opentelemetry' / 'semconv_ai',
-        vendor_root / 'traceloop' / 'sdk',
+        vendor_root / 'tracer' / 'sdk',
     ]
 
     modified_count = 0
@@ -573,6 +623,10 @@ def write_manifest(vendor_root: Path, ol_repo: Path, vendored_packages: List[str
         "git_commit": git_info["commit"],
         "git_branch": git_info["branch"],
         "git_tag": git_info["tag"],
+        "instrumentation_package_policy": {
+            f"opentelemetry-instrumentation-{pkg.replace('_', '-')}": should_vendor
+            for pkg, should_vendor in sorted(OL_INSTRUMENTATION_PACKAGES.items())
+        },
         "packages": {
             "traceloop-sdk": version,
             "opentelemetry-semantic-conventions-ai": version,

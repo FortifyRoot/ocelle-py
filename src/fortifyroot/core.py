@@ -21,7 +21,7 @@ from opentelemetry.sdk.metrics.export import MetricExporter
 from opentelemetry.sdk._logs.export import LogExporter
 from opentelemetry.propagators.textmap import TextMapPropagator
 
-from fortifyroot._vendor.traceloop.sdk import Traceloop
+from fortifyroot._vendor.tracer.sdk import Traceloop
 
 from fortifyroot._internal.constants import (
     FORTIFYROOT_SDK_LANGUAGE,
@@ -50,7 +50,11 @@ from fortifyroot._internal.safety.runtime import (
     DEFAULT_STREAM_HOLDBACK_CHARS,
     configure_global_safety_runtime,
 )
-from fortifyroot.instruments import Instruments, _convert_to_tl_instruments
+from fortifyroot.instruments import (
+    SUPPORTED_INSTRUMENTS,
+    Instruments,
+    _convert_to_tl_instruments,
+)
 from fortifyroot.processors.attribute_renamer import AttributeRenamingProcessor
 from fortifyroot.version import __version__
 
@@ -790,8 +794,11 @@ def init(
     # Inject FortifyRoot SDK version into resource attributes
     resource_attributes[FORTIFYROOT_SDK_VERSION_ATTRIBUTE] = __version__
 
-    # Convert FR Instruments to TL Instruments
-    tl_instruments = _convert_to_tl_instruments(instruments)
+    # Convert FR Instruments to the vendored tracer SDK enum. When no explicit
+    # set is provided, constrain auto-instrumentation to the MVP-supported
+    # packages that are actually bundled in the SDK.
+    resolved_instruments = set(SUPPORTED_INSTRUMENTS) if instruments is None else instruments
+    tl_instruments = _convert_to_tl_instruments(resolved_instruments)
     tl_block_instruments = _convert_to_tl_instruments(block_instruments)
 
     # Determine if we need to wrap the processor with attribute renaming
