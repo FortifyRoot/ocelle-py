@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Pruned post-MVP provider extras before the SDK's first PyPI publication. The
+  MVP package exposes extras only for launch-supported instrumentation paths,
+  so no compatibility aliases are needed.
+
 ### Fixed
 
 - **Metrics initialization bug**: Fixed an issue where metrics were unintentionally
@@ -26,7 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `fortifyroot.init()`
   - `fortifyroot.configure()` fluent API
 - Vendored OpenLLMetry (Traceloop) auto-instrumentation framework
-- Automatic instrumentation for 25+ LLM libraries and frameworks via OpenLLMetry
+- Automatic instrumentation for MVP-supported providers and frameworks:
+  OpenAI, Anthropic, Google GenAI, Bedrock, LiteLLM, LangChain, and LlamaIndex
 - Decorator support: `@workflow`, `@task`, `@agent`, `@tool`
 - Trace correlation via `fortifyroot.set_association_properties()`
 - Environment variable configuration using `FORTIFYROOT_*` namespace

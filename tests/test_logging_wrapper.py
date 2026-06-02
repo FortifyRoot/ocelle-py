@@ -15,7 +15,7 @@ from opentelemetry.trace import (
     use_span,
 )
 
-from fortifyroot._vendor.traceloop.sdk.logging.logging import (
+from fortifyroot._vendor.tracer.sdk.logging.logging import (
     LoggerWrapper,
     init_logging_provider,
     is_fortifyroot_logging_handler,
@@ -151,11 +151,11 @@ def test_logger_wrapper_skips_reinstrumenting_logging_when_already_instrumented(
 
     with (
         mock.patch(
-            "fortifyroot._vendor.traceloop.sdk.logging.logging.init_logging_provider",
+            "fortifyroot._vendor.tracer.sdk.logging.logging.init_logging_provider",
             return_value=mock.Mock(),
         ),
         mock.patch(
-            "fortifyroot._vendor.traceloop.sdk.logging.logging.LoggingInstrumentor"
+            "fortifyroot._vendor.tracer.sdk.logging.logging.LoggingInstrumentor"
         ) as instrumentor_cls,
     ):
         instrumentor = instrumentor_cls.return_value

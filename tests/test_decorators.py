@@ -33,7 +33,7 @@ class TestDecoratorWrappers:
     def test_decorators_are_fr_functions_not_tl(self) -> None:
         """Test that decorators are FR's own functions, not TL re-exports."""
         from fortifyroot import task, workflow, agent, tool
-        from fortifyroot._vendor.traceloop.sdk.decorators import (
+        from fortifyroot._vendor.tracer.sdk.decorators import (
             task as tl_task,
             workflow as tl_workflow,
             agent as tl_agent,
@@ -135,7 +135,7 @@ class TestInstrumentsEnum:
     def test_instruments_is_fr_enum_not_tl(self) -> None:
         """Test that Instruments is FR's own enum, not TL re-export."""
         from fortifyroot import Instruments
-        from fortifyroot._vendor.traceloop.sdk.instruments import Instruments as TLInstruments
+        from fortifyroot._vendor.tracer.sdk.instruments import Instruments as TLInstruments
 
         # FR Instruments should NOT be the same class as TL Instruments
         assert Instruments is not TLInstruments
@@ -147,53 +147,61 @@ class TestInstrumentsEnum:
         assert Instruments.__module__ == "fortifyroot.instruments"
 
     def test_instruments_has_expected_llm_providers(self) -> None:
-        """Test that Instruments enum has LLM provider members."""
+        """Test that Instruments enum has MVP LLM provider members."""
         from fortifyroot import Instruments
 
         # LLM Providers
         assert hasattr(Instruments, "OPENAI")
         assert hasattr(Instruments, "ANTHROPIC")
-        assert hasattr(Instruments, "COHERE")
         assert hasattr(Instruments, "GOOGLE_GENERATIVEAI")
-        assert hasattr(Instruments, "MISTRAL")
-        assert hasattr(Instruments, "GROQ")
-        assert hasattr(Instruments, "OLLAMA")
         assert hasattr(Instruments, "BEDROCK")
-        assert hasattr(Instruments, "VERTEXAI")
         assert hasattr(Instruments, "LITELLM")
 
     def test_instruments_has_expected_frameworks(self) -> None:
-        """Test that Instruments enum has framework members."""
+        """Test that Instruments enum has MVP framework members."""
         from fortifyroot import Instruments
 
         # Frameworks
         assert hasattr(Instruments, "LANGCHAIN")
         assert hasattr(Instruments, "LLAMA_INDEX")
-        assert hasattr(Instruments, "HAYSTACK")
-        assert hasattr(Instruments, "CREWAI")
 
-    def test_instruments_has_expected_vector_dbs(self) -> None:
-        """Test that Instruments enum has vector database members."""
+    def test_instruments_does_not_advertise_post_mvp_members(self) -> None:
+        """Test that public Instruments only advertises supported MVP packages."""
         from fortifyroot import Instruments
 
-        # Vector DBs
-        assert hasattr(Instruments, "PINECONE")
-        assert hasattr(Instruments, "CHROMA")
-        assert hasattr(Instruments, "MILVUS")
-        assert hasattr(Instruments, "QDRANT")
-        assert hasattr(Instruments, "WEAVIATE")
+        assert {instrument.value for instrument in Instruments} == {
+            "openai",
+            "anthropic",
+            "google_generativeai",
+            "bedrock",
+            "litellm",
+            "langchain",
+            "llama_index",
+        }
+        assert not hasattr(Instruments, "PINECONE")
+        assert not hasattr(Instruments, "COHERE")
+        assert not hasattr(Instruments, "GROQ")
+        assert not hasattr(Instruments, "HAYSTACK")
+
+    def test_supported_instruments_exactly_matches_mvp_instruments(self) -> None:
+        """Test that the default supported set is pinned to the MVP surface."""
+        from fortifyroot import Instruments
+        from fortifyroot.instruments import SUPPORTED_INSTRUMENTS
+
+        assert SUPPORTED_INSTRUMENTS == frozenset(Instruments)
+        assert len(SUPPORTED_INSTRUMENTS) == 7
 
     def test_instruments_values_match_tl(self) -> None:
         """Test that FR Instruments values match TL Instruments values."""
         from fortifyroot import Instruments
-        from fortifyroot._vendor.traceloop.sdk.instruments import Instruments as TLInstruments
+        from fortifyroot._vendor.tracer.sdk.instruments import Instruments as TLInstruments
 
         # Check that string values match for common instruments
         assert Instruments.OPENAI.value == TLInstruments.OPENAI.value
         assert Instruments.ANTHROPIC.value == TLInstruments.ANTHROPIC.value
         assert Instruments.LANGCHAIN.value == TLInstruments.LANGCHAIN.value
         assert Instruments.LITELLM.value == TLInstruments.LITELLM.value
-        assert Instruments.PINECONE.value == TLInstruments.PINECONE.value
+        assert Instruments.BEDROCK.value == TLInstruments.BEDROCK.value
 
     def test_instruments_can_be_used_in_set(self) -> None:
         """Test that Instruments can be used in a set (for init params)."""
@@ -234,7 +242,7 @@ class TestInstrumentsConversion:
         """Test converting a single instrument."""
         from fortifyroot import Instruments
         from fortifyroot.instruments import _convert_to_tl_instruments
-        from fortifyroot._vendor.traceloop.sdk.instruments import Instruments as TLInstruments
+        from fortifyroot._vendor.tracer.sdk.instruments import Instruments as TLInstruments
 
         fr_set = {Instruments.OPENAI}
         tl_set = _convert_to_tl_instruments(fr_set)
@@ -247,13 +255,13 @@ class TestInstrumentsConversion:
         """Test converting multiple instruments."""
         from fortifyroot import Instruments
         from fortifyroot.instruments import _convert_to_tl_instruments
-        from fortifyroot._vendor.traceloop.sdk.instruments import Instruments as TLInstruments
+        from fortifyroot._vendor.tracer.sdk.instruments import Instruments as TLInstruments
 
         fr_set = {
             Instruments.OPENAI,
             Instruments.LANGCHAIN,
             Instruments.LITELLM,
-            Instruments.PINECONE,
+            Instruments.BEDROCK,
         }
         tl_set = _convert_to_tl_instruments(fr_set)
 
@@ -262,4 +270,4 @@ class TestInstrumentsConversion:
         assert TLInstruments.OPENAI in tl_set
         assert TLInstruments.LANGCHAIN in tl_set
         assert TLInstruments.LITELLM in tl_set
-        assert TLInstruments.PINECONE in tl_set
+        assert TLInstruments.BEDROCK in tl_set

@@ -1,5 +1,11 @@
 """Test that vendored imports work correctly."""
 
+import importlib
+import json
+import builtins
+import sys
+from pathlib import Path
+
 import pytest
 
 
@@ -8,12 +14,12 @@ class TestVendoredImports:
 
     def test_traceloop_sdk_import(self):
         """Test that traceloop SDK can be imported from vendor."""
-        from fortifyroot._vendor.traceloop.sdk import Traceloop
+        from fortifyroot._vendor.tracer.sdk import Traceloop
         assert Traceloop is not None
 
     def test_traceloop_decorators_import(self):
         """Test that traceloop decorators can be imported."""
-        from fortifyroot._vendor.traceloop.sdk.decorators import task, workflow, aworkflow
+        from fortifyroot._vendor.tracer.sdk.decorators import task, workflow, aworkflow
         assert task is not None
         assert workflow is not None
         assert aworkflow is not None
@@ -43,6 +49,104 @@ class TestVendoredImports:
         from fortifyroot._vendor.opentelemetry.instrumentation.litellm import LiteLLMInstrumentor
         assert LiteLLMInstrumentor is not None
 
+    def test_bedrock_instrumentation_import(self):
+        """Test that Bedrock instrumentation can be imported."""
+        from fortifyroot._vendor.opentelemetry.instrumentation.bedrock import BedrockInstrumentor
+        assert BedrockInstrumentor is not None
+
+    def test_bedrock_instrumentation_import_without_anthropic(self, monkeypatch):
+        """Test that Bedrock import does not require the optional Anthropic package."""
+        module_name = "fortifyroot._vendor.opentelemetry.instrumentation.bedrock.span_utils"
+        sys.modules.pop(module_name, None)
+        sys.modules.pop("anthropic", None)
+
+        original_import = builtins.__import__
+
+        def import_without_anthropic(name, *args, **kwargs):
+            if name == "anthropic":
+                raise ModuleNotFoundError("No module named 'anthropic'")
+            return original_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", import_without_anthropic)
+
+        module = importlib.import_module(module_name)
+
+        assert module is not None
+
+    def test_bedrock_init_does_not_crash_without_anthropic(self, monkeypatch):
+        """Test default Bedrock init handles boto3-present/anthropic-absent envs."""
+        from fortifyroot._vendor.opentelemetry.instrumentation.bedrock import (
+            BedrockInstrumentor,
+        )
+        from fortifyroot._vendor.tracer.sdk.tracing import tracing
+
+        monkeypatch.setattr(
+            tracing,
+            "is_package_installed",
+            lambda package_name: package_name == "boto3",
+        )
+        monkeypatch.setattr(
+            BedrockInstrumentor,
+            "is_instrumented_by_opentelemetry",
+            False,
+            raising=False,
+        )
+        monkeypatch.setattr(BedrockInstrumentor, "instrument", lambda self: None)
+        sys.modules.pop("anthropic", None)
+
+        original_import = builtins.__import__
+
+        def import_without_anthropic(name, *args, **kwargs):
+            if name == "anthropic":
+                raise ModuleNotFoundError("No module named 'anthropic'")
+            return original_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", import_without_anthropic)
+
+        assert tracing.init_bedrock_instrumentor(False) is True
+
+    def test_google_generativeai_instrumentation_import(self):
+        """Test that Google GenAI instrumentation can be imported."""
+        from fortifyroot._vendor.opentelemetry.instrumentation.google_generativeai import (
+            GoogleGenerativeAiInstrumentor,
+        )
+        assert GoogleGenerativeAiInstrumentor is not None
+
+    def test_llamaindex_instrumentation_import(self):
+        """Test that LlamaIndex instrumentation can be imported."""
+        from fortifyroot._vendor.opentelemetry.instrumentation.llamaindex import LlamaIndexInstrumentor
+        assert LlamaIndexInstrumentor is not None
+
+    def test_fortifyroot_instrumentation_import(self):
+        """Test that the FortifyRoot safety bridge instrumentation can be imported."""
+        from fortifyroot._vendor.opentelemetry.instrumentation import fortifyroot
+        assert fortifyroot is not None
+
+    def test_post_mvp_instrumentation_not_vendored(self):
+        """Test that every disabled post-MVP instrumentation is not bundled."""
+        vendor_manifest = (
+            Path(__file__).resolve().parents[1]
+            / "src"
+            / "fortifyroot"
+            / "_vendor"
+            / "VENDOR_MANIFEST.json"
+        )
+        policy = json.loads(vendor_manifest.read_text())[
+            "instrumentation_package_policy"
+        ]
+        disabled_modules = [
+            package.removeprefix("opentelemetry-instrumentation-").replace("-", "_")
+            for package, should_vendor in policy.items()
+            if not should_vendor
+        ]
+
+        assert disabled_modules
+        for module_name in disabled_modules:
+            with pytest.raises(ModuleNotFoundError):
+                importlib.import_module(
+                    f"fortifyroot._vendor.opentelemetry.instrumentation.{module_name}"
+                )
+
     def test_core_otel_not_vendored(self):
         """Test that core OTel packages come from site-packages, not vendor."""
         # These should be importable from the regular opentelemetry package
@@ -58,6 +162,11 @@ class TestVendoredImports:
         # This should fail - traceloop should only be available under _vendor
         with pytest.raises(ModuleNotFoundError):
             import traceloop  # noqa: F401
+
+    def test_no_traceloop_vendor_package(self):
+        """Test that the vendored tracer SDK is not stored under traceloop."""
+        with pytest.raises(ModuleNotFoundError):
+            importlib.import_module("fortifyroot._vendor.traceloop")
 
 
 class TestFortifyrootApi:
@@ -115,7 +224,7 @@ class TestNoLeakedBranding:
             # Allow technical references but not branding
             doc_lower = fortifyroot.init.__doc__.lower()
             # "traceloop" as a brand should not appear
-            # But internal references like "_vendor.traceloop" are OK
+            # But internal references like "_vendor.tracer" are OK
             assert "traceloop sdk" not in doc_lower
             assert "traceloop api" not in doc_lower
 

@@ -16,18 +16,18 @@ Example:
             instruments={Instruments.OPENAI, Instruments.LANGCHAIN},
         )
 
-        # Instrument everything except Pinecone
+        # Instrument everything except Bedrock
         fortifyroot.init(
             app_name="my-app",
             api_key="fr-xxx",
-            block_instruments={Instruments.PINECONE},
+            block_instruments={Instruments.BEDROCK},
         )
 """
 
 from enum import Enum
-from typing import Optional, Set
+from typing import FrozenSet, Optional, Set
 
-from fortifyroot._vendor.traceloop.sdk.instruments import Instruments as _TLInstruments
+from fortifyroot._vendor.tracer.sdk.instruments import Instruments as _TLInstruments
 
 
 class Instruments(Enum):
@@ -39,67 +39,25 @@ class Instruments(Enum):
 
     Categories:
         LLM Providers:
-            OPENAI, ANTHROPIC, COHERE, GOOGLE_GENERATIVEAI, MISTRAL, GROQ,
-            OLLAMA, BEDROCK, VERTEXAI, REPLICATE, TOGETHER, WATSONX,
-            LITELLM,
-            ALEPHALPHA, SAGEMAKER, WRITER
+            OPENAI, ANTHROPIC, GOOGLE_GENERATIVEAI, BEDROCK, LITELLM
 
         Frameworks:
-            LANGCHAIN, LLAMA_INDEX, HAYSTACK, CREWAI, OPENAI_AGENTS, MCP
-
-        Vector Databases:
-            PINECONE, CHROMA, MILVUS, QDRANT, WEAVIATE, LANCEDB, MARQO
-
-        Other:
-            TRANSFORMERS, REDIS, REQUESTS, URLLIB3, PYMYSQL, AGNO
+            LANGCHAIN, LLAMA_INDEX
     """
 
     # LLM Providers
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
-    COHERE = "cohere"
     GOOGLE_GENERATIVEAI = "google_generativeai"
-    MISTRAL = "mistral"
-    GROQ = "groq"
-    OLLAMA = "ollama"
     BEDROCK = "bedrock"
-    VERTEXAI = "vertexai"
-    REPLICATE = "replicate"
-    TOGETHER = "together"
-    WATSONX = "watsonx"
     LITELLM = "litellm"
-    ALEPHALPHA = "alephalpha"
-    SAGEMAKER = "sagemaker"
-    WRITER = "writer"
 
     # Frameworks
     LANGCHAIN = "langchain"
     LLAMA_INDEX = "llama_index"
-    HAYSTACK = "haystack"
-    CREWAI = "crewai"
-    OPENAI_AGENTS = "openai_agents"
-    MCP = "mcp"
-    AGNO = "agno"
-
-    # Vector Databases
-    PINECONE = "pinecone"
-    CHROMA = "chroma"
-    MILVUS = "milvus"
-    QDRANT = "qdrant"
-    WEAVIATE = "weaviate"
-    LANCEDB = "lancedb"
-    MARQO = "marqo"
-
-    # Other
-    TRANSFORMERS = "transformers"
-    REDIS = "redis"
-    REQUESTS = "requests"
-    URLLIB3 = "urllib3"
-    PYMYSQL = "pymysql"
 
 
-# Internal mapping from FR enum to TL enum
-_FR_TO_TL_INSTRUMENTS = {member.value: member.value for member in Instruments}
+SUPPORTED_INSTRUMENTS: FrozenSet[Instruments] = frozenset(Instruments)
 
 
 def _convert_to_tl_instruments(
@@ -127,4 +85,5 @@ def _convert_to_tl_instruments(
 
 __all__ = [
     "Instruments",
+    "SUPPORTED_INSTRUMENTS",
 ]

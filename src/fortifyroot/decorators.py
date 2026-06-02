@@ -22,7 +22,7 @@ Example:
 
 from typing import Any, Callable, Optional, TypeVar
 
-from fortifyroot._vendor.traceloop.sdk.decorators import (
+from fortifyroot._vendor.tracer.sdk.decorators import (
     agent as _tl_agent,
     task as _tl_task,
     tool as _tl_tool,
