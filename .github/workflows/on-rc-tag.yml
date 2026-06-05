@@ -6,7 +6,7 @@ name: SDK rc tag — dispatch Tier 2
 #      after a manual dev-pin without cutting a new tag).
 #
 # Body:
-#   1. Read fr-backend's env/targets.yaml via the public GitHub raw URL.
+#   1. Read fr-backend's env/targets.yaml via the GitHub API.
 #   2. Pre-flight: dev.image_tag must equal prod.image_tag (so the rc SDK
 #      is validated against the backend version customers actually run).
 #      If they differ, FAIL FAST with an actionable error message.
@@ -53,13 +53,22 @@ jobs:
 
       - name: Read fr-backend env/targets.yaml
         id: targets
+        env:
+          # fr-backend is private. Keep this read-only token separate from
+          # the write-capable repository_dispatch token below.
+          GH_TOKEN: ${{ secrets.BACKEND_TARGETS_READ_TOKEN }}
         run: |
           set -euo pipefail
-          # Public read — no token needed. We pull from `main` because that
-          # is the GitOps source of truth.
-          URL="https://raw.githubusercontent.com/FortifyRoot/fr-backend/main/env/targets.yaml"
-          if ! curl -sSfL -o targets.yaml "$URL"; then
-            echo "::error::Could not fetch $URL"
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "::error::BACKEND_TARGETS_READ_TOKEN secret is required to read fr-backend env/targets.yaml."
+            echo "::error::Add a fine-grained PAT with Contents: Read-only on FortifyRoot/fr-backend."
+            echo "::error::See fr-meta/docs/CICD_SETUP.md §5.3."
+            exit 1
+          fi
+          # Read from `main` because that is the GitOps source of truth.
+          if ! gh api --method GET repos/FortifyRoot/fr-backend/contents/env/targets.yaml \
+              -f ref=main --jq '.content' | base64 -d > targets.yaml; then
+            echo "::error::Could not fetch FortifyRoot/fr-backend env/targets.yaml from main"
             exit 1
           fi
           # `yq` (mikefarah/yq) is preinstalled on GitHub-hosted runners.
@@ -110,7 +119,7 @@ jobs:
           set -euo pipefail
           if [[ -z "${GH_TOKEN:-}" ]]; then
             echo "::error::SYSTEM_TEST_DISPATCH_TOKEN secret is required to dispatch sdk_rc to fr-system-tests."
-            echo "::error::Add a fine-grained PAT with 'actions: write' on FortifyRoot/fr-system-tests."
+            echo "::error::Add a fine-grained PAT with Contents: Read and write on FortifyRoot/fr-system-tests."
             echo "::error::See fr-meta/docs/CICD_SETUP.md §5.3."
             exit 1
           fi
