@@ -54,14 +54,14 @@ jobs:
       - name: Read fr-backend env/targets.yaml
         id: targets
         env:
-          # SYSTEM_TEST_DISPATCH_TOKEN also needs Contents: Read on fr-backend
-          # because fr-backend is private.
-          GH_TOKEN: ${{ secrets.SYSTEM_TEST_DISPATCH_TOKEN }}
+          # fr-backend is private. Keep this read-only token separate from
+          # the write-capable repository_dispatch token below.
+          GH_TOKEN: ${{ secrets.BACKEND_TARGETS_READ_TOKEN }}
         run: |
           set -euo pipefail
           if [[ -z "${GH_TOKEN:-}" ]]; then
-            echo "::error::SYSTEM_TEST_DISPATCH_TOKEN secret is required to read fr-backend env/targets.yaml."
-            echo "::error::Add a fine-grained PAT with Contents: Read on FortifyRoot/fr-backend."
+            echo "::error::BACKEND_TARGETS_READ_TOKEN secret is required to read fr-backend env/targets.yaml."
+            echo "::error::Add a fine-grained PAT with Contents: Read-only on FortifyRoot/fr-backend."
             echo "::error::See fr-meta/docs/CICD_SETUP.md §5.3."
             exit 1
           fi
