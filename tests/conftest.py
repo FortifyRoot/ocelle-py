@@ -36,7 +36,7 @@ class _NoFortifyRootSpanExporter(InMemorySpanExporter):
     def get_finished_spans(self):  # type: ignore[override]
         return tuple(
             s for s in super().get_finished_spans()
-            if (s.attributes or {}).get("fortifyroot.span.role") != "retry_attempt"
+            if (s.attributes or {}).get("fortifyroot.span.role") != "llm_attempt"
         )
 from opentelemetry.util._once import Once
 
