@@ -204,7 +204,10 @@ class SafetyHandler:
         snapshot = self._snapshot_store.get()
         if snapshot is None:
             return None
-        return snapshot.evaluate_text(context.text)
+        return snapshot.evaluate_text(
+            context.text,
+            metric_attributes=_metric_attributes_from_context(context),
+        )
 
 
 class SafetyStreamFactory:
@@ -227,7 +230,24 @@ class SafetyStreamFactory:
         return CompletionSafetyStream(
             snapshot=snapshot,
             holdback_chars=self._stream_holdback_chars,
+            metric_attributes=_metric_attributes_from_context(context),
         )
+
+
+def _metric_attributes_from_context(context) -> dict[str, str]:
+    metadata = getattr(context, "metadata", None) or {}
+    attrs: dict[str, str] = {}
+    provider = getattr(context, "provider", None)
+    if provider is not None and str(provider).strip():
+        attrs["gen_ai.system"] = str(provider).strip()
+    for key in ("gen_ai.system", "gen_ai.request.model", "gen_ai.response.model"):
+        value = metadata.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            attrs[key] = text
+    return attrs
 
 
 class SafetyRuntime:

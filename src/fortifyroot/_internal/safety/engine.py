@@ -6,7 +6,7 @@ import concurrent.futures
 import importlib
 import logging
 import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 
 from opentelemetry.metrics import get_meter
@@ -67,6 +67,11 @@ _UDF_ERRORS_COUNTER = _METER.create_counter(
 SDK_LANGUAGE_PYTHON = "PYTHON"
 MAX_REGEX_PATTERN_LENGTH = 1024
 MAX_REGEX_MATCHES = 1000
+SAFETY_ATTRIBUTION_KEYS = (
+    "gen_ai.system",
+    "gen_ai.request.model",
+    "gen_ai.response.model",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,19 +94,24 @@ class CompiledSafetySnapshot:
     enabled: bool
     rules: tuple[CompiledSafetyRule, ...]
 
-    def evaluate_text(self, text: str) -> SafetyResult | None:
+    def evaluate_text(
+        self,
+        text: str,
+        *,
+        metric_attributes: Mapping[str, str] | None = None,
+    ) -> SafetyResult | None:
         if not self.enabled or not text:
             return None
 
         findings: list[SafetyFinding] = []
         for rule in self.rules:
-            findings.extend(_evaluate_rule(rule, text))
+            findings.extend(_evaluate_rule(rule, text, metric_attributes=metric_attributes))
 
         if not findings:
             return None
 
         overall_action = _resolve_overall_action(findings)
-        masked_text = _apply_masks(text, findings)
+        masked_text = _apply_masks(text, findings, metric_attributes=metric_attributes)
 
         return SafetyResult(
             text=masked_text,
@@ -262,9 +272,14 @@ def _safe_finditer(
             raise _RegexTimeoutError() from None
 
 
-def _evaluate_rule(rule: CompiledSafetyRule, text: str) -> list[SafetyFinding]:
-    metric_attributes = _rule_metric_attributes(rule)
-    _RULES_EVALUATED_COUNTER.add(1, attributes=metric_attributes)
+def _evaluate_rule(
+    rule: CompiledSafetyRule,
+    text: str,
+    *,
+    metric_attributes: Mapping[str, str] | None = None,
+) -> list[SafetyFinding]:
+    attrs = _rule_metric_attributes(rule, metric_attributes)
+    _RULES_EVALUATED_COUNTER.add(1, attributes=attrs)
 
     if rule.regex is not None:
         findings: list[SafetyFinding] = []
@@ -279,7 +294,7 @@ def _evaluate_rule(rule: CompiledSafetyRule, text: str) -> list[SafetyFinding]:
             if len(findings) >= MAX_REGEX_MATCHES:
                 break
         if findings:
-            _FINDINGS_PRODUCED_COUNTER.add(len(findings), attributes=metric_attributes)
+            _FINDINGS_PRODUCED_COUNTER.add(len(findings), attributes=attrs)
         return findings
 
     if rule.list_values:
@@ -292,7 +307,7 @@ def _evaluate_rule(rule: CompiledSafetyRule, text: str) -> list[SafetyFinding]:
             if len(findings) >= MAX_REGEX_MATCHES:
                 break
         if findings:
-            _FINDINGS_PRODUCED_COUNTER.add(len(findings), attributes=metric_attributes)
+            _FINDINGS_PRODUCED_COUNTER.add(len(findings), attributes=attrs)
         return findings
 
     if rule.udf_detector is not None:
@@ -301,7 +316,7 @@ def _evaluate_rule(rule: CompiledSafetyRule, text: str) -> list[SafetyFinding]:
             matches = rule.udf_detector.detect(text)
         except Exception:
             logger.warning("UDF detector execution failed: %s", rule.name)
-            _UDF_ERRORS_COUNTER.add(1, attributes=metric_attributes)
+            _UDF_ERRORS_COUNTER.add(1, attributes=attrs)
             return findings
         for match in matches:
             if not isinstance(match, TextSafetyMatch):
@@ -318,7 +333,7 @@ def _evaluate_rule(rule: CompiledSafetyRule, text: str) -> list[SafetyFinding]:
             )
         findings = findings[:MAX_REGEX_MATCHES]
         if findings:
-            _FINDINGS_PRODUCED_COUNTER.add(len(findings), attributes=metric_attributes)
+            _FINDINGS_PRODUCED_COUNTER.add(len(findings), attributes=attrs)
         return findings
 
     return []
@@ -347,7 +362,12 @@ def _resolve_overall_action(findings: Sequence[SafetyFinding]) -> str:
     return SafetyDecision.ALLOW.value
 
 
-def _apply_masks(text: str, findings: Sequence[SafetyFinding]) -> str:
+def _apply_masks(
+    text: str,
+    findings: Sequence[SafetyFinding],
+    *,
+    metric_attributes: Mapping[str, str] | None = None,
+) -> str:
     mask_segments = [
         (finding.start, finding.end, _mask_replacement(finding))
         for finding in findings
@@ -369,7 +389,10 @@ def _apply_masks(text: str, findings: Sequence[SafetyFinding]) -> str:
 
     _MASKS_APPLIED_COUNTER.add(
         len(selected),
-        attributes={"fortifyroot.safety.masked": "true"},
+        attributes={
+            **_safe_metric_attributes(metric_attributes),
+            "fortifyroot.safety.masked": "true",
+        },
     )
 
     parts = []
@@ -403,12 +426,30 @@ def _find_literal_matches(
         yield match.start(), match.end()
 
 
-def _rule_metric_attributes(rule: CompiledSafetyRule) -> dict[str, str]:
+def _rule_metric_attributes(
+    rule: CompiledSafetyRule,
+    metric_attributes: Mapping[str, str] | None = None,
+) -> dict[str, str]:
     return {
+        **_safe_metric_attributes(metric_attributes),
         "fortifyroot.safety.category": rule.category,
         "fortifyroot.safety.action": rule.action,
         "fortifyroot.safety.matcher": _rule_matcher_type(rule),
     }
+
+
+def _safe_metric_attributes(metric_attributes: Mapping[str, str] | None) -> dict[str, str]:
+    if not metric_attributes:
+        return {}
+    attrs: dict[str, str] = {}
+    for key in SAFETY_ATTRIBUTION_KEYS:
+        value = metric_attributes.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            attrs[key] = text
+    return attrs
 
 
 def _rule_matcher_type(rule: CompiledSafetyRule) -> str:
