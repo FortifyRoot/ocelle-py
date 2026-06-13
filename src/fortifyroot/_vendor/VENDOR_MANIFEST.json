@@ -3,7 +3,7 @@
   "openllmetry_version": "0.52.6",
   "git_commit": "72effe3b48b5",
   "git_branch": "fr-v0.52.6.x",
-  "git_tag": "unknown",
+  "git_tag": "fr-v0.52.6.18",
   "instrumentation_package_policy": {
     "opentelemetry-instrumentation-agno": false,
     "opentelemetry-instrumentation-alephalpha": false,
