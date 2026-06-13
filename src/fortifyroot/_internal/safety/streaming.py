@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 
 from opentelemetry.metrics import get_meter
 
@@ -37,6 +38,7 @@ class CompletionSafetyStream:
     snapshot: CompiledSafetySnapshot
     holdback_chars: int
     max_pending_chars: int | None = None
+    metric_attributes: Mapping[str, str] = field(default_factory=dict)
     _pending_text: str = ""
     _pending_offset: int = 0
     _warned_pending_cap: bool = False
@@ -113,7 +115,11 @@ class CompletionSafetyStream:
         finalized_absolute: tuple[SafetyFinding, ...] = ()
         overall_action = SafetyDecision.ALLOW.value
         if finalized_local:
-            masked_release = _apply_masks(release_text, finalized_local)
+            masked_release = _apply_masks(
+                release_text,
+                finalized_local,
+                metric_attributes=self.metric_attributes,
+            )
             finalized_absolute = tuple(
                 SafetyFinding(
                     category=finding.category,
@@ -145,7 +151,9 @@ class CompletionSafetyStream:
 
         findings: list[SafetyFinding] = []
         for rule in self.snapshot.rules:
-            findings.extend(_evaluate_rule(rule, text))
+            findings.extend(
+                _evaluate_rule(rule, text, metric_attributes=self.metric_attributes)
+            )
         return findings
 
     def _resolve_release_boundary(self, findings: list[SafetyFinding]) -> int:

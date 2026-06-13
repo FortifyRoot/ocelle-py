@@ -871,7 +871,15 @@ def test_engine_records_rule_evaluation_mask_and_udf_error_metrics():
         ).config_profile
         masked_snapshot = compile_snapshot(masked_profile)
 
-        result = masked_snapshot.evaluate_text("secret")
+        metric_attributes = {
+            "gen_ai.system": "OpenAI",
+            "gen_ai.request.model": "gpt-4o-mini",
+            "ignored": "not-exported",
+        }
+        result = masked_snapshot.evaluate_text(
+            "secret",
+            metric_attributes=metric_attributes,
+        )
 
         assert result is not None
         assert result.text == "[SECRET.secret_word]"
@@ -916,7 +924,21 @@ def test_engine_records_rule_evaluation_mask_and_udf_error_metrics():
     findings_counter.assert_called_once()
     masks_counter.assert_called_once_with(
         1,
-        attributes={"fortifyroot.safety.masked": "true"},
+        attributes={
+            "gen_ai.system": "OpenAI",
+            "gen_ai.request.model": "gpt-4o-mini",
+            "fortifyroot.safety.masked": "true",
+        },
+    )
+    rules_counter.assert_any_call(
+        1,
+        attributes={
+            "gen_ai.system": "OpenAI",
+            "gen_ai.request.model": "gpt-4o-mini",
+            "fortifyroot.safety.category": "SECRET",
+            "fortifyroot.safety.action": "MASK",
+            "fortifyroot.safety.matcher": "list",
+        },
     )
     udf_errors_counter.assert_called_once()
 

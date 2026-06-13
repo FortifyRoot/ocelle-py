@@ -31,6 +31,7 @@ from fortifyroot._internal.safety.runtime import (
     _normalize_api_endpoint,
     configure_global_safety_runtime,
     shutdown_global_safety_runtime,
+    _metric_attributes_from_context,
 )
 from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (
     SafetyContext,
@@ -56,6 +57,27 @@ def setup_function():
 
 def teardown_function():
     shutdown_global_safety_runtime()
+
+
+def test_metric_attributes_from_context_preserves_raw_llm_context():
+    context = SafetyContext(
+        provider="OpenAI",
+        text="secret",
+        location=SafetyLocation.PROMPT,
+        span_name="openai.chat",
+        metadata={
+            "gen_ai.system": "OpenRouter",
+            "gen_ai.request.model": "openai/gpt-4o-mini",
+            "gen_ai.response.model": "gpt-4o-mini",
+            "ignored": "not-exported",
+        },
+    )
+
+    assert _metric_attributes_from_context(context) == {
+        "gen_ai.system": "OpenRouter",
+        "gen_ai.request.model": "openai/gpt-4o-mini",
+        "gen_ai.response.model": "gpt-4o-mini",
+    }
 
 
 def test_safety_config_client_fetch_compiles_snapshot():
