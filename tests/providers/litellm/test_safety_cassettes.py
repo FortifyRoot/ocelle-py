@@ -2,7 +2,7 @@
 SDK safety cassette tests for LiteLLM (Phase T6-A).
 
 End-to-end tests through the vendored code path:
-  fortifyroot.init() -> litellm.completion() (VCR) -> safety masking -> spans
+  ocelle.init() -> litellm.completion() (VCR) -> safety masking -> spans
 
 LiteLLM uses dual instrumentation:
   - FR creates 'fortifyroot.litellm.safety' parent span (safety events here)
@@ -35,7 +35,7 @@ from opentelemetry.semconv._incubating.attributes import (
     gen_ai_attributes as GenAI,
 )
 
-from fortifyroot import Instruments
+from fortifyroot.ocelle import Instruments
 from tests.providers.conftest import PROMPT_KEYS, COMPLETION_KEYS
 from tests.providers.safety_handlers import (
     SAFETY_ACTION_ALLOW,

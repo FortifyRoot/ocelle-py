@@ -16,7 +16,7 @@ import pytest
 import yaml
 from opentelemetry.semconv._incubating.attributes import gen_ai_attributes as GenAI
 
-from fortifyroot import Instruments
+from fortifyroot.ocelle import Instruments
 
 
 _DEFAULT_MODEL = "gpt-4.1"

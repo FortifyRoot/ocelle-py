@@ -72,7 +72,7 @@ def test_vendored_http_exporters_warn_on_auth_failure_once(
     auth_warnings = [
         record
         for record in caplog.records
-        if "FortifyRoot SDK auth warning" in record.getMessage()
+        if "FortifyRoot Ocelle SDK auth warning" in record.getMessage()
     ]
     assert len(auth_warnings) == 1
     warning = auth_warnings[0].getMessage()
@@ -99,6 +99,6 @@ def test_vendored_grpc_exporter_warns_on_auth_failure(caplog):
     with caplog.at_level("WARNING"), pytest.raises(_FakeAuthRpcError):
         exporter._client.Export()
 
-    assert "FortifyRoot SDK auth warning" in caplog.text
+    assert "FortifyRoot Ocelle SDK auth warning" in caplog.text
     assert "traces" in caplog.text
     assert "gRPC PERMISSION_DENIED" in caplog.text

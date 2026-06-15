@@ -1,53 +1,70 @@
-# FortifyRoot SDK
+# FortifyRoot Ocelle
 
-FortifyRoot SDK provides automatic instrumentation and observability for LLM applications. With a single line of code, get complete visibility into your LLM calls, including prompts, responses, token usage, and latency.
+FortifyRoot Ocelle is a Python SDK for LLM observability, safety, and auditability. With a single initialization call, Ocelle instruments supported LLM providers and frameworks, captures traces, records token/latency metadata, and applies FortifyRoot safety callbacks for prompt and completion content.
 
 ## Installation
 
 ```bash
-pip install fortifyroot-sdk
+pip install fortifyroot-ocelle
+```
+
+Install provider extras as needed:
+
+```bash
+pip install "fortifyroot-ocelle[openai]"
+pip install "fortifyroot-ocelle[openai,anthropic,langchain]"
 ```
 
 ## Quick Start
 
 ```python
-import fortifyroot
+import fortifyroot.ocelle as ocelle
 
-# Initialize FortifyRoot - that's it!
-fortifyroot.init(
+ocelle.init(
     app_name="my-llm-app",
-    api_key="fr-xxx",  # Get your API key from https://app.fortifyroot.com
+    api_key="fr-xxx",
 )
 
-# Your LLM calls are now automatically traced
 import openai
 
 response = openai.chat.completions.create(
     model="gpt-4",
-    messages=[{"role": "user", "content": "Hello!"}]
+    messages=[{"role": "user", "content": "Hello!"}],
 )
 ```
 
+The canonical import is:
+
+```python
+import fortifyroot.ocelle as ocelle
+```
+
+The package also exposes a convenience alias:
+
+```python
+import ocelle
+```
+
+The root `fortifyroot` package is reserved for internal namespaces such as vendored instrumentation. Public SDK code should use `fortifyroot.ocelle` or the `ocelle` convenience alias.
+
 ## Auto-Instrumented LLM Libraries
 
-The MVP SDK vendors and exposes the following supported instrumentation
-packages:
+The MVP SDK vendors and exposes the following supported instrumentation packages:
 
-- **LLM Providers**: OpenAI, Anthropic, Google Generative AI, AWS Bedrock, LiteLLM
+- **LLM providers**: OpenAI, Anthropic, Google Generative AI, AWS Bedrock, LiteLLM
 - **Frameworks**: LangChain, LlamaIndex
 
-For the current launch-certified provider-role matrix and support tiers, see
-[Provider Support](docs/PROVIDERS.md).
+For the current launch-certified provider-role matrix and support tiers, see [Provider Support](docs/PROVIDERS.md).
 
 ## Configuration
 
 ### Environment Variables
 
-You can configure FortifyRoot using environment variables:
+Ocelle keeps the FortifyRoot environment variable namespace stable:
 
 | Environment Variable | Description | Default |
 |---------------------|-------------|---------|
-| `FORTIFYROOT_API_KEY` | Your FortifyRoot API key | None |
+| `FORTIFYROOT_API_KEY` | FortifyRoot API key | None |
 | `FORTIFYROOT_BASE_URL` | API endpoint URL | `https://api.fortifyroot.com` |
 | `FORTIFYROOT_TRACE_CONTENT` | Capture prompt/response content | `true` |
 | `FORTIFYROOT_TRACING_ENABLED` | Enable/disable tracing | `true` |
@@ -55,36 +72,35 @@ You can configure FortifyRoot using environment variables:
 | `FORTIFYROOT_LOGGING_ENABLED` | Enable OTLP log export and synthetic span-end logs | `false` |
 
 When `FORTIFYROOT_LOGGING_ENABLED=true`:
+
 - stdlib Python `logging` records keep using the app's existing handlers and formatting
 - stdlib Python `logging` records emitted inside active spans are exported with trace/span correlation
 - stdlib Python `logging` records emitted outside active spans can still be exported, but they remain uncorrelated
-- FortifyRoot also emits one synthetic correlated log for each completed instrumented span
+- Ocelle emits one synthetic correlated log for each completed instrumented span
 - `print(...)`, stdout, and stderr capture are not included in MVP; use Python `logging` for application logs
 
 ### Programmatic Configuration
 
 ```python
-import fortifyroot
-from fortifyroot import Instruments
+import fortifyroot.ocelle as ocelle
+from fortifyroot.ocelle import Instruments
 
-fortifyroot.init(
+ocelle.init(
     app_name="my-llm-app",
     api_key="fr-xxx",
     api_endpoint="https://api.fortifyroot.com",
-    trace_content=True,  # Set to False to disable content capture
-    instruments={Instruments.OPENAI, Instruments.LANGCHAIN},  # Only instrument specific libraries
+    trace_content=True,
+    instruments={Instruments.OPENAI, Instruments.LANGCHAIN},
 )
 ```
 
 ### Fluent API
 
-For more complex configurations, use the fluent API:
-
 ```python
-import fortifyroot
+import fortifyroot.ocelle as ocelle
 from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
 
-fortifyroot.configure() \
+ocelle.configure() \
     .app_name("my-llm-app") \
     .api_key("fr-xxx") \
     .trace_content(False) \
@@ -95,29 +111,26 @@ fortifyroot.configure() \
 ### Advanced Configuration
 
 ```python
-import fortifyroot
-from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
+import fortifyroot.ocelle as ocelle
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
+from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
 
-# Custom sampling (10% of traces)
-fortifyroot.init(
+ocelle.init(
     app_name="my-app",
     api_key="fr-xxx",
     sampler=TraceIdRatioBased(0.1),
 )
 
-# Custom exporter
-fortifyroot.init(
+ocelle.init(
     app_name="my-app",
     processors=[SimpleSpanProcessor(ConsoleSpanExporter())],
 )
 
-# Span postprocess callback
 def span_callback(span):
     # Inspect span attributes, log alerts, etc.
     pass
 
-fortifyroot.init(
+ocelle.init(
     app_name="my-app",
     api_key="fr-xxx",
     span_postprocess_callback=span_callback,
@@ -129,7 +142,7 @@ fortifyroot.init(
 Use decorators to trace custom functions and create hierarchical traces:
 
 ```python
-from fortifyroot import workflow, task, agent, tool
+from fortifyroot.ocelle import agent, task, tool, workflow
 
 @workflow(name="document_qa")
 def answer_question(document: str, question: str):
@@ -139,17 +152,14 @@ def answer_question(document: str, question: str):
 
 @task(name="split_document")
 def split_document(document: str):
-    # Your logic here
     return chunks
 
 @task(name="find_relevant")
 def find_relevant_chunks(chunks, question):
-    # Your logic here
     return relevant_chunks
 
 @task(name="generate_answer")
 def generate_answer(context, question):
-    # LLM call here
     return answer
 ```
 
@@ -158,41 +168,41 @@ def generate_answer(context, question):
 Attach custom properties to traces for filtering and correlation:
 
 ```python
-import fortifyroot
+import fortifyroot.ocelle as ocelle
 
-fortifyroot.init(app_name="my-app", api_key="fr-xxx")
+ocelle.init(app_name="my-app", api_key="fr-xxx")
 
-# Set properties that will be attached to all subsequent spans
-fortifyroot.set_association_properties({
+ocelle.set_association_properties({
     "user_id": "user_12345",
     "session_id": "sess_abc",
     "conversation_id": "conv_xyz",
 })
-
-# Now make LLM calls - they will have these properties attached
-response = openai.chat.completions.create(...)
 ```
 
-## Privacy & Content Tracing
+## Privacy And Content Tracing
 
-To disable capturing of prompt and response content (for privacy compliance):
+To disable prompt and response content capture:
+
+```bash
+export FORTIFYROOT_TRACE_CONTENT=false
+```
+
+or programmatically:
 
 ```python
-# Via environment variable
-# export FORTIFYROOT_TRACE_CONTENT=false
+import fortifyroot.ocelle as ocelle
 
-# Or programmatically
-fortifyroot.init(
+ocelle.init(
     app_name="my-app",
     api_key="fr-xxx",
-    trace_content=False,  # Only metadata, no content
+    trace_content=False,
 )
 ```
 
 ## Attribution
 
-This SDK is built on top of [OpenLLMetry](https://github.com/traceloop/openllmetry) by Traceloop, licensed under Apache 2.0.
+FortifyRoot Ocelle includes code derived from [OpenLLMetry](https://github.com/traceloop/openllmetry) and `traceloop-sdk` by Traceloop, licensed under the Apache License, Version 2.0. The SDK retains the Apache 2.0 license text and attribution in [LICENSE](LICENSE).
 
 ## License
 
-Apache 2.0
+Apache License, Version 2.0.

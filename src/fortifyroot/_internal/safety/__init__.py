@@ -1,1 +1,1 @@
-"""Internal safety subsystem for FortifyRoot SDK."""
+"""Internal safety subsystem for FortifyRoot Ocelle SDK."""

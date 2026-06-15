@@ -169,29 +169,34 @@ class TestVendoredImports:
             importlib.import_module("fortifyroot._vendor.traceloop")
 
 
-class TestFortifyrootApi:
-    """Test FortifyRoot public API."""
+class TestOcelleApi:
+    """Test Ocelle public API."""
 
-    def test_fortifyroot_import(self):
-        """Test that fortifyroot can be imported."""
+    def test_fortifyroot_namespace_does_not_export_legacy_api(self):
+        """The root namespace exists for internals, not public SDK usage."""
         import fortifyroot
+
         assert fortifyroot is not None
+        assert not hasattr(fortifyroot, "init")
+        assert not hasattr(fortifyroot, "configure")
 
-    def test_fortifyroot_init_exists(self):
-        """Test that fortifyroot.init exists."""
-        import fortifyroot
-        assert hasattr(fortifyroot, "init")
-        assert callable(fortifyroot.init)
+    def test_fortifyroot_ocelle_init_exists(self):
+        """Test that fortifyroot.ocelle.init exists."""
+        import fortifyroot.ocelle as ocelle
 
-    def test_fortifyroot_configure_exists(self):
-        """Test that fortifyroot.configure exists (fluent API)."""
-        import fortifyroot
-        assert hasattr(fortifyroot, "configure")
-        assert callable(fortifyroot.configure)
+        assert hasattr(ocelle, "init")
+        assert callable(ocelle.init)
+
+    def test_fortifyroot_ocelle_configure_exists(self):
+        """Test that fortifyroot.ocelle.configure exists (fluent API)."""
+        import fortifyroot.ocelle as ocelle
+
+        assert hasattr(ocelle, "configure")
+        assert callable(ocelle.configure)
 
     def test_fortifyroot_instruments_enum(self):
         """Test that Instruments enum is available."""
-        from fortifyroot import Instruments
+        from fortifyroot.ocelle import Instruments
         assert Instruments.OPENAI is not None
         assert Instruments.ANTHROPIC is not None
         assert Instruments.LANGCHAIN is not None
@@ -199,7 +204,7 @@ class TestFortifyrootApi:
 
     def test_fortifyroot_decorators(self):
         """Test that decorators are available."""
-        from fortifyroot import task, workflow
+        from fortifyroot.ocelle import task, workflow
         assert task is not None
         assert workflow is not None
 
@@ -209,20 +214,20 @@ class TestNoLeakedBranding:
 
     def test_no_traceloop_in_public_api(self):
         """Test that traceloop name doesn't appear in public API docstrings."""
-        import fortifyroot
+        import fortifyroot.ocelle as ocelle
 
         # Check module docstring
-        if fortifyroot.__doc__:
-            assert "traceloop" not in fortifyroot.__doc__.lower(), \
+        if ocelle.__doc__:
+            assert "traceloop" not in ocelle.__doc__.lower(), \
                 "Module docstring should not mention 'traceloop'"
 
     def test_no_traceloop_in_init_docstring(self):
         """Test that init() docstring doesn't mention traceloop."""
-        import fortifyroot
+        import fortifyroot.ocelle as ocelle
 
-        if fortifyroot.init.__doc__:
+        if ocelle.init.__doc__:
             # Allow technical references but not branding
-            doc_lower = fortifyroot.init.__doc__.lower()
+            doc_lower = ocelle.init.__doc__.lower()
             # "traceloop" as a brand should not appear
             # But internal references like "_vendor.tracer" are OK
             assert "traceloop sdk" not in doc_lower
@@ -245,17 +250,17 @@ class TestFluentApi:
 
     def test_configure_returns_config_object(self):
         """Test that configure() returns a FortifyRootConfig object."""
-        import fortifyroot
+        import fortifyroot.ocelle as ocelle
 
-        config = fortifyroot.configure()
+        config = ocelle.configure()
         assert config is not None
-        assert isinstance(config, fortifyroot.FortifyRootConfig)
+        assert isinstance(config, ocelle.FortifyRootConfig)
 
     def test_fluent_methods_return_self(self):
         """Test that fluent methods return self for chaining."""
-        import fortifyroot
+        import fortifyroot.ocelle as ocelle
 
-        config = fortifyroot.configure()
+        config = ocelle.configure()
 
         # Each method should return the same config object
         result = config.app_name("test")
@@ -269,9 +274,9 @@ class TestFluentApi:
 
     def test_fluent_config_has_init(self):
         """Test that FortifyRootConfig has init() method."""
-        import fortifyroot
+        import fortifyroot.ocelle as ocelle
 
-        config = fortifyroot.configure()
+        config = ocelle.configure()
         assert hasattr(config, "init")
         assert callable(config.init)
 
@@ -282,9 +287,9 @@ class TestInitParameters:
     def test_init_has_basic_parameters(self):
         """Test init() has basic parameters."""
         import inspect
-        import fortifyroot
+        import fortifyroot.ocelle as ocelle
 
-        sig = inspect.signature(fortifyroot.init)
+        sig = inspect.signature(ocelle.init)
         params = sig.parameters
 
         # Basic parameters
@@ -296,9 +301,9 @@ class TestInitParameters:
     def test_init_has_tracing_parameters(self):
         """Test init() has tracing configuration parameters."""
         import inspect
-        import fortifyroot
+        import fortifyroot.ocelle as ocelle
 
-        sig = inspect.signature(fortifyroot.init)
+        sig = inspect.signature(ocelle.init)
         params = sig.parameters
 
         # Tracing parameters
@@ -312,9 +317,9 @@ class TestInitParameters:
     def test_init_has_metrics_parameters(self):
         """Test init() has metrics configuration parameters."""
         import inspect
-        import fortifyroot
+        import fortifyroot.ocelle as ocelle
 
-        sig = inspect.signature(fortifyroot.init)
+        sig = inspect.signature(ocelle.init)
         params = sig.parameters
 
         # Metrics parameters
@@ -325,9 +330,9 @@ class TestInitParameters:
     def test_init_has_logging_parameters(self):
         """Test init() has logging configuration parameters."""
         import inspect
-        import fortifyroot
+        import fortifyroot.ocelle as ocelle
 
-        sig = inspect.signature(fortifyroot.init)
+        sig = inspect.signature(ocelle.init)
         params = sig.parameters
 
         # Logging parameters
@@ -337,9 +342,9 @@ class TestInitParameters:
     def test_init_has_instrumentation_parameters(self):
         """Test init() has instrumentation parameters."""
         import inspect
-        import fortifyroot
+        import fortifyroot.ocelle as ocelle
 
-        sig = inspect.signature(fortifyroot.init)
+        sig = inspect.signature(ocelle.init)
         params = sig.parameters
 
         # Instrumentation parameters
@@ -350,9 +355,9 @@ class TestInitParameters:
     def test_init_has_callback_parameter(self):
         """Test init() has span_postprocess_callback parameter."""
         import inspect
-        import fortifyroot
+        import fortifyroot.ocelle as ocelle
 
-        sig = inspect.signature(fortifyroot.init)
+        sig = inspect.signature(ocelle.init)
         params = sig.parameters
 
         assert "span_postprocess_callback" in params

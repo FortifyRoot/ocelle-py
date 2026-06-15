@@ -3,7 +3,7 @@
 This module provides the common test infrastructure used by all provider-specific
 safety cassette tests (T5, T6, and beyond). It sets up:
 
-- FortifyRoot SDK initialization with in-memory span export
+- FortifyRoot Ocelle SDK initialization with in-memory span export
 - Mock safety configuration (regex rules for email, credit card, phone)
 - VCR cassette integration for recording and replay
 - Helper functions for span inspection and content extraction
@@ -23,7 +23,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.semconv._incubating.attributes import gen_ai_attributes as GenAI
 
-from fortifyroot import Instruments, init
+from fortifyroot.ocelle import Instruments, init
 from fortifyroot._internal.env_mapping import apply_env_var_mapping
 
 

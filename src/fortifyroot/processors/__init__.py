@@ -1,4 +1,4 @@
-"""Span processors for FortifyRoot SDK."""
+"""Span processors for FortifyRoot Ocelle SDK."""
 
 from fortifyroot.processors.attribute_renamer import (
     AttributeRenamingProcessor,

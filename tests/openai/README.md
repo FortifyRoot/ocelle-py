@@ -1,6 +1,6 @@
 # OpenAI Test Suite Guide
 
-This folder contains OpenAI-focused test coverage for FortifyRoot SDK.
+This folder contains OpenAI-focused test coverage for FortifyRoot Ocelle SDK.
 It combines deterministic mocked tests with VCR replay tests.
 
 ## What Is Implemented
@@ -63,7 +63,7 @@ Reason: both tests exercise the same HTTP request shape and only validate differ
 ## Local Setup
 
 ```bash
-cd "/Users/arnavdutta/FortifyRoot - Meta/fr-meta/fortifyroot-sdk-py"
+cd "/Users/arnavdutta/FortifyRoot - Meta/fr-meta/ocelle-py"
 poetry install --with test
 ```
 

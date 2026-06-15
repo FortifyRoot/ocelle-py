@@ -1,7 +1,7 @@
-"""Core FortifyRoot SDK functionality.
+"""Core FortifyRoot Ocelle SDK functionality.
 
 This module provides the main initialization and configuration functions
-for the FortifyRoot SDK, including:
+for the FortifyRoot Ocelle SDK, including:
 - init(): Initialize the SDK with tracing configuration
 - set_association_properties(): Set context properties for traces
 - FortifyRootConfig: Fluent API for configuration (builder pattern)
@@ -497,7 +497,7 @@ def init(
     allow_udf_detectors: bool = False,
 ) -> None:
     """
-    Initialize FortifyRoot SDK for LLM observability.
+    Initialize FortifyRoot Ocelle SDK for LLM observability.
 
     This function initializes the OpenTelemetry tracing infrastructure and
     auto-instruments supported LLM libraries (OpenAI, Anthropic, LangChain, etc.).
@@ -567,7 +567,7 @@ def init(
             Can be overridden by FORTIFYROOT_ENRICH_METRICS environment variable.
 
         resource_attributes: Additional OpenTelemetry resource attributes to attach
-            to all telemetry. FortifyRoot SDK version is automatically added.
+            to all telemetry. FortifyRoot Ocelle SDK version is automatically added.
 
         instruments: Optional set of Instruments to enable. If None, all detected
             instruments are enabled. Use this to limit instrumentation to specific
@@ -601,18 +601,18 @@ def init(
     Example:
         Basic usage::
 
-            import fortifyroot
+            import fortifyroot.ocelle as ocelle
 
-            fortifyroot.init(
+            ocelle.init(
                 app_name="my-llm-app",
                 api_key="fr-xxx",
             )
 
         With specific instruments::
 
-            from fortifyroot import Instruments
+            from fortifyroot.ocelle import Instruments
 
-            fortifyroot.init(
+            ocelle.init(
                 app_name="my-llm-app",
                 api_key="fr-xxx",
                 instruments={Instruments.OPENAI, Instruments.LANGCHAIN},
@@ -620,7 +620,7 @@ def init(
 
         Disable content tracing for privacy::
 
-            fortifyroot.init(
+            ocelle.init(
                 app_name="my-llm-app",
                 api_key="fr-xxx",
                 trace_content=False,
@@ -630,7 +630,7 @@ def init(
 
             from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
 
-            fortifyroot.init(
+            ocelle.init(
                 app_name="my-llm-app",
                 api_key="fr-xxx",
                 sampler=TraceIdRatioBased(0.1),  # Sample 10% of traces
@@ -642,7 +642,7 @@ def init(
 
             console_processor = SimpleSpanProcessor(ConsoleSpanExporter())
 
-            fortifyroot.init(
+            ocelle.init(
                 app_name="my-llm-app",
                 api_key="fr-xxx",
                 processors=[console_processor],
@@ -654,7 +654,7 @@ def init(
                 # Inspect span, log alerts, etc.
                 pass
 
-            fortifyroot.init(
+            ocelle.init(
                 app_name="my-llm-app",
                 api_key="fr-xxx",
                 span_postprocess_callback=span_callback,
@@ -791,7 +791,7 @@ def init(
         if shorthand in resource_attributes and canonical not in resource_attributes:
             resource_attributes[canonical] = resource_attributes.pop(shorthand)
 
-    # Inject FortifyRoot SDK version into resource attributes
+    # Inject FortifyRoot Ocelle SDK version into resource attributes
     resource_attributes[FORTIFYROOT_SDK_VERSION_ATTRIBUTE] = __version__
 
     # Convert FR Instruments to the vendored tracer SDK enum. When no explicit
@@ -927,12 +927,12 @@ def set_association_properties(properties: Dict) -> None:
     Example:
         ::
 
-            import fortifyroot
+            import fortifyroot.ocelle as ocelle
 
-            fortifyroot.init(app_name="my-app", api_key="fr-xxx")
+            ocelle.init(app_name="my-app", api_key="fr-xxx")
 
             # Set properties that will be attached to all subsequent spans
-            fortifyroot.set_association_properties({
+            ocelle.set_association_properties({
                 "user_id": "user_12345",
                 "session_id": "sess_abc",
                 "conversation_id": "conv_xyz",
@@ -951,7 +951,7 @@ def set_association_properties(properties: Dict) -> None:
 
 class FortifyRootConfig:
     """
-    Fluent configuration builder for FortifyRoot SDK.
+    Fluent configuration builder for FortifyRoot Ocelle SDK.
 
     This provides an alternative way to configure the SDK using method chaining
     instead of passing all parameters to init().
@@ -959,10 +959,10 @@ class FortifyRootConfig:
     Example:
         ::
 
-            import fortifyroot
+            import fortifyroot.ocelle as ocelle
 
             # Fluent API
-            fortifyroot.configure() \\
+            ocelle.configure() \\
                 .app_name("my-llm-app") \\
                 .api_key("fr-xxx") \\
                 .trace_content(False) \\
@@ -970,7 +970,7 @@ class FortifyRootConfig:
                 .init()
 
             # Equivalent to:
-            fortifyroot.init(
+            ocelle.init(
                 app_name="my-llm-app",
                 api_key="fr-xxx",
                 trace_content=False,
@@ -1150,9 +1150,9 @@ def configure() -> FortifyRootConfig:
     Example:
         ::
 
-            import fortifyroot
+            import fortifyroot.ocelle as ocelle
 
-            fortifyroot.configure() \\
+            ocelle.configure() \\
                 .app_name("my-app") \\
                 .api_key("fr-xxx") \\
                 .trace_content(False) \\

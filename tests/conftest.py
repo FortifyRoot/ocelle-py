@@ -40,7 +40,7 @@ class _NoFortifyRootSpanExporter(InMemorySpanExporter):
         )
 from opentelemetry.util._once import Once
 
-from fortifyroot import Instruments, init
+from fortifyroot.ocelle import Instruments, init
 from fortifyroot._internal.env_mapping import apply_env_var_mapping
 from fortifyroot._vendor.opentelemetry.instrumentation.openai import OpenAIInstrumentor
 from fortifyroot._vendor.opentelemetry.instrumentation.openai.shared.config import (

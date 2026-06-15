@@ -2,7 +2,7 @@
 SDK safety cassette tests for Bedrock (Phase T5-D).
 
 End-to-end tests through the vendored code path:
-  fortifyroot.init() -> Bedrock Converse API call (VCR) -> safety masking -> spans
+  ocelle.init() -> Bedrock Converse API call (VCR) -> safety masking -> spans
 
 Every test verifies BOTH safety behaviour AND regular LLM telemetry capture
 (span name, gen_ai.system, model, tokens, prompt/completion attributes).
@@ -30,7 +30,7 @@ from opentelemetry.semconv._incubating.attributes import (
     gen_ai_attributes as GenAI,
 )
 
-from fortifyroot import Instruments
+from fortifyroot.ocelle import Instruments
 from tests.providers.conftest import PROMPT_KEYS, COMPLETION_KEYS
 from tests.providers.safety_handlers import (
     SAFETY_ACTION_ALLOW,

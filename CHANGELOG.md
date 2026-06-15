@@ -27,18 +27,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial public release of the FortifyRoot SDK
+- Initial public release of the FortifyRoot Ocelle SDK
 - Core initialization APIs:
-  - `fortifyroot.init()`
-  - `fortifyroot.configure()` fluent API
+  - `fortifyroot.ocelle.init()`
+  - `fortifyroot.ocelle.configure()` fluent API
 - Vendored OpenLLMetry (Traceloop) auto-instrumentation framework
 - Automatic instrumentation for MVP-supported providers and frameworks:
   OpenAI, Anthropic, Google GenAI, Bedrock, LiteLLM, LangChain, and LlamaIndex
 - Decorator support: `@workflow`, `@task`, `@agent`, `@tool`
-- Trace correlation via `fortifyroot.set_association_properties()`
+- Trace correlation via `fortifyroot.ocelle.set_association_properties()`
 - Environment variable configuration using `FORTIFYROOT_*` namespace
 - Automatic attribute renaming from `traceloop.*` to `fortifyroot.*`
-- Injection of FortifyRoot SDK version into OpenTelemetry resource attributes
+- Injection of FortifyRoot Ocelle SDK version into OpenTelemetry resource attributes
 - Simplified, FortifyRoot-branded API layered on top of `traceloop-sdk`
 
 

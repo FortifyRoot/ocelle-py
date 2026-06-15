@@ -6,7 +6,7 @@ making it easier to understand the flow and debug issues.
 Example:
     ::
 
-        from fortifyroot import workflow, task
+        from fortifyroot.ocelle import workflow, task
 
         @workflow(name="document_qa")
         def answer_question(document: str, question: str):

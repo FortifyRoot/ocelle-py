@@ -6,18 +6,18 @@ enable or disable auto-instrumentation for specific LLM libraries and frameworks
 Example:
     ::
 
-        from fortifyroot import Instruments
-        import fortifyroot
+        from fortifyroot.ocelle import Instruments
+        import fortifyroot.ocelle as ocelle
 
         # Only instrument OpenAI and LangChain
-        fortifyroot.init(
+        ocelle.init(
             app_name="my-app",
             api_key="fr-xxx",
             instruments={Instruments.OPENAI, Instruments.LANGCHAIN},
         )
 
         # Instrument everything except Bedrock
-        fortifyroot.init(
+        ocelle.init(
             app_name="my-app",
             api_key="fr-xxx",
             block_instruments={Instruments.BEDROCK},
@@ -35,7 +35,7 @@ class Instruments(Enum):
     Enum of supported LLM libraries and frameworks for auto-instrumentation.
 
     Use this enum with the `instruments` or `block_instruments` parameters
-    in `fortifyroot.init()` to control which libraries are instrumented.
+    in `ocelle.init()` to control which libraries are instrumented.
 
     Categories:
         LLM Providers:

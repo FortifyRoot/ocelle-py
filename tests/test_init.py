@@ -1,4 +1,4 @@
-"""Tests for fortifyroot.init() function."""
+"""Tests for Ocelle init() function."""
 
 import os
 from unittest import mock
@@ -33,15 +33,15 @@ class TestInit:
     """Tests for the init() function."""
 
     def test_init_function_exists(self):
-        """Test that init function is exported from fortifyroot."""
-        from fortifyroot import init
+        """Test that init function is exported from fortifyroot.ocelle."""
+        from fortifyroot.ocelle import init
 
         assert callable(init)
 
     def test_init_has_expected_parameters(self):
         """Test that init has the expected parameter signature."""
         import inspect
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         sig = inspect.signature(init)
         params = sig.parameters
@@ -67,7 +67,7 @@ class TestInit:
 
     def test_set_association_properties_exported(self):
         """Test that set_association_properties is exported."""
-        from fortifyroot import set_association_properties
+        from fortifyroot.ocelle import set_association_properties
 
         assert callable(set_association_properties)
 
@@ -76,8 +76,8 @@ class TestVersion:
     """Tests for version handling."""
 
     def test_version_exported(self):
-        """Test that __version__ is exported from fortifyroot."""
-        from fortifyroot import __version__
+        """Test that __version__ is exported from fortifyroot.ocelle."""
+        from fortifyroot.ocelle import __version__
 
         assert isinstance(__version__, str)
         # Should be semver-like
@@ -86,7 +86,7 @@ class TestVersion:
 
     def test_version_matches_module(self):
         """Test that exported version matches version module."""
-        from fortifyroot import __version__
+        from fortifyroot.ocelle import __version__
         from fortifyroot.version import __version__ as module_version
 
         assert __version__ == module_version
@@ -95,7 +95,7 @@ class TestVersion:
         """Test that __version__ resolves to pyproject's package version."""
         import re
         from pathlib import Path
-        from fortifyroot import __version__
+        from fortifyroot.ocelle import __version__
 
         pyproject = Path(__file__).parents[1] / "pyproject.toml"
         match = re.search(r'(?m)^version = "([^"]+)"', pyproject.read_text())
@@ -108,9 +108,9 @@ class TestPublicAPI:
 
     def test_all_exports_defined(self):
         """Test that __all__ is defined and contains expected items."""
-        import fortifyroot
+        import fortifyroot.ocelle as ocelle
 
-        assert hasattr(fortifyroot, "__all__")
+        assert hasattr(ocelle, "__all__")
 
         expected_exports = [
             "init",
@@ -128,13 +128,13 @@ class TestPublicAPI:
         ]
 
         for export in expected_exports:
-            assert export in fortifyroot.__all__, f"Missing export: {export}"
+            assert export in ocelle.__all__, f"Missing export: {export}"
 
     def test_no_traceloop_in_public_api(self):
         """Test that 'traceloop' doesn't appear in public API names."""
-        import fortifyroot
+        import fortifyroot.ocelle as ocelle
 
-        for name in fortifyroot.__all__:
+        for name in ocelle.__all__:
             assert "traceloop" not in name.lower(), f"Traceloop leak in: {name}"
 
 
@@ -154,7 +154,7 @@ class TestTraceContentParameter:
     def test_trace_content_default_is_true(self):
         """Test that trace_content defaults to True."""
         import inspect
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         sig = inspect.signature(init)
         trace_content_param = sig.parameters["trace_content"]
@@ -177,7 +177,7 @@ class TestSafetyRuntimeBootstrap:
 
     def test_init_configures_safety_runtime_with_explicit_values(self):
         """Test that init wires explicit safety runtime configuration."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         with (
             mock.patch("fortifyroot.core.Traceloop.get_default_span_processor", return_value=mock.Mock()),
@@ -205,7 +205,7 @@ class TestSafetyRuntimeBootstrap:
 
     def test_init_configures_safety_runtime_from_environment(self):
         """Test that init resolves safety runtime config from environment."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         with mock.patch.dict(
             os.environ,
@@ -235,7 +235,7 @@ class TestSafetyRuntimeBootstrap:
 
     def test_init_invalid_poll_interval_env_falls_back_to_default(self):
         """Test that invalid poll interval env values fall back to the default."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         with mock.patch.dict(
             os.environ,
@@ -265,7 +265,7 @@ class TestSafetyRuntimeBootstrap:
 
     def test_init_ignores_traceloop_base_url_when_fr_base_url_is_absent(self):
         """Test that init ignores direct TRACELOOP_BASE_URL fallback."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         with mock.patch.dict(
             os.environ,
@@ -295,7 +295,7 @@ class TestSafetyRuntimeBootstrap:
 
     def test_init_uses_fortifyroot_base_url_when_set(self):
         """Test that init honors FORTIFYROOT_BASE_URL."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         with mock.patch.dict(
             os.environ,
@@ -328,7 +328,7 @@ class TestInitOptionalPaths:
 
     def test_init_uses_api_key_for_default_trace_metrics_and_logging_auth(self):
         """Test that api_key alone authenticates traces, metrics, and logs."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         default_processor = mock.Mock()
         created_metrics_exporter = mock.Mock()
@@ -394,7 +394,7 @@ class TestInitOptionalPaths:
 
     def test_init_requires_auth_for_default_managed_fortifyroot_exports(self):
         """Test that hosted FortifyRoot exports fail fast without auth."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         with (
             mock.patch("fortifyroot.core.Traceloop.get_default_span_processor") as default_processor_mock,
@@ -413,7 +413,7 @@ class TestInitOptionalPaths:
 
     def test_init_rejects_x_api_key_as_managed_export_auth(self):
         """Test that managed FortifyRoot OTLP export requires Authorization auth."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         with (
             mock.patch("fortifyroot.core.Traceloop.get_default_span_processor") as default_processor_mock,
@@ -435,7 +435,7 @@ class TestInitOptionalPaths:
 
     def test_init_allows_unauthenticated_custom_collector_endpoint(self):
         """Test that custom OTLP collectors can still be used without FortifyRoot auth."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         default_processor = mock.Mock()
         created_metrics_exporter = mock.Mock()
@@ -481,7 +481,7 @@ class TestInitOptionalPaths:
 
     def test_init_inherits_trace_authorization_into_signal_headers(self):
         """Test that explicit trace Authorization is reused for metrics and logs by default."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         default_processor = mock.Mock()
         created_metrics_exporter = mock.Mock()
@@ -549,7 +549,7 @@ class TestInitOptionalPaths:
 
     def test_init_uses_api_key_for_custom_collector_trace_metrics_and_logging_auth(self):
         """Test that api_key bearer auth is applied consistently for non-FortifyRoot collectors."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         default_processor = mock.Mock()
         created_metrics_exporter = mock.Mock()
@@ -611,7 +611,7 @@ class TestInitOptionalPaths:
 
     def test_init_requires_auth_for_managed_fortifyroot_metrics_endpoint(self):
         """Test that FortifyRoot metrics export requires auth even when traces go elsewhere."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         with mock.patch.dict(
             os.environ,
@@ -642,7 +642,7 @@ class TestInitOptionalPaths:
 
     def test_init_allows_custom_metrics_endpoint_without_auth_when_traces_use_custom_processors(self):
         """Test that non-FortifyRoot metrics endpoints are not blocked by FortifyRoot auth checks."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         processor = mock.Mock()
         created_metrics_exporter = mock.Mock()
@@ -681,7 +681,7 @@ class TestInitOptionalPaths:
 
     def test_init_uses_grpc_metrics_exporter_for_grpc_metrics_endpoint(self):
         """Test that gRPC metrics endpoints stay on the gRPC exporter path."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         default_processor = mock.Mock()
         created_metrics_exporter = mock.Mock()
@@ -720,7 +720,7 @@ class TestInitOptionalPaths:
 
     def test_init_uses_grpc_logging_exporter_for_grpc_logging_endpoint(self):
         """Test that gRPC logging endpoints stay on the gRPC exporter path."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         default_processor = mock.Mock()
         created_logging_exporter = mock.Mock()
@@ -764,7 +764,7 @@ class TestInitOptionalPaths:
 
     def test_init_builds_default_processor_metrics_exporter_and_optional_kwargs(self):
         """Test default processor path, metrics exporter autowiring, and optional kwargs."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         default_processor = mock.Mock()
         logging_exporter = mock.Mock()
@@ -840,7 +840,7 @@ class TestInitOptionalPaths:
 
     def test_init_wraps_single_custom_processor(self):
         """Test the single-processor path used for custom processor injection."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         processor = mock.Mock()
 
@@ -867,7 +867,7 @@ class TestFluentConfig:
 
     def test_configure_builder_captures_values_and_calls_init(self):
         """Test that the fluent builder forwards all configured values to init()."""
-        from fortifyroot import Instruments, configure
+        from fortifyroot.ocelle import Instruments, configure
 
         exporter = mock.Mock()
         metrics_exporter = mock.Mock()
@@ -1013,7 +1013,7 @@ class TestSDKMetadataHeaders:
 
     def test_sdk_metadata_headers_include_expected_values(self):
         import platform
-        from fortifyroot import __version__
+        from fortifyroot.ocelle import __version__
 
         assert _sdk_metadata_headers() == {
             "X-FortifyRoot-SDK-Version": __version__,
@@ -1100,7 +1100,7 @@ class TestMetricsExporterSchemes:
 
     def test_grpc_scheme_creates_insecure_grpc_metrics_exporter(self):
         """Test that grpc:// scheme creates an insecure gRPC metrics exporter."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         default_processor = mock.Mock()
         created_metrics_exporter = mock.Mock()
@@ -1139,7 +1139,7 @@ class TestMetricsExporterSchemes:
 
     def test_unknown_scheme_creates_insecure_grpc_metrics_exporter(self):
         """Test that an unknown scheme falls back to insecure gRPC metrics exporter."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         default_processor = mock.Mock()
         created_metrics_exporter = mock.Mock()
@@ -1182,7 +1182,7 @@ class TestLoggingExporterSchemes:
 
     def test_grpcs_scheme_creates_secure_grpc_logging_exporter(self):
         """Test that grpcs:// scheme creates a secure gRPC logging exporter."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         default_processor = mock.Mock()
         created_logging_exporter = mock.Mock()
@@ -1224,7 +1224,7 @@ class TestLoggingExporterSchemes:
 
     def test_unknown_scheme_creates_insecure_grpc_logging_exporter(self):
         """Test that an unknown scheme falls back to insecure gRPC logging exporter."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         default_processor = mock.Mock()
         created_logging_exporter = mock.Mock()
@@ -1270,7 +1270,7 @@ class TestValidateDefaultExportAuth:
 
     def test_requires_auth_for_managed_fortifyroot_logging_endpoint(self):
         """Test that FortifyRoot logging export requires auth (line 343 coverage)."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         with mock.patch.dict(
             os.environ,
@@ -1297,7 +1297,7 @@ class TestValidateDefaultExportAuth:
 
     def test_requires_auth_for_all_managed_signals(self):
         """Test that all three signals appear when all go to FortifyRoot without auth."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         with mock.patch.dict(
             os.environ,
@@ -1326,7 +1326,7 @@ class TestInitExporterBranch:
 
     def test_custom_exporter_skips_default_processor_creation(self):
         """Test that providing exporter skips default processor creation."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
 
         custom_exporter = mock.Mock()
 
@@ -1360,7 +1360,7 @@ class TestAllowUdfDetectors:
 
     def test_init_allow_udf_detectors_enables_udf_loading(self):
         """Test that init(allow_udf_detectors=True) enables UDF detector loading."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
         from fortifyroot._internal.safety import engine as safety_engine
 
         with (
@@ -1378,7 +1378,7 @@ class TestAllowUdfDetectors:
 
     def test_init_default_udf_detectors_disabled(self):
         """Test that init() does not enable UDF detectors by default."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
         from fortifyroot._internal.safety import engine as safety_engine
 
         with (
@@ -1395,7 +1395,7 @@ class TestAllowUdfDetectors:
 
     def test_init_allow_udf_detectors_via_env_var(self):
         """Test that FORTIFYROOT_ALLOW_UDF_DETECTORS env var enables UDF loading."""
-        from fortifyroot import init
+        from fortifyroot.ocelle import init
         from fortifyroot._internal.safety import engine as safety_engine
 
         with mock.patch.dict(
@@ -1421,7 +1421,7 @@ class TestSetAssociationProperties:
 
     def test_delegates_to_traceloop(self):
         """Test that set_association_properties delegates to Traceloop."""
-        from fortifyroot import set_association_properties
+        from fortifyroot.ocelle import set_association_properties
 
         with mock.patch(
             "fortifyroot.core.Traceloop.set_association_properties"

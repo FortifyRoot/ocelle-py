@@ -1,4 +1,4 @@
-"""FortifyRoot SDK version.
+"""FortifyRoot Ocelle SDK version.
 
 The package version is defined in ``pyproject.toml``. Installed wheels and
 editable installs expose that value through distribution metadata, so this file
@@ -13,10 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 try:
-    __version__ = version("fortifyroot-sdk")
+    __version__ = version("fortifyroot-ocelle")
 except PackageNotFoundError:
     __version__ = "0+unknown"
     logger.warning(
-        "fortifyroot-sdk package metadata was not found; using version %s",
+        "fortifyroot-ocelle package metadata was not found; using version %s",
         __version__,
     )
