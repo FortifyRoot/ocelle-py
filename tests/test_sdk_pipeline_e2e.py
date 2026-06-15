@@ -30,7 +30,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.semconv._incubating.attributes import gen_ai_attributes as GenAI
 
-from fortifyroot import Instruments, init
+from fortifyroot.ocelle import Instruments, init
 from fortifyroot._internal.constants import (
     ATTRIBUTE_PREFIX_FORTIFYROOT,
     ATTRIBUTE_PREFIX_TRACELOOP,
@@ -972,7 +972,7 @@ class TestInitParameterCombinations:
         _skip_if_no_cassette("test_openai_safety_no_config_passthrough")
         os.environ.setdefault("FORTIFYROOT_METRICS_ENABLED", "false")
         os.environ.setdefault("FORTIFYROOT_LOGGING_ENABLED", "false")
-        from fortifyroot import configure
+        from fortifyroot.ocelle import configure
 
         processor = SimpleSpanProcessor(span_exporter)
         apply_env_var_mapping()

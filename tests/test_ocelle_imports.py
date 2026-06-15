@@ -19,3 +19,10 @@ def test_top_level_ocelle_import_exports_public_api():
     assert ocelle.OcelleConfig is ocelle.FortifyRootConfig
     assert ocelle.Instruments.OPENAI is not None
     assert isinstance(ocelle.__version__, str)
+
+
+def test_fortifyroot_root_namespace_does_not_export_legacy_public_api():
+    import fortifyroot
+
+    assert not hasattr(fortifyroot, "init")
+    assert not hasattr(fortifyroot, "configure")

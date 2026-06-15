@@ -8,31 +8,31 @@ class TestDecoratorWrappers:
 
     def test_task_decorator_is_callable(self) -> None:
         """Test that @task decorator is available and callable."""
-        from fortifyroot import task
+        from fortifyroot.ocelle import task
 
         assert callable(task)
 
     def test_workflow_decorator_is_callable(self) -> None:
         """Test that @workflow decorator is available and callable."""
-        from fortifyroot import workflow
+        from fortifyroot.ocelle import workflow
 
         assert callable(workflow)
 
     def test_agent_decorator_is_callable(self) -> None:
         """Test that @agent decorator is available and callable."""
-        from fortifyroot import agent
+        from fortifyroot.ocelle import agent
 
         assert callable(agent)
 
     def test_tool_decorator_is_callable(self) -> None:
         """Test that @tool decorator is available and callable."""
-        from fortifyroot import tool
+        from fortifyroot.ocelle import tool
 
         assert callable(tool)
 
     def test_decorators_are_fr_functions_not_tl(self) -> None:
         """Test that decorators are FR's own functions, not TL re-exports."""
-        from fortifyroot import task, workflow, agent, tool
+        from fortifyroot.ocelle import task, workflow, agent, tool
         from fortifyroot._vendor.tracer.sdk.decorators import (
             task as tl_task,
             workflow as tl_workflow,
@@ -49,7 +49,7 @@ class TestDecoratorWrappers:
 
     def test_decorators_module_path(self) -> None:
         """Test that decorators are defined in fortifyroot module."""
-        from fortifyroot import task, workflow, agent, tool
+        from fortifyroot.ocelle import task, workflow, agent, tool
 
         assert task.__module__ == "fortifyroot.decorators"
         assert workflow.__module__ == "fortifyroot.decorators"
@@ -58,7 +58,7 @@ class TestDecoratorWrappers:
 
     def test_decorators_have_docstrings(self) -> None:
         """Test that decorators have FR docstrings."""
-        from fortifyroot import task, workflow, agent, tool
+        from fortifyroot.ocelle import task, workflow, agent, tool
 
         assert task.__doc__ is not None
         assert "task" in task.__doc__.lower()
@@ -74,7 +74,7 @@ class TestDecoratorWrappers:
 
     def test_task_decorator_can_decorate_function(self) -> None:
         """Test that @task can be applied to functions."""
-        from fortifyroot import task
+        from fortifyroot.ocelle import task
 
         @task(name="test_task")
         def my_task() -> str:
@@ -84,7 +84,7 @@ class TestDecoratorWrappers:
 
     def test_workflow_decorator_can_decorate_function(self) -> None:
         """Test that @workflow can be applied to functions."""
-        from fortifyroot import workflow
+        from fortifyroot.ocelle import workflow
 
         @workflow(name="test_workflow")
         def my_workflow() -> str:
@@ -94,7 +94,7 @@ class TestDecoratorWrappers:
 
     def test_agent_decorator_can_decorate_function(self) -> None:
         """Test that @agent can be applied to functions."""
-        from fortifyroot import agent
+        from fortifyroot.ocelle import agent
 
         @agent(name="test_agent")
         def my_agent() -> str:
@@ -104,7 +104,7 @@ class TestDecoratorWrappers:
 
     def test_tool_decorator_can_decorate_function(self) -> None:
         """Test that @tool can be applied to functions."""
-        from fortifyroot import tool
+        from fortifyroot.ocelle import tool
 
         @tool(name="test_tool")
         def my_tool() -> str:
@@ -114,7 +114,7 @@ class TestDecoratorWrappers:
 
     def test_decorator_accepts_all_parameters(self) -> None:
         """Test that decorators accept name, version, and method_name params."""
-        from fortifyroot import task, workflow
+        from fortifyroot.ocelle import task, workflow
 
         # Should not raise any errors
         @task(name="my_task", version=1)
@@ -134,7 +134,7 @@ class TestInstrumentsEnum:
 
     def test_instruments_is_fr_enum_not_tl(self) -> None:
         """Test that Instruments is FR's own enum, not TL re-export."""
-        from fortifyroot import Instruments
+        from fortifyroot.ocelle import Instruments
         from fortifyroot._vendor.tracer.sdk.instruments import Instruments as TLInstruments
 
         # FR Instruments should NOT be the same class as TL Instruments
@@ -142,13 +142,13 @@ class TestInstrumentsEnum:
 
     def test_instruments_module_path(self) -> None:
         """Test that Instruments is defined in fortifyroot module."""
-        from fortifyroot import Instruments
+        from fortifyroot.ocelle import Instruments
 
         assert Instruments.__module__ == "fortifyroot.instruments"
 
     def test_instruments_has_expected_llm_providers(self) -> None:
         """Test that Instruments enum has MVP LLM provider members."""
-        from fortifyroot import Instruments
+        from fortifyroot.ocelle import Instruments
 
         # LLM Providers
         assert hasattr(Instruments, "OPENAI")
@@ -159,7 +159,7 @@ class TestInstrumentsEnum:
 
     def test_instruments_has_expected_frameworks(self) -> None:
         """Test that Instruments enum has MVP framework members."""
-        from fortifyroot import Instruments
+        from fortifyroot.ocelle import Instruments
 
         # Frameworks
         assert hasattr(Instruments, "LANGCHAIN")
@@ -167,7 +167,7 @@ class TestInstrumentsEnum:
 
     def test_instruments_does_not_advertise_post_mvp_members(self) -> None:
         """Test that public Instruments only advertises supported MVP packages."""
-        from fortifyroot import Instruments
+        from fortifyroot.ocelle import Instruments
 
         assert {instrument.value for instrument in Instruments} == {
             "openai",
@@ -185,7 +185,7 @@ class TestInstrumentsEnum:
 
     def test_supported_instruments_exactly_matches_mvp_instruments(self) -> None:
         """Test that the default supported set is pinned to the MVP surface."""
-        from fortifyroot import Instruments
+        from fortifyroot.ocelle import Instruments
         from fortifyroot.instruments import SUPPORTED_INSTRUMENTS
 
         assert SUPPORTED_INSTRUMENTS == frozenset(Instruments)
@@ -193,7 +193,7 @@ class TestInstrumentsEnum:
 
     def test_instruments_values_match_tl(self) -> None:
         """Test that FR Instruments values match TL Instruments values."""
-        from fortifyroot import Instruments
+        from fortifyroot.ocelle import Instruments
         from fortifyroot._vendor.tracer.sdk.instruments import Instruments as TLInstruments
 
         # Check that string values match for common instruments
@@ -205,7 +205,7 @@ class TestInstrumentsEnum:
 
     def test_instruments_can_be_used_in_set(self) -> None:
         """Test that Instruments can be used in a set (for init params)."""
-        from fortifyroot import Instruments
+        from fortifyroot.ocelle import Instruments
 
         instrument_set = {Instruments.OPENAI, Instruments.LANGCHAIN}
 
@@ -215,7 +215,7 @@ class TestInstrumentsEnum:
 
     def test_instruments_has_docstring(self) -> None:
         """Test that Instruments enum has documentation."""
-        from fortifyroot import Instruments
+        from fortifyroot.ocelle import Instruments
 
         assert Instruments.__doc__ is not None
         assert "LLM" in Instruments.__doc__ or "instrument" in Instruments.__doc__.lower()
@@ -240,7 +240,7 @@ class TestInstrumentsConversion:
 
     def test_convert_single_instrument(self) -> None:
         """Test converting a single instrument."""
-        from fortifyroot import Instruments
+        from fortifyroot.ocelle import Instruments
         from fortifyroot.instruments import _convert_to_tl_instruments
         from fortifyroot._vendor.tracer.sdk.instruments import Instruments as TLInstruments
 
@@ -253,7 +253,7 @@ class TestInstrumentsConversion:
 
     def test_convert_multiple_instruments(self) -> None:
         """Test converting multiple instruments."""
-        from fortifyroot import Instruments
+        from fortifyroot.ocelle import Instruments
         from fortifyroot.instruments import _convert_to_tl_instruments
         from fortifyroot._vendor.tracer.sdk.instruments import Instruments as TLInstruments
 

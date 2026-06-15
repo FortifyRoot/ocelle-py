@@ -45,7 +45,7 @@ The package also exposes a convenience alias:
 import ocelle
 ```
 
-The legacy `import fortifyroot` surface remains available for internal compatibility during the rename, but new docs should use `fortifyroot.ocelle`.
+The root `fortifyroot` package is reserved for internal namespaces such as vendored instrumentation. Public SDK code should use `fortifyroot.ocelle` or the `ocelle` convenience alias.
 
 ## Auto-Instrumented LLM Libraries
 

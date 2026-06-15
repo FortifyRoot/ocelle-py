@@ -11,7 +11,7 @@ import pytest
 from opentelemetry.semconv._incubating.attributes import gen_ai_attributes as GenAI
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
-from fortifyroot import Instruments, init
+from fortifyroot.ocelle import Instruments, init
 from fortifyroot._internal.constants import FORTIFYROOT_SDK_VERSION_ATTRIBUTE
 from fortifyroot._internal.env_mapping import apply_env_var_mapping
 from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (

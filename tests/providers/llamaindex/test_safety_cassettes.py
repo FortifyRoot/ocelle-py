@@ -2,7 +2,7 @@
 SDK safety cassette tests for LlamaIndex (Phase T6-C).
 
 End-to-end tests through the vendored code path:
-  fortifyroot.init() -> LlamaIndex OpenAI LLM (VCR) -> safety masking -> spans
+  ocelle.init() -> LlamaIndex OpenAI LLM (VCR) -> safety masking -> spans
 
 LlamaIndex uses an event-driven dispatcher for instrumentation.
 Safety is applied via method wrapping on BaseLLM (chat, complete, stream_chat, etc.).
@@ -34,7 +34,7 @@ from opentelemetry.semconv._incubating.attributes import (
     gen_ai_attributes as GenAI,
 )
 
-from fortifyroot import Instruments, init
+from fortifyroot.ocelle import Instruments, init
 from fortifyroot._internal.env_mapping import apply_env_var_mapping
 from tests.providers.conftest import PROMPT_KEYS, COMPLETION_KEYS
 from tests.providers.safety_handlers import (

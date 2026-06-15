@@ -2,7 +2,7 @@
 SDK safety cassette tests for LangChain/LangGraph (Phase T6-B).
 
 End-to-end tests through the vendored code path:
-  fortifyroot.init() -> ChatOpenAI chain/agent (VCR) -> safety masking -> spans
+  ocelle.init() -> ChatOpenAI chain/agent (VCR) -> safety masking -> spans
 
 LangChain instrumentation captures chain, agent, and LangGraph workflow spans.
 Safety is applied at the base_chat_model_generate/agenerate wrapper level.
@@ -34,7 +34,7 @@ from opentelemetry.semconv._incubating.attributes import (
     gen_ai_attributes as GenAI,
 )
 
-from fortifyroot import Instruments, init
+from fortifyroot.ocelle import Instruments, init
 from fortifyroot._internal.env_mapping import apply_env_var_mapping
 from tests.providers.conftest import PROMPT_KEYS, COMPLETION_KEYS
 from tests.providers.safety_handlers import (

@@ -202,10 +202,15 @@ def test_imports():
     
     try:
         import fortifyroot
-        print("  ✓ import fortifyroot (compatibility)")
+        assert not hasattr(fortifyroot, "init")
+        assert not hasattr(fortifyroot, "configure")
+        print("  ✓ import fortifyroot namespace without legacy public API")
     except ImportError as e:
         errors.append(f"fortifyroot: {e}")
         print(f"  ✗ import fortifyroot: {e}")
+    except AssertionError as e:
+        errors.append(f"fortifyroot legacy API still exposed: {e}")
+        print(f"  ✗ fortifyroot namespace exposes legacy public API: {e}")
     
     try:
         from fortifyroot.ocelle import init, Instruments, task, workflow

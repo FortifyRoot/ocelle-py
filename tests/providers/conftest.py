@@ -23,7 +23,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.semconv._incubating.attributes import gen_ai_attributes as GenAI
 
-from fortifyroot import Instruments, init
+from fortifyroot.ocelle import Instruments, init
 from fortifyroot._internal.env_mapping import apply_env_var_mapping
 
 

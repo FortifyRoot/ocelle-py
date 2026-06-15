@@ -260,7 +260,7 @@ class TestEnvVarMappingOnImport:
 
 
 class TestOTelBSPScheduleDelayDefault:
-    """ST-10 MVP stopgap: fortifyroot.init() sets OTEL_BSP_SCHEDULE_DELAY=15000
+    """ST-10 MVP stopgap: ocelle.init() sets OTEL_BSP_SCHEDULE_DELAY=15000
     when unset, so direct-SDK retry chains buffer into one OTLP batch and
     produce a RetryLoopEvent via the per-batch detector.
 
@@ -272,7 +272,7 @@ class TestOTelBSPScheduleDelayDefault:
     """
 
     def test_default_set_when_env_unset(self):
-        """When OTEL_BSP_SCHEDULE_DELAY is not set, fortifyroot.init()
+        """When OTEL_BSP_SCHEDULE_DELAY is not set, ocelle.init()
         sets it to '15000'. Uses subprocess isolation so the
         ``setdefault`` side effect doesn't leak between tests."""
         import subprocess, sys, json
@@ -282,13 +282,13 @@ import os, json, sys
 # Ensure starting state is clean — no schedule-delay env var.
 os.environ.pop("OTEL_BSP_SCHEDULE_DELAY", None)
 
-# fortifyroot.init() does global OTel setup. We disable tracing so the
+# ocelle.init() does global OTel setup. We disable tracing so the
 # OTLP exporter doesn't try to connect; only the env-default side effect
 # matters for this test.
 os.environ["FORTIFYROOT_ENABLED"] = "false"
 
-import fortifyroot
-fortifyroot.init(app_name="test-bsp-default", api_endpoint="https://example.invalid", api_key="sk-test")
+import fortifyroot.ocelle as ocelle
+ocelle.init(app_name="test-bsp-default", api_endpoint="https://example.invalid", api_key="sk-test")
 
 result = {"after_init": os.environ.get("OTEL_BSP_SCHEDULE_DELAY", "<unset>")}
 print(json.dumps(result))
@@ -318,18 +318,18 @@ print(json.dumps(result))
 
     def test_customer_override_preserved(self):
         """When the customer has set OTEL_BSP_SCHEDULE_DELAY before
-        fortifyroot.init(), the customer value is preserved (we use
+        ocelle.init(), the customer value is preserved (we use
         ``os.environ.setdefault`` precisely so customer overrides win)."""
         import subprocess, sys, json
         script = '''
 import os, json
 
-# Customer pre-sets a different value before importing fortifyroot.
+# Customer pre-sets a different value before importing Ocelle.
 os.environ["OTEL_BSP_SCHEDULE_DELAY"] = "30000"
 os.environ["FORTIFYROOT_ENABLED"] = "false"
 
-import fortifyroot
-fortifyroot.init(app_name="test-bsp-customer-override", api_endpoint="https://example.invalid", api_key="sk-test")
+import fortifyroot.ocelle as ocelle
+ocelle.init(app_name="test-bsp-customer-override", api_endpoint="https://example.invalid", api_key="sk-test")
 
 result = {"after_init": os.environ.get("OTEL_BSP_SCHEDULE_DELAY", "<unset>")}
 print(json.dumps(result))
