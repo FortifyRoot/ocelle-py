@@ -1,8 +1,8 @@
 # FortifyRoot Provider Support
 
-This page is the current launch-certified support matrix for FortifyRoot SDK provider and framework instrumentation.
+This page is the current launch-certified support matrix for FortifyRoot Ocelle SDK provider and framework instrumentation.
 
-The MVP SDK vendors and exposes only launch-supported instrumentation packages. Planned rows below document roadmap/provider-role direction, not libraries currently exposed by `fortifyroot.Instruments` or SDK extras.
+The MVP SDK vendors and exposes only launch-supported instrumentation packages. Planned rows below document roadmap/provider-role direction, not libraries currently exposed by `fortifyroot.ocelle.Instruments` or SDK extras.
 
 ## Status Terms
 

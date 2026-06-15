@@ -1,4 +1,4 @@
-"""Internal modules for FortifyRoot SDK."""
+"""Internal modules for FortifyRoot Ocelle SDK."""
 
 from fortifyroot._internal.constants import (
     ATTRIBUTE_PREFIX_FORTIFYROOT,

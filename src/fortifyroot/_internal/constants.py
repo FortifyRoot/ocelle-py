@@ -1,4 +1,4 @@
-"""Internal constants for FortifyRoot SDK."""
+"""Internal constants for FortifyRoot Ocelle SDK."""
 
 # Attribute prefix for renaming traceloop.* -> fortifyroot.*
 ATTRIBUTE_PREFIX_TRACELOOP = "traceloop."

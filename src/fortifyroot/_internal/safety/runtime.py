@@ -134,7 +134,7 @@ class SafetyConfigClient:
             )
             if exc.code in AUTH_HTTP_STATUS_CODES:
                 raise SafetyConfigFetchError(
-                    f"FortifyRoot SDK auth warning: safety config fetch was rejected with HTTP status {exc.code}. "
+                    f"FortifyRoot Ocelle SDK auth warning: safety config fetch was rejected with HTTP status {exc.code}. "
                     "The SDK API key may be invalid, revoked, deleted, or missing permissions. "
                     "Safety config updates will not be applied until a valid SDK API key is configured.",
                     auth_status_code=exc.code,

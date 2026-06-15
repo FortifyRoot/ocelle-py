@@ -200,7 +200,7 @@ def test_safety_config_client_fetch_surfaces_auth_warning(status_code):
         with pytest.raises(
             SafetyConfigFetchError,
             match=(
-                "FortifyRoot SDK auth warning: safety config fetch was rejected "
+                "FortifyRoot Ocelle SDK auth warning: safety config fetch was rejected "
                 f"with HTTP status {status_code}"
             ),
         ) as exc_info:
@@ -430,7 +430,7 @@ def test_safety_runtime_dedupes_repeated_auth_fetch_warnings(caplog):
         stream_holdback_chars=128,
     )
     error = SafetyConfigFetchError(
-        "FortifyRoot SDK auth warning: safety config fetch was rejected with HTTP status 401.",
+        "FortifyRoot Ocelle SDK auth warning: safety config fetch was rejected with HTTP status 401.",
         auth_status_code=401,
     )
 
@@ -445,13 +445,13 @@ def test_safety_runtime_dedupes_repeated_auth_fetch_warnings(caplog):
         record
         for record in caplog.records
         if record.levelno == logging.WARNING
-        and "FortifyRoot SDK auth warning" in record.getMessage()
+        and "FortifyRoot Ocelle SDK auth warning" in record.getMessage()
     ]
     debug_records = [
         record
         for record in caplog.records
         if record.levelno == logging.DEBUG
-        and "FortifyRoot SDK auth warning" in record.getMessage()
+        and "FortifyRoot Ocelle SDK auth warning" in record.getMessage()
     ]
     assert len(warning_records) == 1
     assert len(debug_records) == 1

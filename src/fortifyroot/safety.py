@@ -1,4 +1,4 @@
-"""Public safety detector contracts for FortifyRoot SDK."""
+"""Public safety detector contracts for FortifyRoot Ocelle SDK."""
 
 from __future__ import annotations
 

@@ -211,6 +211,7 @@ Apache License, Version 2.0.
 
 Copyright Traceloop
 
-The FortifyRoot SDK is a wrapper around the traceloop-sdk package, providing
-a rebranded interface/enhancements for LLM observability. We gratefully
-acknowledge the Traceloop team for their excellent work on OpenLLMetry.
+FortifyRoot Ocelle is a Python SDK built with code derived from OpenLLMetry
+and traceloop-sdk. It provides FortifyRoot's product interface and enhancements
+for LLM observability, safety and auditability. We gratefully acknowledge the
+Traceloop team for their excellent work on OpenLLMetry.

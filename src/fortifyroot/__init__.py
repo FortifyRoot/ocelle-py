@@ -1,16 +1,16 @@
 """
-FortifyRoot SDK for LLM Observability.
+FortifyRoot Ocelle SDK for LLM Observability.
 
 FortifyRoot provides automatic instrumentation and observability for LLM applications.
-Simply call `fortifyroot.init()` to start capturing traces from supported LLM libraries
+Simply call `ocelle.init()` to start capturing traces from supported LLM libraries
 including OpenAI, Anthropic, Google GenAI, Bedrock, LangChain, LiteLLM, and LlamaIndex.
 
 Example:
     Basic usage::
 
-        import fortifyroot
+        import fortifyroot.ocelle as ocelle
 
-        fortifyroot.init(
+        ocelle.init(
             app_name="my-llm-app",
             api_key="fr-xxx",
         )
@@ -24,7 +24,7 @@ Example:
 
     Using decorators to trace custom functions::
 
-        from fortifyroot import workflow, task
+        from fortifyroot.ocelle import workflow, task
 
         @workflow(name="my_pipeline")
         def run_pipeline(input_text):
@@ -38,7 +38,7 @@ Example:
 
     Using the fluent configuration API::
 
-        fortifyroot.configure() \\
+        ocelle.configure() \\
             .app_name("my-app") \\
             .api_key("fr-xxx") \\
             .trace_content(False) \\

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script to verify all FortifyRoot SDK imports work correctly.
+Test script to verify all FortifyRoot Ocelle SDK imports work correctly.
 
 Run this AFTER pip install -e . to verify everything is set up correctly.
 
@@ -15,7 +15,7 @@ def test_imports():
     errors = []
     
     print("=" * 60)
-    print("FortifyRoot SDK Import Test")
+    print("FortifyRoot Ocelle SDK Import Test")
     print("=" * 60)
     print(f"Python: {sys.executable}")
     print(f"Version: {sys.version}")
@@ -183,22 +183,36 @@ def test_imports():
     
     print()
     
-    # Test 4: FortifyRoot public API
-    print("Testing FortifyRoot public API...")
+    # Test 4: FortifyRoot Ocelle public API
+    print("Testing FortifyRoot Ocelle public API...")
+    
+    try:
+        import fortifyroot.ocelle as ocelle
+        print("  ✓ import fortifyroot.ocelle as ocelle")
+    except ImportError as e:
+        errors.append(f"fortifyroot.ocelle: {e}")
+        print(f"  ✗ import fortifyroot.ocelle: {e}")
+    
+    try:
+        import ocelle
+        print("  ✓ import ocelle")
+    except ImportError as e:
+        errors.append(f"ocelle: {e}")
+        print(f"  ✗ import ocelle: {e}")
     
     try:
         import fortifyroot
-        print("  ✓ import fortifyroot")
+        print("  ✓ import fortifyroot (compatibility)")
     except ImportError as e:
         errors.append(f"fortifyroot: {e}")
         print(f"  ✗ import fortifyroot: {e}")
     
     try:
-        from fortifyroot import init, Instruments, task, workflow
-        print("  ✓ fortifyroot.init, Instruments, task, workflow")
+        from fortifyroot.ocelle import init, Instruments, task, workflow
+        print("  ✓ fortifyroot.ocelle init, Instruments, task, workflow")
     except ImportError as e:
-        errors.append(f"fortifyroot API: {e}")
-        print(f"  ✗ fortifyroot public API: {e}")
+        errors.append(f"fortifyroot.ocelle API: {e}")
+        print(f"  ✗ fortifyroot.ocelle public API: {e}")
     
     print()
     print("=" * 60)

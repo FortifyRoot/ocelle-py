@@ -1,9 +1,9 @@
-# FortifyRoot SDK – Developer Guide (DEV.md)
+# FortifyRoot Ocelle SDK – Developer Guide (DEV.md)
 
 This document is intended for FortifyRoot maintainers and contributors.
 It describes how to set up a local development environment, manage the
 FortifyRoot fork of OpenLLMetry (Traceloop), vendor OpenLLMetry into the
-FortifyRoot SDK, and work effectively with Poetry and VS Code.
+FortifyRoot Ocelle SDK, and work effectively with Poetry and VS Code.
 
 This file is internal-facing and intentionally separate from README.md.
 
@@ -59,7 +59,7 @@ Typical layout:
 ```
 <workspace-root>/
 ├── fr-openllmetry-py/
-└── fortifyroot-sdk-py/
+└── ocelle-py/
 ```
 
 ---
@@ -111,11 +111,11 @@ git push origin fr-v0.50.2.0
 
 ---
 
-## 4. FortifyRoot SDK Setup
+## 4. FortifyRoot Ocelle SDK Setup
 
 ```bash
-git clone https://github.com/FortifyRoot/fortifyroot-sdk-py
-cd fortifyroot-sdk-py
+git clone https://github.com/FortifyRoot/ocelle-py
+cd ocelle-py
 deactivate || true
 rm -rf .venv
 poetry config virtualenvs.in-project true
@@ -175,7 +175,7 @@ Enable code command:
 Open project:
 
 ```bash
-cd fortifyroot-sdk-py
+cd ocelle-py
 code .
 ```
 

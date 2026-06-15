@@ -1,13 +1,13 @@
 [tool.poetry]
-name = "fortifyroot-sdk"
+name = "fortifyroot-ocelle"
 version = "0.1.0"
-description = "FortifyRoot SDK for LLM Observability"
+description = "FortifyRoot Ocelle SDK for LLM observability"
 authors = ["FortifyRoot <sdk@fortifyroot.com>"]
 license = "Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/fortifyroot/fortifyroot-sdk-py"
+repository = "https://github.com/FortifyRoot/ocelle-py"
 documentation = "https://docs.fortifyroot.com"
-keywords = ["llm", "genai", "observability", "tracing", "opentelemetry", "langchain", "openai", "anthropic"]
+keywords = ["ocelle", "llm", "genai", "observability", "tracing", "opentelemetry", "langchain", "openai", "anthropic"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -25,7 +25,10 @@ include = [
     { path = "CHANGELOG.md", format = "sdist" },
     { path = "LICENSE", format = "sdist" },
 ]
-packages = [{ include = "fortifyroot", from = "src" }]
+packages = [
+    { include = "fortifyroot", from = "src" },
+    { include = "ocelle", from = "src" },
+]
 
 # =============================================================================
 # PRODUCTION DEPENDENCIES
@@ -95,7 +98,7 @@ inflection = ">=0.5.1,<0.6.0"
 
 # -------------------------------------------------------------------------
 # Optional instrumented libraries (installed only via extras)
-# e.g. pip install fortifyroot-sdk[openai]  or  fortifyroot-sdk[bedrock]
+# e.g. pip install fortifyroot-ocelle[openai]  or  fortifyroot-ocelle[bedrock]
 # NOT installed by default.  Each maps to a [tool.poetry.extras] group.
 # Hard runtime deps of specific instrumentations (e.g. tokenizers for
 # bedrock) are also declared here. NOTE: if an instrumentor's module-
@@ -167,7 +170,7 @@ tokenizers = ">=0.13.0"
 
 [tool.poetry.extras]
 datasets = ["pandas"]
-# Per-instrumentation extras — install via e.g. pip install fortifyroot-sdk[openai,anthropic]
+# Per-instrumentation extras — install via e.g. pip install fortifyroot-ocelle[openai,anthropic]
 anthropic = ["anthropic"]
 bedrock = ["boto3", "anthropic", "tokenizers"]
 google-generativeai = ["google-genai"]
@@ -233,7 +236,7 @@ filterwarnings = [
 
 [tool.coverage.run]
 branch = true
-source = ["src/fortifyroot"]
+source = ["src/fortifyroot", "src/ocelle"]
 omit = ["src/fortifyroot/_vendor/*"]
 
 [tool.coverage.report]

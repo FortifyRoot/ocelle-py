@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Vendor OpenLLMetry into FortifyRoot SDK
+# Vendor OpenLLMetry into FortifyRoot Ocelle SDK
 #
 # Usage:
-#   ./scripts/vendor.sh <path to openllmetry fork> <path to FR SDK> [<git tag of fork>]
+#   ./scripts/vendor.sh <path to openllmetry fork> <path to Ocelle SDK> [<git tag of fork>]
 #
 # This is a convenience wrapper around vendor_openllmetry.py
 #
@@ -13,7 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ $# -lt 2 ]]; then
-    echo "Usage: $0 <openllmetry-forked-repo-path> <fr-sdk-repo-path>"
+    echo "Usage: $0 <openllmetry-forked-repo-path> <ocelle-sdk-repo-path>"
     exit 1
 fi
 
@@ -27,7 +27,7 @@ if [[ ! -d "$OL_REPO/packages" ]]; then
 fi
 
 if [[ ! -d "$FR_SDK_REPO/src/fortifyroot" ]]; then
-    echo "ERROR: Invalid FortifyRoot SDK repo path: $FR_SDK_REPO"
+    echo "ERROR: Invalid FortifyRoot Ocelle SDK repo path: $FR_SDK_REPO"
     echo "       Expected to find src/fortifyroot/ directory"
     exit 1
 fi

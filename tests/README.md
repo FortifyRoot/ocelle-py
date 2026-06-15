@@ -1,6 +1,6 @@
-# FortifyRoot SDK Test Suite
+# FortifyRoot Ocelle SDK Test Suite
 
-This document is the high-level guide for everything under `tests/` in `fortifyroot-sdk-py`.
+This document is the high-level guide for everything under `tests/` in `ocelle-py`.
 It explains test structure, execution flow, CI behavior, and security expectations.
 
 ## Goals
@@ -55,7 +55,7 @@ Use these layers intentionally:
 
 1. Core tests (`tests/test_*.py`)
    - No provider network.
-   - Verify FortifyRoot SDK contract and internal behavior.
+   - Verify FortifyRoot Ocelle SDK contract and internal behavior.
 
 2. Provider mocked tests (`tests/openai/test_instrumentation.py`)
    - Patch provider SDK calls.
@@ -69,7 +69,7 @@ Use these layers intentionally:
 ## Local Setup
 
 ```bash
-cd "/Users/arnavdutta/FortifyRoot - Meta/fr-meta/fortifyroot-sdk-py"
+cd "/Users/arnavdutta/FortifyRoot - Meta/fr-meta/ocelle-py"
 poetry install --with test
 ```
 
