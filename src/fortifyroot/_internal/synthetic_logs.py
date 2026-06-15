@@ -1,4 +1,4 @@
-"""Helpers for emitting FortifyRoot-owned synthetic logs for finished spans."""
+"""Helpers for emitting FortifyRoot Ocelle synthetic logs for finished spans."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def emit_synthetic_span_log(span: ReadableSpan) -> None:
         with trace.use_span(NonRecordingSpan(span_context), end_on_exit=False):
             _SYNTHETIC_LOGGER.log(
                 level,
-                "FortifyRoot synthetic span log",
+                "FortifyRoot Ocelle synthetic span log",
                 extra=payload,
             )
     except Exception:

@@ -393,7 +393,7 @@ class TestInitOptionalPaths:
         }
 
     def test_init_requires_auth_for_default_managed_fortifyroot_exports(self):
-        """Test that hosted FortifyRoot exports fail fast without auth."""
+        """Test that hosted FortifyRoot Ocelle exports fail fast without auth."""
         from fortifyroot.ocelle import init
 
         with (
@@ -403,7 +403,7 @@ class TestInitOptionalPaths:
         ):
             with pytest.raises(
                 ValueError,
-                match="default FortifyRoot traces, metrics export",
+                match="default FortifyRoot Ocelle traces, metrics export",
             ):
                 init(app_name="fortifyroot-test")
 
@@ -412,7 +412,7 @@ class TestInitOptionalPaths:
         runtime_mock.assert_not_called()
 
     def test_init_rejects_x_api_key_as_managed_export_auth(self):
-        """Test that managed FortifyRoot OTLP export requires Authorization auth."""
+        """Test that managed FortifyRoot Ocelle OTLP export requires Authorization auth."""
         from fortifyroot.ocelle import init
 
         with (
@@ -422,7 +422,7 @@ class TestInitOptionalPaths:
         ):
             with pytest.raises(
                 ValueError,
-                match="default FortifyRoot traces, metrics export",
+                match="default FortifyRoot Ocelle traces, metrics export",
             ):
                 init(
                     app_name="fortifyroot-test",
@@ -610,7 +610,7 @@ class TestInitOptionalPaths:
         assert kwargs["logging_exporter"] is created_logging_exporter
 
     def test_init_requires_auth_for_managed_fortifyroot_metrics_endpoint(self):
-        """Test that FortifyRoot metrics export requires auth even when traces go elsewhere."""
+        """Test that FortifyRoot Ocelle metrics export requires auth even when traces go elsewhere."""
         from fortifyroot.ocelle import init
 
         with mock.patch.dict(
@@ -629,7 +629,7 @@ class TestInitOptionalPaths:
             ):
                 with pytest.raises(
                     ValueError,
-                    match="default FortifyRoot metrics export",
+                    match="default FortifyRoot Ocelle metrics export",
                 ):
                     init(
                         app_name="fortifyroot-test",
@@ -1269,7 +1269,7 @@ class TestValidateDefaultExportAuth:
     """Tests for _validate_default_export_auth edge cases."""
 
     def test_requires_auth_for_managed_fortifyroot_logging_endpoint(self):
-        """Test that FortifyRoot logging export requires auth (line 343 coverage)."""
+        """Test that FortifyRoot Ocelle logging export requires auth."""
         from fortifyroot.ocelle import init
 
         with mock.patch.dict(
@@ -1288,7 +1288,7 @@ class TestValidateDefaultExportAuth:
             ):
                 with pytest.raises(
                     ValueError,
-                    match="default FortifyRoot.*logs export",
+                    match="default FortifyRoot Ocelle.*logs export",
                 ):
                     init(
                         app_name="fortifyroot-test",
