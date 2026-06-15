@@ -493,7 +493,7 @@ def test_logging_enabled_emits_synthetic_log_for_finished_span(
 
     synthetic_log_mock.assert_called_once()
     assert synthetic_log_mock.call_args.args[0] == logging.INFO
-    assert synthetic_log_mock.call_args.args[1] == "FortifyRoot synthetic span log"
+    assert synthetic_log_mock.call_args.args[1] == "FortifyRoot Ocelle synthetic span log"
 
     payload = synthetic_log_mock.call_args.kwargs["extra"]
     assert payload["fortifyroot.synthetic_log"] is True

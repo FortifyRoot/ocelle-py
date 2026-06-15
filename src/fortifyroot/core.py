@@ -466,7 +466,7 @@ def _validate_default_export_auth(
         joined_signals = ", ".join(missing_signals)
         raise ValueError(
             "FortifyRoot API key or explicit export headers are required for "
-            f"default FortifyRoot {joined_signals} export"
+            f"default FortifyRoot Ocelle {joined_signals} export"
         )
 
 
