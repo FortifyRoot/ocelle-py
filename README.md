@@ -4,6 +4,8 @@ FortifyRoot Ocelle is a Python SDK for LLM observability, safety, and auditabili
 
 ## Installation
 
+Ocelle supports Python 3.10 and newer.
+
 ```bash
 pip install fortifyroot-ocelle
 ```
