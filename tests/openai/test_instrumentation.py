@@ -24,6 +24,9 @@ from fortifyroot._vendor.opentelemetry.instrumentation.fortifyroot import (
 from fortifyroot._vendor.opentelemetry.instrumentation.openai.shared.config import (
     Config as OpenAIConfig,
 )
+from fortifyroot._vendor.opentelemetry.instrumentation.openai.retry_handler import (
+    _extract_usage_from_body,
+)
 from fortifyroot._vendor.opentelemetry.instrumentation.openai.utils import (
     should_send_prompts,
 )
@@ -150,6 +153,50 @@ def _content_attr_keys() -> set[str]:
 
 def _assert_no_content_attrs(span) -> None:
     assert all(key not in span.attributes for key in _content_attr_keys())
+
+
+class _FakeHTTPResponse:
+    def __init__(self, body: dict):
+        self._body = body
+
+    def json(self) -> dict:
+        return self._body
+
+
+class _FakeSpan:
+    def __init__(self):
+        self.attributes: dict[str, object] = {}
+
+    def set_attribute(self, key: str, value: object) -> None:
+        self.attributes[key] = value
+
+
+def test_retry_attempt_extracts_cache_tokens_from_response_body():
+    span = _FakeSpan()
+
+    _extract_usage_from_body(
+        span,
+        _FakeHTTPResponse(
+            {
+                "id": "chatcmpl-cache-test",
+                "model": "gpt-4o-mini",
+                "usage": {
+                    "prompt_tokens": 2909,
+                    "completion_tokens": 8,
+                    "total_tokens": 2917,
+                    "prompt_tokens_details": {
+                        "cached_tokens": 2816,
+                        "audio_tokens": 0,
+                    },
+                },
+            }
+        ),
+    )
+
+    assert span.attributes[GenAI.GEN_AI_USAGE_INPUT_TOKENS] == 2909
+    assert span.attributes[GenAI.GEN_AI_USAGE_OUTPUT_TOKENS] == 8
+    assert span.attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 2917
+    assert span.attributes[SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS] == 2816
 
 
 def test_chat_completion_creates_span(init_openai_sdk, span_exporter):
