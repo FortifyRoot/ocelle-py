@@ -105,6 +105,31 @@ class TestEnvVarMapping:
             assert os.environ.get("TRACELOOP_API_KEY") is None
             assert os.environ.get("TRACELOOP_BASE_URL") is None
 
+    def test_metrics_mapping_requires_fortifyroot_gate(self):
+        """TRACELOOP_METRICS_ENABLED alone is scrubbed; FR gate is load-bearing."""
+        from fortifyroot._internal.env_mapping import apply_env_var_mapping
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "TRACELOOP_METRICS_ENABLED": "false",
+            },
+            clear=True,
+        ):
+            apply_env_var_mapping()
+            assert os.environ.get("TRACELOOP_METRICS_ENABLED") is None
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FORTIFYROOT_METRICS_ENABLED": "false",
+                "TRACELOOP_METRICS_ENABLED": "true",
+            },
+            clear=True,
+        ):
+            apply_env_var_mapping()
+            assert os.environ.get("TRACELOOP_METRICS_ENABLED") == "false"
+
 
 class TestFRSpecificEnvVars:
     """Tests for FR-only env vars (no TL equivalent) declared in env_mapping."""
