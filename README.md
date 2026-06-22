@@ -23,8 +23,9 @@ pip install "fortifyroot-ocelle[openai,anthropic,langchain]"
 import fortifyroot.ocelle as ocelle
 
 ocelle.init(
-    app_name="my-llm-app",
-    api_key="fr-xxx",
+    app_name="my-llm-app",  # any name you choose for this service
+    api_key="fr_sk_...",
+    resource_attributes={"environment": "dev"},  # dev / prod / testing — or any label you choose
 )
 
 import openai
@@ -89,7 +90,7 @@ from fortifyroot.ocelle import Instruments
 
 ocelle.init(
     app_name="my-llm-app",
-    api_key="fr-xxx",
+    api_key="fr_sk_...",
     api_endpoint="https://api.fortifyroot.com",
     trace_content=True,
     instruments={Instruments.OPENAI, Instruments.LANGCHAIN},
@@ -104,7 +105,7 @@ from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
 
 ocelle.configure() \
     .app_name("my-llm-app") \
-    .api_key("fr-xxx") \
+    .api_key("fr_sk_...") \
     .trace_content(False) \
     .sampler(TraceIdRatioBased(0.1)) \
     .init()
@@ -119,7 +120,7 @@ from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
 
 ocelle.init(
     app_name="my-app",
-    api_key="fr-xxx",
+    api_key="fr_sk_...",
     sampler=TraceIdRatioBased(0.1),
 )
 
@@ -134,7 +135,7 @@ def span_callback(span):
 
 ocelle.init(
     app_name="my-app",
-    api_key="fr-xxx",
+    api_key="fr_sk_...",
     span_postprocess_callback=span_callback,
 )
 ```
@@ -172,7 +173,7 @@ Attach custom properties to traces for filtering and correlation:
 ```python
 import fortifyroot.ocelle as ocelle
 
-ocelle.init(app_name="my-app", api_key="fr-xxx")
+ocelle.init(app_name="my-app", api_key="fr_sk_...")
 
 ocelle.set_association_properties({
     "user_id": "user_12345",
@@ -196,7 +197,7 @@ import fortifyroot.ocelle as ocelle
 
 ocelle.init(
     app_name="my-app",
-    api_key="fr-xxx",
+    api_key="fr_sk_...",
     trace_content=False,
 )
 ```
