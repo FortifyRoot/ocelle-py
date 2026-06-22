@@ -12,14 +12,14 @@ Example:
         # Only instrument OpenAI and LangChain
         ocelle.init(
             app_name="my-app",
-            api_key="fr-xxx",
+            api_key="fr_sk_...",
             instruments={Instruments.OPENAI, Instruments.LANGCHAIN},
         )
 
         # Instrument everything except Bedrock
         ocelle.init(
             app_name="my-app",
-            api_key="fr-xxx",
+            api_key="fr_sk_...",
             block_instruments={Instruments.BEDROCK},
         )
 """

@@ -605,7 +605,7 @@ def init(
 
             ocelle.init(
                 app_name="my-llm-app",
-                api_key="fr-xxx",
+                api_key="fr_sk_...",
             )
 
         With specific instruments::
@@ -614,7 +614,7 @@ def init(
 
             ocelle.init(
                 app_name="my-llm-app",
-                api_key="fr-xxx",
+                api_key="fr_sk_...",
                 instruments={Instruments.OPENAI, Instruments.LANGCHAIN},
             )
 
@@ -622,7 +622,7 @@ def init(
 
             ocelle.init(
                 app_name="my-llm-app",
-                api_key="fr-xxx",
+                api_key="fr_sk_...",
                 trace_content=False,
             )
 
@@ -632,7 +632,7 @@ def init(
 
             ocelle.init(
                 app_name="my-llm-app",
-                api_key="fr-xxx",
+                api_key="fr_sk_...",
                 sampler=TraceIdRatioBased(0.1),  # Sample 10% of traces
             )
 
@@ -644,7 +644,7 @@ def init(
 
             ocelle.init(
                 app_name="my-llm-app",
-                api_key="fr-xxx",
+                api_key="fr_sk_...",
                 processors=[console_processor],
             )
 
@@ -656,7 +656,7 @@ def init(
 
             ocelle.init(
                 app_name="my-llm-app",
-                api_key="fr-xxx",
+                api_key="fr_sk_...",
                 span_postprocess_callback=span_callback,
             )
     """
@@ -929,7 +929,7 @@ def set_association_properties(properties: Dict) -> None:
 
             import fortifyroot.ocelle as ocelle
 
-            ocelle.init(app_name="my-app", api_key="fr-xxx")
+            ocelle.init(app_name="my-app", api_key="fr_sk_...")
 
             # Set properties that will be attached to all subsequent spans
             ocelle.set_association_properties({
@@ -964,7 +964,7 @@ class FortifyRootConfig:
             # Fluent API
             ocelle.configure() \\
                 .app_name("my-llm-app") \\
-                .api_key("fr-xxx") \\
+                .api_key("fr_sk_...") \\
                 .trace_content(False) \\
                 .sampler(TraceIdRatioBased(0.1)) \\
                 .init()
@@ -972,7 +972,7 @@ class FortifyRootConfig:
             # Equivalent to:
             ocelle.init(
                 app_name="my-llm-app",
-                api_key="fr-xxx",
+                api_key="fr_sk_...",
                 trace_content=False,
                 sampler=TraceIdRatioBased(0.1),
             )
@@ -1154,7 +1154,7 @@ def configure() -> FortifyRootConfig:
 
             ocelle.configure() \\
                 .app_name("my-app") \\
-                .api_key("fr-xxx") \\
+                .api_key("fr_sk_...") \\
                 .trace_content(False) \\
                 .init()
 
