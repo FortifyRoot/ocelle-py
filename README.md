@@ -50,6 +50,22 @@ import ocelle
 
 The root `fortifyroot` package is reserved for internal namespaces such as vendored instrumentation. Public SDK code should use `fortifyroot.ocelle` or the `ocelle` convenience alias.
 
+## Network Requirements
+
+If your app runs in a private subnet, VPC, Kubernetes cluster, or locked-down CI/runtime, allow outbound HTTPS egress on TCP 443 to `api.fortifyroot.com`.
+
+Ocelle exports telemetry over OTLP/HTTP to:
+
+- `https://api.fortifyroot.com/v1/traces`
+- `https://api.fortifyroot.com/v1/metrics`
+- `https://api.fortifyroot.com/v1/logs`
+
+If safety enforcement is enabled with `config_profile_id`, the SDK also polls:
+
+- `https://api.fortifyroot.com/v1/sdk/config/{config_profile_id}`
+
+No inbound firewall rule is required. Hosted FortifyRoot usage does not require opening OTLP ports `4317` or `4318`; those are local/internal listener ports. Your workload still needs separate egress to whichever LLM providers it calls.
+
 ## Auto-Instrumented LLM Libraries
 
 The MVP SDK vendors and exposes the following supported instrumentation packages:
