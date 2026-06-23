@@ -11,6 +11,7 @@ import logging
 import os
 import platform
 import sys
+import uuid
 from urllib.parse import urlsplit
 from typing import Callable, Dict, List, Optional, Set, TypedDict, cast
 
@@ -64,11 +65,60 @@ logger = logging.getLogger(__name__)
 # Default API endpoint for FortifyRoot
 DEFAULT_API_ENDPOINT = "https://api.fortifyroot.com"
 AUTHORIZATION_HEADER = "Authorization"
+MIN_MANAGED_METRICS_EXPORT_INTERVAL_MS = 60000
+_PROCESS_SERVICE_INSTANCE_ID: Optional[str] = None
 SDK_METADATA_HEADERS = {
     FORTIFYROOT_SDK_VERSION_HEADER.lower(),
     FORTIFYROOT_SDK_LANGUAGE_HEADER.lower(),
     FORTIFYROOT_SDK_LANGUAGE_VERSION_HEADER.lower(),
 }
+
+
+def _get_process_service_instance_id() -> str:
+    """Return a stable random service.instance.id for this Python process."""
+    global _PROCESS_SERVICE_INSTANCE_ID
+    if _PROCESS_SERVICE_INSTANCE_ID is None:
+        _PROCESS_SERVICE_INSTANCE_ID = str(uuid.uuid4())
+    return _PROCESS_SERVICE_INSTANCE_ID
+
+
+def _otel_resource_attributes_has_key(key: str) -> bool:
+    raw = os.getenv("OTEL_RESOURCE_ATTRIBUTES", "")
+    for item in raw.split(","):
+        name, sep, _ = item.partition("=")
+        if sep and name.strip() == key:
+            return True
+    return False
+
+
+def _ensure_default_service_instance_id(resource_attributes: Dict) -> None:
+    """Inject service.instance.id unless explicit resource/env attrs provide it."""
+    if "service.instance.id" in resource_attributes:
+        return
+    if _otel_resource_attributes_has_key("service.instance.id"):
+        return
+    resource_attributes["service.instance.id"] = _get_process_service_instance_id()
+
+
+def _clamp_managed_metrics_export_interval() -> None:
+    """Clamp only an explicit env override; the OTel default is already 60000ms."""
+    raw = os.getenv("OTEL_METRIC_EXPORT_INTERVAL", "").strip()
+    if not raw:
+        return
+    try:
+        interval_ms = int(raw)
+    except (TypeError, ValueError):
+        return
+    if interval_ms >= MIN_MANAGED_METRICS_EXPORT_INTERVAL_MS:
+        return
+    os.environ["OTEL_METRIC_EXPORT_INTERVAL"] = str(MIN_MANAGED_METRICS_EXPORT_INTERVAL_MS)
+    logger.warning(
+        "OTEL_METRIC_EXPORT_INTERVAL=%dms is below FortifyRoot's managed metrics "
+        "minimum of %dms; using %dms",
+        interval_ms,
+        MIN_MANAGED_METRICS_EXPORT_INTERVAL_MS,
+        MIN_MANAGED_METRICS_EXPORT_INTERVAL_MS,
+    )
 
 
 def _resolve_api_endpoint(value: str) -> str:
@@ -791,6 +841,8 @@ def init(
         if shorthand in resource_attributes and canonical not in resource_attributes:
             resource_attributes[canonical] = resource_attributes.pop(shorthand)
 
+    _ensure_default_service_instance_id(resource_attributes)
+
     # Inject FortifyRoot Ocelle SDK version into resource attributes
     resource_attributes[FORTIFYROOT_SDK_VERSION_ATTRIBUTE] = __version__
 
@@ -824,6 +876,8 @@ def init(
         final_processors = [AttributeRenamingProcessor(default_processor)]
 
     metrics_enabled = _is_enabled_from_env("FORTIFYROOT_METRICS_ENABLED", True)
+    if metrics_enabled:
+        _clamp_managed_metrics_export_interval()
 
     # FIX: When we create a default processor (final_processors), Traceloop interprets
     # this as a "custom pipeline" and requires a matching metrics_exporter.
