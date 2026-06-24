@@ -63,7 +63,7 @@ Reason: both tests exercise the same HTTP request shape and only validate differ
 ## Local Setup
 
 ```bash
-cd "/Users/arnavdutta/FortifyRoot - Meta/fr-meta/ocelle-py"
+# from the ocelle-py repo root
 poetry install --with test
 ```
 
