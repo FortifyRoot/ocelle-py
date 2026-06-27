@@ -49,9 +49,9 @@ CONTENT_KEYS = PROMPT_KEYS | COMPLETION_KEYS
 # Mock safety configuration
 # ---------------------------------------------------------------------------
 
-# Realistic rules matching the proto SafetyRule structure from
-# fr-proto/proto/config/v1/config.proto.  Used to test the full safety
-# pipeline: init() -> provider call (VCR) -> safety engine -> masked spans.
+# Realistic rules matching the backend SDK config SafetyRule structure. Used to
+# test the full safety pipeline: init() -> provider call (VCR) -> safety engine
+# -> masked spans.
 #
 # Masking replacement is NOT a rule field — the engine always computes it as
 # [<Category>.<RuleName>], e.g. [PII.email-detector].
@@ -99,7 +99,7 @@ def mock_safety_rules() -> list[dict[str, Any]]:
 
 
 class _NoFortifyRootSpanExporter(InMemorySpanExporter):
-    """ST-10.4 (2026-05-17): filter ST-10.4 retry_attempt sibling
+    """FortifyRoot retry-attempt (2026-05-17): filter FortifyRoot retry-attempt retry_attempt sibling
     spans (role=retry_attempt) from upstream provider-test exporter.
     Role-based, NOT name-prefix-based, so legitimate
     ``fortifyroot.litellm.safety`` etc. spans that tests actually

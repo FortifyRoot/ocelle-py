@@ -503,8 +503,7 @@ def test_configure_global_safety_runtime_skips_when_endpoint_is_not_fortifyroot(
     [
         (FORTIFYROOT_API_BASE_URL, True),
         ("https://api.fortifyroot.com/", True),
-        ("https://dev-api.fortifyroot.com", True),
-        ("https://staging-api.fortifyroot.com", True),
+        ("https://tenant.api.fortifyroot.com", True),
         ("http://localhost:8080", True),
         ("http://127.0.0.1:8080", True),
         ("http://[::1]:8080", True),

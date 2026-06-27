@@ -5,7 +5,7 @@ It describes how to set up a local development environment, manage the
 FortifyRoot fork of OpenLLMetry (Traceloop), vendor OpenLLMetry into the
 FortifyRoot Ocelle SDK, and work effectively with Poetry and VS Code.
 
-This file is internal-facing and intentionally separate from README.md.
+This file is maintainer-facing and intentionally separate from README.md.
 
 ---
 

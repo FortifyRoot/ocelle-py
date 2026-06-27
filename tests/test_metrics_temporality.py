@@ -1,4 +1,4 @@
-"""Regression tests for the OTLP metrics temporality pin (Issue ST-8 I1).
+"""Regression tests for the OTLP metrics temporality pin.
 
 Context: OpenTelemetry Python's OTLPMetricExporter (both HTTP and gRPC
 variants) defaults ``preferred_temporality`` to ``DELTA`` for Counter,
@@ -6,9 +6,8 @@ Histogram, and ObservableCounter. Prometheus and Grafana Mimir — which
 back FortifyRoot's customer-facing ``SearchMetrics`` / ``GetMetricStats``
 query APIs — reject DELTA for those instrument types with HTTP 500
 "invalid temporality and type combination" and drop the data point. The
-result was a silent, end-to-end metric ingestion failure that went
-undetected until ST-8 went to exercise ``SearchMetrics`` with SDK-emitted
-data.
+result was a silent, end-to-end metric ingestion failure that surfaced
+when ``SearchMetrics`` was exercised with SDK-emitted data.
 
 Fix (in ``fortifyroot.core``): ``_init_default_metrics_exporter`` now
 builds a ``preferred_temporality`` mapping via
@@ -18,11 +17,9 @@ gRPC insecure via scheme=``grpc``, gRPC secure via scheme=``grpcs``,
 fallback gRPC for unknown schemes).
 
 These tests lock the fix in place so a future refactor cannot silently
-regress back to the library default. If a legitimate reason arises to
-relax the CUMULATIVE pin, the assertion below must be updated
-deliberately — with a new log entry in ``fr-system-tests/docs/development/
-ai-logs/st_phase_8.txt`` explaining why, because Prometheus-backed query
-paths will break without it.
+regress back to the library default. If a legitimate reason arises to relax
+the CUMULATIVE pin, update the assertion deliberately and document why,
+because Prometheus-backed query paths will break without it.
 """
 
 from __future__ import annotations
@@ -201,8 +198,7 @@ class TestRealExporterHasCumulativeTemporality:
                 f"{instrument_cls.__name__} temporality on live "
                 f"{type(exporter).__name__} is {pref[instrument_cls]}, "
                 f"expected CUMULATIVE. Prometheus/Mimir-backed query APIs "
-                f"will drop data points silently — see ST-8 I1 in "
-                f"st_phase_8.txt."
+                f"will drop data points silently."
             )
 
     def test_live_http_exporter_with_auth_header_preserves_temporality(self):

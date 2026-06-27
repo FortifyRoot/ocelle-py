@@ -285,15 +285,12 @@ class TestEnvVarMappingOnImport:
 
 
 class TestOTelBSPScheduleDelayDefault:
-    """ST-10 MVP stopgap: ocelle.init() sets OTEL_BSP_SCHEDULE_DELAY=15000
+    """ocelle.init() sets OTEL_BSP_SCHEDULE_DELAY=15000
     when unset, so direct-SDK retry chains buffer into one OTLP batch and
     produce a RetryLoopEvent via the per-batch detector.
 
-    See ``fr-backend/docs/development/RETRY_LOOP.md`` §1.1 (MVP scope
-    summary) for the customer-facing behaviour this default supports,
-    and ``ST-10-FOLLOWUP-cross-batch-retry-detection`` in
-    ``fr-system-tests/SYSTEM_TESTS_PLAN.md`` for the proper backend fix
-    that lets us revert this default later.
+    This supports the documented MVP retry-loop behavior until the backend
+    can aggregate retry attempts across OTLP batches.
     """
 
     def test_default_set_when_env_unset(self):
@@ -337,8 +334,8 @@ print(json.dumps(result))
         data = json.loads(json_line)
         assert data["after_init"] == "15000", (
             f"Expected OTEL_BSP_SCHEDULE_DELAY='15000' after init, got "
-            f"{data['after_init']!r}. ST-10 MVP stopgap regressed — see "
-            f"fortifyroot/core.py and RETRY_LOOP.md §1.1."
+            f"{data['after_init']!r}. The MVP retry-loop batching "
+            f"default regressed."
         )
 
     def test_customer_override_preserved(self):
