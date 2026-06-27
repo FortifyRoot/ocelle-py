@@ -18,10 +18,9 @@ from fortifyroot.core import (
 
 # Expected temporality mapping passed to every OTLP metrics exporter
 # construction — see `fortifyroot.core._cumulative_preferred_temporality`
-# and the Issue-I1 banner in st_phase_8.txt for why this must be
-# CUMULATIVE across the board. Computed once here so all nine existing
-# `metric_exporter_cls.assert_called_once_with(...)` sites stay consistent
-# if the mapping ever legitimately changes.
+# for why this must be CUMULATIVE across the board. Computed once here so
+# every `metric_exporter_cls.assert_called_once_with(...)` site stays
+# consistent if the mapping ever legitimately changes.
 _EXPECTED_TEMPORALITY = _cumulative_preferred_temporality()
 
 
@@ -300,7 +299,7 @@ class TestSafetyRuntimeBootstrap:
         with mock.patch.dict(
             os.environ,
             {
-                "FORTIFYROOT_BASE_URL": "https://dev-api.fortifyroot.com",
+                "FORTIFYROOT_BASE_URL": "https://tenant.api.fortifyroot.com",
                 "FORTIFYROOT_API_KEY": "env-key",
                 "FORTIFYROOT_CONFIG_PROFILE_ID": "cfg-env",
             },
@@ -315,7 +314,7 @@ class TestSafetyRuntimeBootstrap:
 
         runtime_mock.assert_called_once_with(
             enabled=True,
-            api_endpoint="https://dev-api.fortifyroot.com",
+            api_endpoint="https://tenant.api.fortifyroot.com",
             api_key="env-key",
             config_profile_id="cfg-env",
             poll_interval_seconds=60,

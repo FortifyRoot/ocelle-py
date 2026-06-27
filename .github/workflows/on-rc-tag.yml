@@ -1,17 +1,16 @@
 name: SDK rc tag — dispatch Tier 2
 
-# Per RELEASE_GATE.md §2.4 + §4.4. Triggered by:
+# Triggered by:
 #   1. Pushing an rc tag matching v-*-rc.* on this repo.
 #   2. workflow_dispatch with the rc_tag input (lets you re-run the gate
-#      after a manual dev-pin without cutting a new tag).
+#      without cutting a new tag).
 #
 # Body:
-#   1. Read fr-backend's env/targets.yaml via the GitHub API.
-#   2. Pre-flight: dev.image_tag must equal prod.image_tag (so the rc SDK
-#      is validated against the backend version customers actually run).
+#   1. Read the backend release target manifest via the GitHub API.
+#   2. Pre-flight: dev.image_tag must equal prod.image_tag.
 #      If they differ, FAIL FAST with an actionable error message.
-#   3. If they match (or prod is in `bootstrap` mode), dispatch
-#      event_type=sdk_rc to fr-system-tests with rc_tag in the payload.
+#   3. If they match (or prod is in `bootstrap` mode), dispatch the SDK rc
+#      validation event with rc_tag in the payload.
 
 on:
   push:
@@ -51,24 +50,20 @@ jobs:
           fi
           echo "rc_tag=$RC_TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Read fr-backend env/targets.yaml
+      - name: Read backend release target manifest
         id: targets
         env:
-          # fr-backend is private. Keep this read-only token separate from
-          # the write-capable repository_dispatch token below.
           GH_TOKEN: ${{ secrets.BACKEND_TARGETS_READ_TOKEN }}
         run: |
           set -euo pipefail
           if [[ -z "${GH_TOKEN:-}" ]]; then
-            echo "::error::BACKEND_TARGETS_READ_TOKEN secret is required to read fr-backend env/targets.yaml."
-            echo "::error::Add a fine-grained PAT with Contents: Read-only on FortifyRoot/fr-backend."
-            echo "::error::See fr-meta/docs/CICD_SETUP.md §5.3."
+            echo "::error::Repository secret BACKEND_TARGETS_READ_TOKEN is not configured."
             exit 1
           fi
-          # Read from `main` because that is the GitOps source of truth.
+          # Read from `main` because that is the release target source of truth.
           if ! gh api --method GET repos/FortifyRoot/fr-backend/contents/env/targets.yaml \
               -f ref=main --jq '.content' | base64 -d > targets.yaml; then
-            echo "::error::Could not fetch FortifyRoot/fr-backend env/targets.yaml from main"
+            echo "::error::Could not fetch the backend release target manifest from main."
             exit 1
           fi
           # `yq` (mikefarah/yq) is preinstalled on GitHub-hosted runners.
@@ -97,30 +92,22 @@ jobs:
             dev.image_tag  = $DEV
             prod.image_tag = $PROD
           Dev must match prod for SDK rc validation. To fix:
-            1. Open a PR on fr-backend that sets env/targets.yaml:
-                 dev.image_tag = $PROD
-            2. Merge it. deploy-dev.yml will roll dev-api back to '$PROD'
-               and run Tier 1.
-            3. Wait for Tier 1 green, then re-run THIS workflow via
-               workflow_dispatch with rc_tag = ${{ steps.vars.outputs.rc_tag }}.
+            1. Align the backend dev target with prod.image_tag ($PROD).
+            2. Wait for the dev deployment and validation gate to complete.
+            3. Re-run this workflow with rc_tag = ${{ steps.vars.outputs.rc_tag }}.
           EOF
             exit 1
           fi
           echo "Pre-flight OK — dev == prod == $DEV"
 
-      - name: Dispatch sdk_rc to fr-system-tests
+      - name: Dispatch SDK rc validation
         env:
-          # SYSTEM_TEST_DISPATCH_TOKEN is REQUIRED for cross-repo dispatch.
-          # GITHUB_TOKEN cannot fire `repository_dispatch` on a foreign repo.
-          # See CICD_SETUP.md §5.3.
           GH_TOKEN: ${{ secrets.SYSTEM_TEST_DISPATCH_TOKEN }}
           RC_TAG: ${{ steps.vars.outputs.rc_tag }}
         run: |
           set -euo pipefail
           if [[ -z "${GH_TOKEN:-}" ]]; then
-            echo "::error::SYSTEM_TEST_DISPATCH_TOKEN secret is required to dispatch sdk_rc to fr-system-tests."
-            echo "::error::Add a fine-grained PAT with Contents: Read and write on FortifyRoot/fr-system-tests."
-            echo "::error::See fr-meta/docs/CICD_SETUP.md §5.3."
+            echo "::error::Repository secret SYSTEM_TEST_DISPATCH_TOKEN is not configured."
             exit 1
           fi
           gh api -X POST \
@@ -128,4 +115,4 @@ jobs:
             -f event_type=sdk_rc \
             -F "client_payload[rc_tag]=${RC_TAG}" \
             -F "client_payload[repo]=${{ github.repository }}"
-          echo "sdk_rc dispatched. Watch fr-system-tests Actions for result."
+          echo "SDK rc validation dispatched."

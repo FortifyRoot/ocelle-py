@@ -794,22 +794,21 @@ def init(
     # May have been overridden by FORTIFYROOT_TRACE_CONTENT env above.
     os.environ["TRACELOOP_TRACE_CONTENT"] = str(trace_content).lower()
 
-    # ── OTel BatchSpanProcessor schedule_delay default (ST-10 MVP stopgap) ──
+    # OTel BatchSpanProcessor schedule_delay default for retry-loop detection.
     #
     # OpenTelemetry's BatchSpanProcessor reads OTEL_BSP_SCHEDULE_DELAY at
     # construction time (default = 5000 ms). With the upstream default,
     # any direct-SDK LLM retry chain whose total wall-clock exceeds ~5 s
     # (e.g. provider sends Retry-After: 10, customer has max_retries=4
     # with exponential backoff, slow-failing attempts) fragments its
-    # spans across multiple OTLP batches → fr-backend's
-    # ``proc_retry_detector.go`` is strictly per-batch and never sees ≥2
-    # sibling retry_attempt events together → silent RetryLoopEvent miss.
+    # spans across multiple OTLP batches. The backend retry-loop detector is
+    # per-batch in the MVP path and never sees multiple sibling retry_attempt
+    # events together, causing a silent RetryLoopEvent miss.
     # Per-attempt LLMUsageEvent extraction is unaffected.
     #
-    # The proper backend fix (DB-lookup cross-batch aggregator in
-    # proc_retry_detector) is deferred post-MVP as
-    # ``ST-10-FOLLOWUP-cross-batch-retry-detection``. As an MVP-side
-    # stopgap (kapil 2026-05-19), we widen the default OTel schedule
+    # The proper backend fix (a cross-batch retry aggregator) is deferred as
+    # ``cross-batch retry detection follow-up``. As an MVP-side
+    # stopgap (2026-05-19), we widen the default OTel schedule
     # delay to 15 s so nearly all real-world direct-SDK retry chains
     # (OpenAI / Anthropic max_retries up to 4-5 with typical
     # Retry-After ≤ 10 s) buffer into one OTLP batch and produce a
@@ -819,12 +818,9 @@ def init(
     # size (512). Customers who need a different value can override
     # via the standard OTel env var, which we respect via ``setdefault``.
     #
-    # See fr-backend/docs/development/RETRY_LOOP.md §1.1 for the full
-    # MVP-scope summary including the documented behaviour around
-    # disable_batch=True (which DISABLES RetryLoopEvent detection
-    # entirely because every span ships as its own OTLP batch — that
-    # is a documented MVP limitation pending the same backend
-    # follow-up).
+    # This also defines the documented behavior around disable_batch=True:
+    # RetryLoopEvent detection is disabled because every span ships as its
+    # own OTLP batch. That MVP limitation is pending the same backend follow-up.
     os.environ.setdefault("OTEL_BSP_SCHEDULE_DELAY", "15000")
 
     # Prepare resource attributes with FR SDK version

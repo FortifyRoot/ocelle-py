@@ -1,14 +1,15 @@
 # FortifyRoot Provider Support
 
-This page is the current launch-certified support matrix for FortifyRoot Ocelle SDK provider and framework instrumentation.
+This page is the current support matrix for FortifyRoot Ocelle SDK provider and framework instrumentation.
 
-The MVP SDK vendors and exposes only launch-supported instrumentation packages. Planned rows below document roadmap/provider-role direction, not libraries currently exposed by `fortifyroot.ocelle.Instruments` or SDK extras.
+The MVP SDK vendors and exposes only launch-supported instrumentation packages. Planned and mapper-supported rows below document roadmap/provider-role direction, not libraries currently exposed by `fortifyroot.ocelle.Instruments` or SDK extras.
 
 ## Status Terms
 
 | Status | Meaning |
 |---|---|
 | `live-tested` | Verified with live provider traffic in the launch validation suite. |
+| `opt-in-live-tested` | Covered by an opt-in live-dev test, but not part of the default fixture-mode launch gate. |
 | `fixture-tested` | Covered by recorded or deterministic test fixtures, but not claimed as live-tested in the launch matrix. |
 | `mapper-supported` | FortifyRoot recognizes the provider role, but full live coverage is not part of the current launch matrix. |
 | `planned` | Planned or broader-direction support; do not describe as launch-certified. |
@@ -32,8 +33,8 @@ Raw SDK/request values can differ from these roles. FortifyRoot keeps raw values
 | OpenAI | `live-tested` | Yes | Direct calls: none | Direct calls: `openai` | OpenAI-compatible routes can change routing/billing provider; see OpenRouter. |
 | Anthropic | `live-tested` | Yes | Direct calls: none | Direct calls: `anthropic` | Also appears as model provider for Claude models routed through OpenRouter or LiteLLM. |
 | Google GenAI | `live-tested` | Yes | Direct calls: none | Direct calls: `google` | Launch validation covers Gemini-style traffic. |
-| xAI | `live-tested` | Yes | Direct calls: none in current launch matrix | Direct calls: `xai`; OpenRouter-routed calls: `openrouter` | Recognized through OpenAI-compatible/OpenRouter paths and provider-role mapping; not a dedicated vendored instrument. |
-| AWS Bedrock | `live-tested` | Yes | `bedrock` where Bedrock is the platform route | `bedrock` where Bedrock pricing applies | Includes Bedrock-native and Bedrock-routed provider-role behavior in the launch validation path. |
+| xAI | `mapper-supported` | Yes, when inferred from model names or routed OpenAI-compatible telemetry | Direct calls: none in current launch matrix | Inferred from provider-role mapping when deterministic | Recognized through OpenAI-compatible/OpenRouter paths and provider-role mapping; not a dedicated vendored instrument. |
+| AWS Bedrock | `live-tested` | Yes | `bedrock` where Bedrock is the platform route | `bedrock` where Bedrock pricing applies | Includes Bedrock-native and third-party-on-Bedrock provider-role behavior in the launch validation path. |
 | Azure OpenAI | `mapper-supported` | Usually `openai` | `azure` | `azure` where Azure pricing applies | Recognized through the OpenAI-compatible instrumentation path and provider-role mapping; not a dedicated vendored instrument. |
 | Cohere | `planned` | Planned | Direct calls: none | Provider pricing when certified | Not bundled or exposed in the MVP SDK. |
 | Mistral AI | `planned` | Planned | Direct calls: none | Provider pricing when certified | Not bundled or exposed in the MVP SDK. |
@@ -51,7 +52,7 @@ Raw SDK/request values can differ from these roles. FortifyRoot keeps raw values
 
 | Provider | Current status | Routing provider behavior | Billing provider behavior | Notes |
 |---|---:|---|---|---|
-| OpenRouter | `live-tested` | `routing_provider=openrouter` when traffic is sent through OpenRouter. | `billing_provider=openrouter` when the route is identified and pricing data is available. | Model provider remains the underlying vendor, such as `anthropic`, `openai`, `google`, or `xai`. |
+| OpenRouter | `opt-in-live-tested` | `routing_provider=openrouter` when traffic is sent through OpenRouter and the route is detected. | `billing_provider=openrouter` when the route is identified and pricing data is available. | Model provider remains the underlying vendor, such as `anthropic`, `openai`, `google`, or `xai`. Routed OpenRouter cost checks are opt-in live-dev assertions, not part of the default fixture-mode gate. |
 | LiteLLM self-hosted | `live-tested` | `routing_provider=litellm`. | Defaults to the underlying model provider unless another routed billing provider is explicitly identified. | FortifyRoot does not infer LiteLLM Cloud billing from self-hosted LiteLLM traffic. |
 | LiteLLM Cloud | `planned` | Needs an explicit Cloud/self-hosted signal. | Planned; requires LiteLLM Cloud pricing and an org/config signal before `billing_provider=litellm` is emitted. | Do not describe LiteLLM Cloud billing as launch-certified. |
 | Azure | `mapper-supported` | `routing_provider=azure` for Azure-routed OpenAI traffic. | `billing_provider=azure` where Azure pricing applies. | Supported by provider-role mapping; validate live for launch claims. |
@@ -77,7 +78,7 @@ Vector database instrumentation is separate from LLM provider-role attribution a
 
 ## Caveats
 
-- This page is a launch-certified support matrix, not an exhaustive list of every library that can be imported or partially instrumented.
+- This page is a support matrix, not an exhaustive list of every library that can be imported or partially instrumented.
 - Provider-role behavior requires telemetry emitted by a current SDK and FortifyRoot service version. Older telemetry can lack newer role labels.
 - Pricing support depends on available pricing data and deterministic billing-provider identification.
 - LiteLLM Cloud billing is planned, not launch-certified.

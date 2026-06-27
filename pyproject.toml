@@ -92,7 +92,8 @@ wrapt = "^1.14.0"
 # TracerWrapper's auto-load path imports it even when the customer did
 # not install the ``[llamaindex]`` extra. Keeping it optional caused the
 # instrumentor to silently swallow ImportError and emit NO LlamaIndex
-# spans for the customer (see fr-system-tests ST-6 addendum 2, I2).
+# spans for the customer; keep it as a hard dependency while the vendored
+# LlamaIndex instrumentor is auto-loaded.
 # It's a 40 KB pure-Python package — cheap to always install.
 inflection = ">=0.5.1,<0.6.0"
 
