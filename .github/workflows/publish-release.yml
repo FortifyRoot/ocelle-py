@@ -1,29 +1,22 @@
 name: Publish to PyPI
 
-# Manual workflow_dispatch only.
-#
-# Body (in safe order — no user-supplied code runs until ALL pre-flight
-# checks pass):
-#   1. (T1.2) Validate rc_tag matches the strict regex.
-#   2. (T1.1) Resolve rc_tag → commit SHA via gh api WITHOUT checkout.
-#   3. (T1.1) Verify Tier-2 commit-status is green on that SHA.
-#   4. ONLY NOW: actions/checkout the validated ref.
-#   5. (T1.3) Pin pip-installed build deps to known-good versions.
-#   6. python -m build (runs the package's build hooks — first point at
-#      which user-controlled code executes on the runner).
-#   7. Assume AWS role via OIDC, fetch PyPI token from AWS SM.
-#   8. twine upload.
+# Manual workflow_dispatch only. The job validates the tag, checks the
+# SDK release-gate status on the resolved SHA, then checks out that SHA
+# and publishes with PyPI Trusted Publishing.
 
 on:
   workflow_dispatch:
     inputs:
-      rc_tag:
-        description: 'rc tag that already passed Tier 2 (e.g. v-1.2.0-rc.1)'
-        required: true
-      pypi_repository:
-        description: 'PyPI repository (pypi or testpypi)'
+      release_tag:
+        description: 'SDK release tag that passed the gate (e.g. v1.0.0rc1 or v1.0.0)'
         required: false
-        default: 'pypi'
+      rc_tag:
+        description: 'Deprecated alias for release_tag'
+        required: false
+      pypi_repository:
+        description: 'PyPI repository (testpypi for rc, pypi for final)'
+        required: false
+        default: 'testpypi'
 
 permissions:
   id-token: write
@@ -31,57 +24,69 @@ permissions:
 
 jobs:
   publish:
-    name: Publish ${{ inputs.rc_tag }} to ${{ inputs.pypi_repository }}
+    name: Publish ${{ inputs.release_tag || inputs.rc_tag }} to ${{ inputs.pypi_repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Requires the configured PyPI release environment approval.
-    environment: pypi
+    environment:
+      name: ${{ inputs.pypi_repository == 'testpypi' && 'testpypi' || 'pypi' }}
     steps:
-      # ---------------------------------------------------------------
-      # T1.2 — Validate the rc_tag input matches a strict pattern.
-      # Fails fast on typos / accidental misuse before anything else
-      # runs. Does not stop a determined insider but cuts off a class
-      # of accidental misuse and adds a defense-in-depth signal.
-      # ---------------------------------------------------------------
-      - name: Validate rc_tag pattern (T1.2)
+      - name: Validate release tag and target repository
+        id: tag
         env:
-          RC_TAG: ${{ inputs.rc_tag }}
+          RELEASE_TAG: ${{ inputs.release_tag || inputs.rc_tag }}
+          PYPI_REPOSITORY: ${{ inputs.pypi_repository }}
         run: |
           set -euo pipefail
-          if [[ ! "$RC_TAG" =~ ^v-[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]]; then
-            echo "::error::rc_tag '$RC_TAG' does not match the required pattern."
-            echo "::error::Expected: v-<MAJOR>.<MINOR>.<PATCH>-rc.<N>  (e.g. v-1.2.0-rc.1)"
+          if [[ -z "$RELEASE_TAG" ]]; then
+            echo "::error::release_tag is required."
             exit 1
           fi
-          echo "rc_tag pattern OK: $RC_TAG"
+          case "$PYPI_REPOSITORY" in
+            pypi|testpypi) ;;
+            *)
+              echo "::error::pypi_repository must be 'pypi' or 'testpypi'."
+              exit 1
+              ;;
+          esac
+          if [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+rc[0-9]+$ ]]; then
+            TAG_KIND="rc"
+          elif [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            TAG_KIND="final"
+          else
+            echo "::error::Tag '$RELEASE_TAG' must be vX.Y.ZrcN or vX.Y.Z."
+            exit 1
+          fi
+          if [[ "$TAG_KIND" == "rc" && "$PYPI_REPOSITORY" != "testpypi" ]]; then
+            echo "::error::RC tags may only publish to TestPyPI."
+            exit 1
+          fi
+          if [[ "$TAG_KIND" == "final" && "$PYPI_REPOSITORY" != "pypi" ]]; then
+            echo "::error::Final tags may only publish to PyPI."
+            exit 1
+          fi
+          VERSION="${RELEASE_TAG#v}"
+          {
+            echo "release_tag=$RELEASE_TAG"
+            echo "tag_kind=$TAG_KIND"
+            echo "version=$VERSION"
+          } >> "$GITHUB_OUTPUT"
 
-      # ---------------------------------------------------------------
-      # T1.1 (a) — Resolve rc_tag → commit SHA WITHOUT checkout.
-      # We use the GitHub API directly so no user-supplied code lands on
-      # the runner before the Tier-2 status gate has been evaluated.
-      # /commits/<ref> resolves both lightweight and annotated tags to
-      # the underlying commit SHA.
-      # ---------------------------------------------------------------
-      - name: Resolve rc_tag to commit SHA (T1.1a)
+      - name: Resolve release tag to commit SHA
         id: resolve
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RC_TAG: ${{ inputs.rc_tag }}
+          RELEASE_TAG: ${{ steps.tag.outputs.release_tag }}
         run: |
           set -euo pipefail
-          SHA="$(gh api "repos/${{ github.repository }}/commits/${RC_TAG}" --jq '.sha' 2>/dev/null || echo "")"
+          SHA="$(gh api "repos/${{ github.repository }}/commits/${RELEASE_TAG}" --jq '.sha' 2>/dev/null || echo "")"
           if [[ -z "$SHA" ]]; then
-            echo "::error::Could not resolve commit SHA for rc tag '$RC_TAG' (does it exist?)."
+            echo "::error::Could not resolve commit SHA for tag '$RELEASE_TAG'."
             exit 1
           fi
-          echo "rc_tag $RC_TAG → SHA $SHA"
+          echo "release tag $RELEASE_TAG resolves to SHA $SHA"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
-      # ---------------------------------------------------------------
-      # T1.1 (b) — Verify Tier-2 commit-status is green on that SHA,
-      # BEFORE checking out any code from the rc_tag ref.
-      # ---------------------------------------------------------------
-      - name: Validate Tier-2 commit-status (T1.1b — pre-checkout)
+      - name: Validate SDK release-gate commit status
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SHA: ${{ steps.resolve.outputs.sha }}
@@ -91,18 +96,12 @@ jobs:
           state="$(gh api "repos/${{ github.repository }}/commits/${SHA}/statuses" \
             --jq "[.[] | select(.context==\"$context\")] | sort_by(.updated_at) | last | .state // empty")"
           if [[ "$state" != "success" ]]; then
-            echo "::error::No green Tier 2 status on ${SHA} (got: '$state')."
-            echo "::error::Re-run on-rc-tag.yml or wait for it to finish first."
+            echo "::error::No green SDK release-gate status on ${SHA} (got: '${state}')."
+            echo "::error::Run the SDK release tag gate and wait for it to finish first."
             exit 1
           fi
-          echo "Tier 2 status: success on $SHA"
+          echo "SDK release-gate status is success on $SHA"
 
-      # ---------------------------------------------------------------
-      # All gates passed. NOW we can check out the rc_tag's code.
-      # We use the resolved SHA (not the symbolic tag) so a force-push
-      # to the tag between the gate check and the checkout cannot
-      # swap in different code (TOCTOU defense).
-      # ---------------------------------------------------------------
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.resolve.outputs.sha }}
@@ -111,50 +110,35 @@ jobs:
         with:
           python-version: '3.12'
 
-      # ---------------------------------------------------------------
-      # T1.3 — Pin Python build deps. Removes the "compromised dep on
-      # PyPI" attack path. Bump deliberately when a new minor lands.
-      # Also pin pip itself for reproducible resolver behaviour.
-      # ---------------------------------------------------------------
-      - name: Install pinned build deps (T1.3)
+      - name: Validate pyproject version matches tag
+        env:
+          EXPECTED_VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          actual="$(python -c 'import pathlib, tomllib; data = tomllib.loads(pathlib.Path("pyproject.toml").read_text()); print(data["tool"]["poetry"]["version"])')"
+          if [[ "$actual" != "$EXPECTED_VERSION" ]]; then
+            echo "::error::pyproject.toml version '$actual' does not match tag version '$EXPECTED_VERSION'."
+            exit 1
+          fi
+          echo "pyproject.toml version matches tag: $actual"
+
+      - name: Install pinned build deps
         run: |
           set -euo pipefail
           python -m pip install --upgrade 'pip==24.3.1'
-          pip install --no-deps 'build==1.2.2.post1' 'twine==6.1.0'
-          # Resolve the (pinned) transitive deps in a separate, deps-only step
-          # — keeps the top-level pin authoritative.
-          pip install 'build==1.2.2.post1' 'twine==6.1.0'
+          pip install 'build==1.2.2.post1'
 
       - name: Build distributions
         run: python -m build
 
-      - name: Assume AWS role via OIDC for PyPI token
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Publish accepted rc to TestPyPI
+        if: inputs.pypi_repository == 'testpypi'
+        # pypa/gh-action-pypi-publish release/v1 resolved 2026-06-30.
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b
         with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/fortifyroot-sdk-publish-oidc
-          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          repository-url: https://test.pypi.org/legacy/
 
-      - name: Fetch PyPI token from AWS SM
-        uses: aws-actions/aws-secretsmanager-get-secrets@v2
-        with:
-          secret-ids: |
-            PYPI,fr/release/pypi-token
-          parse-json-secrets: true
-
-      - name: twine upload
-        env:
-          TWINE_USERNAME: __token__
-        # The aws-secretsmanager-get-secrets action with `parse-json-secrets:
-        # true` and alias `PYPI,fr/release/pypi-token` exports each JSON key
-        # of the secret as `PYPI_<KEY>` in $GITHUB_ENV. So the secret
-        # JSON `{"PYPI_TOKEN": "..."}` becomes the env var `PYPI_PYPI_TOKEN`
-        # (same alias-prefix pattern used for `CLERK_CLERK_SECRET_KEY`
-        # elsewhere). Forward at shell level to keep static linters quiet.
-        run: |
-          set -euo pipefail
-          export TWINE_PASSWORD="$PYPI_PYPI_TOKEN"
-          if [[ "${{ inputs.pypi_repository }}" == "testpypi" ]]; then
-            twine upload --repository testpypi dist/*
-          else
-            twine upload dist/*
-          fi
+      - name: Publish final release to PyPI
+        if: inputs.pypi_repository != 'testpypi'
+        # pypa/gh-action-pypi-publish release/v1 resolved 2026-06-30.
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b

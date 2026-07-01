@@ -1,109 +1,67 @@
-name: SDK rc tag — dispatch Tier 2
+name: SDK release tag gate
 
-# Triggered by:
-#   1. Pushing an rc tag matching v-*-rc.* on this repo.
-#   2. workflow_dispatch with the rc_tag input (lets you re-run the gate
-#      without cutting a new tag).
-#
-# Body:
-#   1. Read the backend release target manifest via the GitHub API.
-#   2. Pre-flight: dev.image_tag must equal prod.image_tag.
-#      If they differ, FAIL FAST with an actionable error message.
-#   3. If they match (or prod is in `bootstrap` mode), dispatch the SDK rc
-#      validation event with rc_tag in the payload.
+# Dispatches the private SDK release gate for PEP 440 rc and final tags.
+# The private receiver treats the payload as informational, resolves the tag
+# against FortifyRoot/ocelle-py, and performs backend target preflight before
+# it fetches live-test secrets.
 
 on:
   push:
     tags:
-      - 'v-*-rc.*'
+      - 'v*rc*'
+      - 'v[0-9]*.[0-9]*.[0-9]*'
   workflow_dispatch:
     inputs:
+      release_tag:
+        description: 'SDK release tag to validate (e.g. v1.0.0rc1 or v1.0.0)'
+        required: false
       rc_tag:
-        description: 'rc tag to validate (e.g. v-1.2.0-rc.1)'
-        required: true
+        description: 'Deprecated alias for release_tag'
+        required: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: sdk-rc-${{ github.event.inputs.rc_tag || github.ref_name }}
+  group: sdk-release-gate-${{ inputs.release_tag || inputs.rc_tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
-  preflight-and-dispatch:
-    name: Preflight (dev==prod) and dispatch Tier 2
+  validate-and-dispatch:
+    name: Validate tag and dispatch release gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Resolve rc tag
+      - name: Resolve release tag
         id: vars
         run: |
           set -euo pipefail
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            RC_TAG="${{ inputs.rc_tag }}"
+            RELEASE_TAG="${{ inputs.release_tag || inputs.rc_tag }}"
           else
-            RC_TAG="${{ github.ref_name }}"
+            RELEASE_TAG="${{ github.ref_name }}"
           fi
-          if [[ ! "$RC_TAG" =~ ^v-.*-rc\..*$ ]]; then
-            echo "::error::Refusing to run on non-rc tag '$RC_TAG' (expected v-X.Y.Z-rc.N)"
+          if [[ -z "$RELEASE_TAG" ]]; then
+            echo "::error::release_tag is required."
             exit 1
           fi
-          echo "rc_tag=$RC_TAG" >> "$GITHUB_OUTPUT"
+          if [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+rc[0-9]+$ ]]; then
+            TAG_KIND="rc"
+          elif [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            TAG_KIND="final"
+          else
+            echo "::error::Refusing to run on tag '$RELEASE_TAG'."
+            echo "::error::Expected vX.Y.ZrcN or vX.Y.Z, for example v1.0.0rc1 or v1.0.0."
+            exit 1
+          fi
+          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "tag_kind=$TAG_KIND" >> "$GITHUB_OUTPUT"
 
-      - name: Read backend release target manifest
-        id: targets
-        env:
-          GH_TOKEN: ${{ secrets.BACKEND_TARGETS_READ_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${GH_TOKEN:-}" ]]; then
-            echo "::error::Repository secret BACKEND_TARGETS_READ_TOKEN is not configured."
-            exit 1
-          fi
-          # Read from `main` because that is the release target source of truth.
-          if ! gh api --method GET repos/FortifyRoot/fr-backend/contents/env/targets.yaml \
-              -f ref=main --jq '.content' | base64 -d > targets.yaml; then
-            echo "::error::Could not fetch the backend release target manifest from main."
-            exit 1
-          fi
-          # `yq` (mikefarah/yq) is preinstalled on GitHub-hosted runners.
-          # Guard so the failure mode is loud if a future runner image drops it.
-          command -v yq >/dev/null || { echo "::error::yq is required but not installed on this runner"; exit 1; }
-          DEV="$(yq -r '.dev.image_tag' targets.yaml)"
-          PROD="$(yq -r '.prod.image_tag' targets.yaml)"
-          echo "dev=$DEV"
-          echo "prod=$PROD"
-          echo "dev_tag=$DEV" >> "$GITHUB_OUTPUT"
-          echo "prod_tag=$PROD" >> "$GITHUB_OUTPUT"
-
-      - name: Pre-flight (dev == prod, or prod is bootstrap)
-        env:
-          DEV: ${{ steps.targets.outputs.dev_tag }}
-          PROD: ${{ steps.targets.outputs.prod_tag }}
-        run: |
-          set -euo pipefail
-          if [[ "$PROD" == "bootstrap" ]]; then
-            echo "Bootstrap mode — prod has no deployed image yet. Proceeding."
-            exit 0
-          fi
-          if [[ "$DEV" != "$PROD" ]]; then
-            cat <<EOF
-          ::error::SDK rc Tier-2 pre-flight FAILED.
-            dev.image_tag  = $DEV
-            prod.image_tag = $PROD
-          Dev must match prod for SDK rc validation. To fix:
-            1. Align the backend dev target with prod.image_tag ($PROD).
-            2. Wait for the dev deployment and validation gate to complete.
-            3. Re-run this workflow with rc_tag = ${{ steps.vars.outputs.rc_tag }}.
-          EOF
-            exit 1
-          fi
-          echo "Pre-flight OK — dev == prod == $DEV"
-
-      - name: Dispatch SDK rc validation
+      - name: Dispatch SDK release validation
         env:
           GH_TOKEN: ${{ secrets.SYSTEM_TEST_DISPATCH_TOKEN }}
-          RC_TAG: ${{ steps.vars.outputs.rc_tag }}
+          RELEASE_TAG: ${{ steps.vars.outputs.release_tag }}
+          TAG_KIND: ${{ steps.vars.outputs.tag_kind }}
         run: |
           set -euo pipefail
           if [[ -z "${GH_TOKEN:-}" ]]; then
@@ -113,6 +71,8 @@ jobs:
           gh api -X POST \
             repos/FortifyRoot/fr-system-tests/dispatches \
             -f event_type=sdk_rc \
-            -F "client_payload[rc_tag]=${RC_TAG}" \
-            -F "client_payload[repo]=${{ github.repository }}"
-          echo "SDK rc validation dispatched."
+            -F "client_payload[release_tag]=${RELEASE_TAG}" \
+            -F "client_payload[rc_tag]=${RELEASE_TAG}" \
+            -F "client_payload[tag_kind]=${TAG_KIND}" \
+            -F "client_payload[repo]=FortifyRoot/ocelle-py"
+          echo "SDK release validation dispatched for ${RELEASE_TAG} (${TAG_KIND})."
