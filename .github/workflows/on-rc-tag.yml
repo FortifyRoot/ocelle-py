@@ -14,17 +14,14 @@ on:
     inputs:
       release_tag:
         description: 'SDK release tag to validate (e.g. v1.0.0rc1 or v1.0.0)'
-        required: false
-      rc_tag:
-        description: 'Deprecated alias for release_tag'
-        required: false
+        required: true
 
 permissions:
   contents: read
   statuses: read
 
 concurrency:
-  group: sdk-release-gate-${{ inputs.release_tag || inputs.rc_tag || github.ref_name }}
+  group: sdk-release-gate-${{ inputs.release_tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -40,7 +37,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            RELEASE_TAG="${{ inputs.release_tag || inputs.rc_tag }}"
+            RELEASE_TAG="${{ inputs.release_tag }}"
           else
             RELEASE_TAG="${{ github.ref_name }}"
           fi
@@ -81,7 +78,6 @@ jobs:
             repos/FortifyRoot/fr-system-tests/dispatches \
             -f event_type=sdk_rc \
             -F "client_payload[release_tag]=${RELEASE_TAG}" \
-            -F "client_payload[rc_tag]=${RELEASE_TAG}" \
             -F "client_payload[tag_kind]=${TAG_KIND}" \
             -F "client_payload[status_nonce]=${STATUS_NONCE}" \
             -F "client_payload[repo]=FortifyRoot/ocelle-py"
