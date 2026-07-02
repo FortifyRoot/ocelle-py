@@ -21,6 +21,7 @@ on:
 
 permissions:
   contents: read
+  statuses: read
 
 concurrency:
   group: sdk-release-gate-${{ inputs.release_tag || inputs.rc_tag || github.ref_name }}
@@ -30,10 +31,12 @@ jobs:
   validate-and-dispatch:
     name: Validate tag and dispatch release gate
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 130
     steps:
       - name: Resolve release tag
         id: vars
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
@@ -54,14 +57,20 @@ jobs:
             echo "::error::Expected vX.Y.ZrcN or vX.Y.Z, for example v1.0.0rc1 or v1.0.0."
             exit 1
           fi
-          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
-          echo "tag_kind=$TAG_KIND" >> "$GITHUB_OUTPUT"
+          SDK_SHA="$(gh api "repos/FortifyRoot/ocelle-py/commits/${RELEASE_TAG}" --jq '.sha')"
+          {
+            echo "release_tag=$RELEASE_TAG"
+            echo "tag_kind=$TAG_KIND"
+            echo "sdk_sha=$SDK_SHA"
+            echo "status_nonce=sdk-${{ github.run_id }}-${{ github.run_attempt }}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Dispatch SDK release validation
         env:
           GH_TOKEN: ${{ secrets.SYSTEM_TEST_DISPATCH_TOKEN }}
           RELEASE_TAG: ${{ steps.vars.outputs.release_tag }}
           TAG_KIND: ${{ steps.vars.outputs.tag_kind }}
+          STATUS_NONCE: ${{ steps.vars.outputs.status_nonce }}
         run: |
           set -euo pipefail
           if [[ -z "${GH_TOKEN:-}" ]]; then
@@ -74,5 +83,37 @@ jobs:
             -F "client_payload[release_tag]=${RELEASE_TAG}" \
             -F "client_payload[rc_tag]=${RELEASE_TAG}" \
             -F "client_payload[tag_kind]=${TAG_KIND}" \
+            -F "client_payload[status_nonce]=${STATUS_NONCE}" \
             -F "client_payload[repo]=FortifyRoot/ocelle-py"
           echo "SDK release validation dispatched for ${RELEASE_TAG} (${TAG_KIND})."
+
+      - name: Wait for SDK release gate status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SDK_SHA: ${{ steps.vars.outputs.sdk_sha }}
+          RELEASE_TAG: ${{ steps.vars.outputs.release_tag }}
+          STATUS_NONCE: ${{ steps.vars.outputs.status_nonce }}
+        run: |
+          set -euo pipefail
+          context="fr-system-tests / sdk-rc"
+          deadline=$(( $(date +%s) + 6900 ))   # ~115 min budget
+          while [[ $(date +%s) -lt $deadline ]]; do
+            state="$(gh api "repos/FortifyRoot/ocelle-py/commits/${SDK_SHA}/statuses" \
+              --jq "[.[] | select(.context==\"$context\" and (.description // \"\" | contains(\"$STATUS_NONCE\")))] | sort_by(.updated_at) | last | .state // empty")"
+            case "$state" in
+              success)
+                echo "SDK release gate passed for ${RELEASE_TAG} (${SDK_SHA})."
+                exit 0
+                ;;
+              failure|error)
+                echo "::error::SDK release gate failed for ${RELEASE_TAG} (${SDK_SHA})."
+                exit 1
+                ;;
+              *)
+                echo "SDK release gate status not yet posted for ${RELEASE_TAG} (got: '${state}'). Sleeping 60s."
+                ;;
+            esac
+            sleep 60
+          done
+          echo "::error::Timed out waiting for SDK release gate status '${context}' on ${SDK_SHA}."
+          exit 1
