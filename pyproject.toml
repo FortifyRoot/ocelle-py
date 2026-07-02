@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fortifyroot-ocelle"
-version = "0.1.0"
+version = "1.0.0rc1"
 description = "FortifyRoot Ocelle SDK for LLM observability"
 authors = ["FortifyRoot <sdk@fortifyroot.com>"]
 license = "Apache-2.0"
