@@ -26,6 +26,9 @@ jobs:
     timeout-minutes: 30
     environment:
       name: ${{ inputs.pypi_repository == 'testpypi' && 'testpypi' || 'pypi' }}
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      pypi_repository: ${{ steps.tag.outputs.pypi_repository }}
     steps:
       - name: Validate release tag and target repository
         id: tag
@@ -66,6 +69,7 @@ jobs:
             echo "release_tag=$RELEASE_TAG"
             echo "tag_kind=$TAG_KIND"
             echo "version=$VERSION"
+            echo "pypi_repository=$PYPI_REPOSITORY"
           } >> "$GITHUB_OUTPUT"
 
       - name: Resolve release tag to commit SHA
@@ -139,3 +143,102 @@ jobs:
         if: inputs.pypi_repository != 'testpypi'
         # pypa/gh-action-pypi-publish release/v1 resolved 2026-06-30.
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b
+
+  verify-published-install:
+    name: Verify published install from ${{ needs.publish.outputs.pypi_repository }}
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Create clean verification venv
+        env:
+          VERSION: ${{ needs.publish.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$VERSION" ]]; then
+            echo "::error::Missing published package version."
+            exit 1
+          fi
+          venv="/tmp/ocelle-publish-verify-${VERSION}"
+          python -m venv "$venv"
+          # shellcheck disable=SC1091
+          source "$venv/bin/activate"
+          python -m pip install --upgrade pip
+
+      - name: Verify published TestPyPI install
+        if: needs.publish.outputs.pypi_repository == 'testpypi'
+        env:
+          VERSION: ${{ needs.publish.outputs.version }}
+        run: |
+          set -euo pipefail
+          venv="/tmp/ocelle-publish-verify-${VERSION}"
+          # shellcheck disable=SC1091
+          source "$venv/bin/activate"
+          for attempt in {1..12}; do
+            echo "TestPyPI install verification attempt ${attempt}/12 for fortifyroot-ocelle==${VERSION}."
+            if python -m pip install --no-cache-dir \
+                --index-url https://test.pypi.org/simple/ \
+                --extra-index-url https://pypi.org/simple/ \
+                "fortifyroot-ocelle==${VERSION}"; then
+              break
+            fi
+
+            if [[ "$attempt" == "12" ]]; then
+              echo "::error::Published TestPyPI install verification failed after ${attempt} attempts."
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Verify published PyPI install
+        if: needs.publish.outputs.pypi_repository == 'pypi'
+        env:
+          VERSION: ${{ needs.publish.outputs.version }}
+        run: |
+          set -euo pipefail
+          venv="/tmp/ocelle-publish-verify-${VERSION}"
+          # shellcheck disable=SC1091
+          source "$venv/bin/activate"
+          for attempt in {1..12}; do
+            echo "PyPI install verification attempt ${attempt}/12 for fortifyroot-ocelle==${VERSION}."
+            if python -m pip install --no-cache-dir "fortifyroot-ocelle==${VERSION}"; then
+              break
+            fi
+
+            if [[ "$attempt" == "12" ]]; then
+              echo "::error::Published PyPI install verification failed after ${attempt} attempts."
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Verify published import and version
+        env:
+          VERSION: ${{ needs.publish.outputs.version }}
+        run: |
+          set -euo pipefail
+          venv="/tmp/ocelle-publish-verify-${VERSION}"
+          # shellcheck disable=SC1091
+          source "$venv/bin/activate"
+          python - <<'PY'
+          import importlib.metadata
+          import os
+
+          import fortifyroot.ocelle as ocelle
+
+          expected = os.environ["VERSION"]
+          installed = importlib.metadata.version("fortifyroot-ocelle")
+          if installed != expected:
+              raise SystemExit(
+                  f"installed package version {installed!r} != expected {expected!r}"
+              )
+          if ocelle.__version__ != expected:
+              raise SystemExit(
+                  f"fortifyroot.ocelle.__version__ {ocelle.__version__!r} != expected {expected!r}"
+              )
+          print(ocelle)
+          PY
