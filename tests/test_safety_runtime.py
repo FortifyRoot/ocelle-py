@@ -393,8 +393,14 @@ def test_safety_runtime_starts_with_empty_snapshot_when_initial_fetch_fails(capl
         hdrs=None,
         fp=None,
     )
+    empty_snapshot_counter = mock.Mock()
     with (
-        caplog.at_level(logging.WARNING),
+        caplog.at_level(logging.ERROR),
+        mock.patch.object(
+            safety_runtime,
+            "_EMPTY_SNAPSHOT_START_COUNTER",
+            mock.Mock(add=empty_snapshot_counter),
+        ),
         mock.patch(
             "fortifyroot._internal.safety.runtime.urllib.request.urlopen",
             side_effect=error,
@@ -404,6 +410,10 @@ def test_safety_runtime_starts_with_empty_snapshot_when_initial_fetch_fails(capl
         runtime.start()
 
     assert "Initial FortifyRoot safety config fetch failed; starting with empty safety snapshot" in caplog.text
+    empty_snapshot_counter.assert_called_once_with(
+        1,
+        attributes={"reason": "SafetyConfigFetchError"},
+    )
     assert get_prompt_safety_handler() is not None
     assert get_completion_safety_handler() is not None
     assert get_completion_safety_stream_factory() is not None
@@ -508,7 +518,7 @@ def test_configure_global_safety_runtime_skips_when_endpoint_is_not_fortifyroot(
         ("http://127.0.0.1:8080", True),
         ("http://[::1]:8080", True),
         ("https://localhost:8080", True),
-        ("http://host.docker.internal:8080", True),
+        ("http://host.docker.internal:8080", False),
         ("http://api.fortifyroot.com", False),
         ("https://collector.example.com", False),
         ("http://collector.example.com", False),
