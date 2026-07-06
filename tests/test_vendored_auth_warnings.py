@@ -3,6 +3,7 @@ from grpc import RpcError, StatusCode
 
 from fortifyroot._vendor.tracer.sdk.exporters.auth_warnings import (
     _AuthWarningClientProxy,
+    _endpoint_label,
     reset_auth_warning_state_for_tests,
 )
 
@@ -81,6 +82,21 @@ def test_vendored_http_exporters_warn_on_auth_failure_once(
     assert "invalid, revoked, deleted, or missing permissions" in warning
     assert "Telemetry will not reach the OTLP endpoint" in warning
     assert "Telemetry will not reach FortifyRoot" not in warning
+
+
+def test_vendored_endpoint_label_strips_userinfo():
+    assert _endpoint_label("https://user:secret@collector.example.com:4318/v1/traces") == (
+        "collector.example.com:4318"
+    )
+
+
+def test_vendored_endpoint_label_formats_ipv6_host():
+    assert _endpoint_label("grpcs://[::1]:4317") == "[::1]:4317"
+
+
+def test_vendored_endpoint_label_handles_invalid_port():
+    endpoint = "https://collector.example.com:99999/v1/traces"
+    assert _endpoint_label(endpoint) == endpoint
 
 
 def test_vendored_grpc_exporter_warns_on_auth_failure(caplog):

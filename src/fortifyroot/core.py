@@ -12,6 +12,7 @@ import os
 import platform
 import sys
 import uuid
+import ipaddress
 from urllib.parse import urlsplit
 from typing import Callable, Dict, List, Optional, Set, TypedDict, cast
 
@@ -72,6 +73,7 @@ SDK_METADATA_HEADERS = {
     FORTIFYROOT_SDK_LANGUAGE_HEADER.lower(),
     FORTIFYROOT_SDK_LANGUAGE_VERSION_HEADER.lower(),
 }
+LOCAL_EXPORT_HOSTS = {"localhost"}
 
 
 def _get_process_service_instance_id() -> str:
@@ -305,6 +307,59 @@ def _normalize_http_otlp_endpoint(endpoint: str, suffix: str) -> str:
     return normalized
 
 
+def _is_local_export_host(host: Optional[str]) -> bool:
+    if not host:
+        return False
+    normalized = host.strip().lower()
+    if normalized in LOCAL_EXPORT_HOSTS:
+        return True
+    try:
+        return ipaddress.ip_address(normalized).is_loopback
+    except ValueError:
+        return False
+
+
+def _resolve_grpc_exporter_endpoint(endpoint: str) -> tuple[str, bool]:
+    """Return (grpc_endpoint, insecure) for supported gRPC endpoint forms."""
+    trimmed = endpoint.strip()
+    if "://" not in trimmed:
+        return trimmed, False
+
+    parsed = urlsplit(trimmed)
+    if parsed.username or parsed.password:
+        raise ValueError("OTLP exporter endpoints must not include username or password")
+    scheme = parsed.scheme.lower()
+    if scheme == "grpcs":
+        return parsed.netloc, False
+    if scheme == "grpc":
+        if not _is_local_export_host(parsed.hostname):
+            raise ValueError(
+                "grpc:// OTLP export is insecure and is allowed only for local "
+                "development endpoints; use grpcs:// or https:// for remote collectors"
+            )
+        return parsed.netloc, True
+
+    raise ValueError(
+        f"Unsupported OTLP exporter endpoint scheme {parsed.scheme!r}; "
+        "use https://, http://, grpcs://, grpc://localhost, or a bare secure gRPC host:port"
+    )
+
+
+def _validate_http_exporter_endpoint(endpoint: str) -> None:
+    """Reject plaintext HTTP export except for local development collectors."""
+    parsed = urlsplit(endpoint.strip())
+    if parsed.username or parsed.password:
+        raise ValueError("OTLP exporter endpoints must not include username or password")
+    if parsed.scheme.lower() != "http":
+        return
+    if _is_local_export_host(parsed.hostname):
+        return
+    raise ValueError(
+        "http:// OTLP export is insecure and is allowed only for local "
+        "development endpoints; use https:// for remote collectors"
+    )
+
+
 def _cumulative_preferred_temporality() -> Dict[type, "AggregationTemporality"]:
     """Force CUMULATIVE temporality for Counter / Histogram / ObservableCounter.
 
@@ -353,6 +408,7 @@ def _init_default_metrics_exporter(
                 OTLPMetricExporter as HTTPMetricExporter,
             )
 
+            _validate_http_exporter_endpoint(endpoint)
             return cast(
                 MetricExporter,
                 HTTPMetricExporter(
@@ -366,12 +422,13 @@ def _init_default_metrics_exporter(
                 OTLPMetricExporter as GRPCMetricExporter,
             )
 
+            grpc_endpoint, insecure = _resolve_grpc_exporter_endpoint(endpoint)
             return cast(
                 MetricExporter,
                 GRPCMetricExporter(
-                    endpoint=parsed.netloc,
+                    endpoint=grpc_endpoint,
                     headers=headers,
-                    insecure=True,
+                    insecure=insecure,
                     preferred_temporality=preferred_temporality,
                 ),
             )
@@ -380,12 +437,13 @@ def _init_default_metrics_exporter(
                 OTLPMetricExporter as GRPCMetricExporter,
             )
 
+            grpc_endpoint, insecure = _resolve_grpc_exporter_endpoint(endpoint)
             return cast(
                 MetricExporter,
                 GRPCMetricExporter(
-                    endpoint=parsed.netloc,
+                    endpoint=grpc_endpoint,
                     headers=headers,
-                    insecure=False,
+                    insecure=insecure,
                     preferred_temporality=preferred_temporality,
                 ),
             )
@@ -394,12 +452,13 @@ def _init_default_metrics_exporter(
                 OTLPMetricExporter as GRPCMetricExporter,
             )
 
+            grpc_endpoint, insecure = _resolve_grpc_exporter_endpoint(endpoint)
             return cast(
                 MetricExporter,
                 GRPCMetricExporter(
-                    endpoint=endpoint.strip(),
+                    endpoint=grpc_endpoint,
                     headers=headers,
-                    insecure=True,
+                    insecure=insecure,
                     preferred_temporality=preferred_temporality,
                 ),
             )
@@ -418,6 +477,7 @@ def _init_default_logging_exporter(
                 OTLPLogExporter as HTTPLogExporter,
             )
 
+            _validate_http_exporter_endpoint(endpoint)
             return cast(
                 LogExporter,
                 HTTPLogExporter(
@@ -430,12 +490,13 @@ def _init_default_logging_exporter(
                 OTLPLogExporter as GRPCLogExporter,
             )
 
+            grpc_endpoint, insecure = _resolve_grpc_exporter_endpoint(endpoint)
             return cast(
                 LogExporter,
                 GRPCLogExporter(
-                    endpoint=parsed.netloc,
+                    endpoint=grpc_endpoint,
                     headers=headers,
-                    insecure=True,
+                    insecure=insecure,
                 ),
             )
         case "grpcs":
@@ -443,12 +504,13 @@ def _init_default_logging_exporter(
                 OTLPLogExporter as GRPCLogExporter,
             )
 
+            grpc_endpoint, insecure = _resolve_grpc_exporter_endpoint(endpoint)
             return cast(
                 LogExporter,
                 GRPCLogExporter(
-                    endpoint=parsed.netloc,
+                    endpoint=grpc_endpoint,
                     headers=headers,
-                    insecure=False,
+                    insecure=insecure,
                 ),
             )
         case _:
@@ -456,12 +518,13 @@ def _init_default_logging_exporter(
                 OTLPLogExporter as GRPCLogExporter,
             )
 
+            grpc_endpoint, insecure = _resolve_grpc_exporter_endpoint(endpoint)
             return cast(
                 LogExporter,
                 GRPCLogExporter(
-                    endpoint=endpoint.strip(),
+                    endpoint=grpc_endpoint,
                     headers=headers,
-                    insecure=True,
+                    insecure=insecure,
                 ),
             )
 
@@ -486,6 +549,13 @@ def _validate_default_export_auth(
 
     metrics_enabled = _is_enabled_from_env("FORTIFYROOT_METRICS_ENABLED", True)
     logging_enabled = _is_enabled_from_env("FORTIFYROOT_LOGGING_ENABLED", False)
+
+    if exporter is None and processors is None:
+        _validate_http_exporter_endpoint(trace_endpoint)
+    if exporter is None and metrics_exporter is None and metrics_enabled:
+        _validate_http_exporter_endpoint(metrics_endpoint)
+    if exporter is None and logging_exporter is None and logging_enabled:
+        _validate_http_exporter_endpoint(logging_endpoint)
 
     missing_signals: List[str] = []
     if (
@@ -947,8 +1017,7 @@ def init(
         # propagator=propagator,
         **tl_kwargs,
     )
-    if allow_udf_detectors:
-        set_udf_detectors_enabled(True)
+    set_udf_detectors_enabled(allow_udf_detectors)
 
     configure_global_safety_runtime(
         enabled=enabled,

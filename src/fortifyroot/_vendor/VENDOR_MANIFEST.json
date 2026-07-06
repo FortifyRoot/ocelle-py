@@ -1,9 +1,12 @@
 {
-  "vendored_at": "2026-06-27T19:30:27.492730",
+  "vendored_at": "2026-07-06T21:20:43.609893",
   "openllmetry_version": "0.52.6",
-  "git_commit": "86389b2e0d35",
+  "git_commit": "ea31a61a6518",
   "git_branch": "HEAD",
-  "git_tag": "fr-v0.52.6.33",
+  "git_tag": "fr-v0.52.6.34",
+  "git_base_tag": "fr-v0.52.6.34",
+  "git_dirty": false,
+  "git_dirty_files": [],
   "instrumentation_package_policy": {
     "opentelemetry-instrumentation-agno": false,
     "opentelemetry-instrumentation-alephalpha": false,

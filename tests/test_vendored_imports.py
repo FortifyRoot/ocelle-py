@@ -243,6 +243,9 @@ class TestNoLeakedBranding:
             manifest = json.loads(manifest_path.read_text())
             assert "openllmetry_version" in manifest
             assert "packages" in manifest
+            if manifest.get("git_dirty"):
+                assert manifest.get("git_tag") == "dirty-working-tree"
+                assert manifest.get("git_base_tag")
 
 
 class TestFluentApi:

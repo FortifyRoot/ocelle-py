@@ -12,9 +12,9 @@ when ``SearchMetrics`` was exercised with SDK-emitted data.
 Fix (in ``fortifyroot.core``): ``_init_default_metrics_exporter`` now
 builds a ``preferred_temporality`` mapping via
 ``_cumulative_preferred_temporality`` that pins every numeric instrument
-to CUMULATIVE, and threads it into all four construction paths (HTTP,
-gRPC insecure via scheme=``grpc``, gRPC secure via scheme=``grpcs``,
-fallback gRPC for unknown schemes).
+to CUMULATIVE, and threads it into every supported construction path (HTTP,
+local-dev gRPC via scheme=``grpc``, secure gRPC via scheme=``grpcs``, and
+bare secure gRPC host:port endpoints).
 
 These tests lock the fix in place so a future refactor cannot silently
 regress back to the library default. If a legitimate reason arises to relax
@@ -111,15 +111,28 @@ class TestInitDefaultMetricsExporterPinsTemporality:
         _, kwargs = cls.call_args
         assert kwargs["preferred_temporality"] == _cumulative_preferred_temporality()
 
-    def test_grpc_insecure_scheme_passes_cumulative_mapping(self):
+    def test_local_grpc_insecure_scheme_passes_cumulative_mapping(self):
         with mock.patch(
             "opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter"
         ) as cls:
             _init_default_metrics_exporter(
-                "grpc://metrics.example.com:4317",
+                "grpc://localhost:4317",
                 headers={"Authorization": "Bearer key"},
             )
         _, kwargs = cls.call_args
+        assert kwargs["preferred_temporality"] == _cumulative_preferred_temporality()
+        assert kwargs["insecure"] is True
+
+    def test_ipv6_loopback_grpc_insecure_scheme_passes_cumulative_mapping(self):
+        with mock.patch(
+            "opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter"
+        ) as cls:
+            _init_default_metrics_exporter(
+                "grpc://[::1]:4317",
+                headers={"Authorization": "Bearer key"},
+            )
+        _, kwargs = cls.call_args
+        assert kwargs["endpoint"] == "[::1]:4317"
         assert kwargs["preferred_temporality"] == _cumulative_preferred_temporality()
         assert kwargs["insecure"] is True
 
@@ -135,17 +148,61 @@ class TestInitDefaultMetricsExporterPinsTemporality:
         assert kwargs["preferred_temporality"] == _cumulative_preferred_temporality()
         assert kwargs["insecure"] is False
 
-    def test_unknown_scheme_falls_back_to_grpc_with_cumulative(self):
-        """Fallback path for bare hostnames or uncommon schemes."""
+    def test_bare_endpoint_uses_secure_grpc_with_cumulative(self):
+        """Bare host:port remains supported but is secure by default."""
         with mock.patch(
             "opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter"
         ) as cls:
             _init_default_metrics_exporter(
-                "otlp://metrics.example.com:4317",
+                "metrics.example.com:4317",
                 headers={"Authorization": "Bearer key"},
             )
         _, kwargs = cls.call_args
         assert kwargs["preferred_temporality"] == _cumulative_preferred_temporality()
+        assert kwargs["endpoint"] == "metrics.example.com:4317"
+        assert kwargs["insecure"] is False
+
+    def test_remote_grpc_insecure_scheme_is_rejected(self):
+        with pytest.raises(ValueError, match="grpc:// OTLP export is insecure"):
+            _init_default_metrics_exporter(
+                "grpc://metrics.example.com:4317",
+                headers={"Authorization": "Bearer key"},
+            )
+
+    def test_unknown_scheme_is_rejected(self):
+        with pytest.raises(ValueError, match="Unsupported OTLP exporter endpoint scheme"):
+            _init_default_metrics_exporter(
+                "otlp://metrics.example.com:4317",
+                headers={"Authorization": "Bearer key"},
+            )
+
+    def test_remote_plaintext_http_is_rejected(self):
+        with pytest.raises(ValueError, match="http:// OTLP export is insecure"):
+            _init_default_metrics_exporter(
+                "http://metrics.example.com:4318",
+                headers={"Authorization": "Bearer key"},
+            )
+
+    def test_host_docker_internal_plaintext_http_is_rejected(self):
+        with pytest.raises(ValueError, match="http:// OTLP export is insecure"):
+            _init_default_metrics_exporter(
+                "http://host.docker.internal:4318",
+                headers={"Authorization": "Bearer key"},
+            )
+
+    def test_host_docker_internal_plaintext_grpc_is_rejected(self):
+        with pytest.raises(ValueError, match="grpc:// OTLP export is insecure"):
+            _init_default_metrics_exporter(
+                "grpc://host.docker.internal:4317",
+                headers={"Authorization": "Bearer key"},
+            )
+
+    def test_endpoint_userinfo_is_rejected(self):
+        with pytest.raises(ValueError, match="must not include username or password"):
+            _init_default_metrics_exporter(
+                "https://user:secret@metrics.example.com:4318",
+                headers={"Authorization": "Bearer key"},
+            )
 
 
 # ---------------------------------------------------------------------------

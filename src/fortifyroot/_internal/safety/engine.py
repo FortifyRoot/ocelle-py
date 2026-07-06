@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import concurrent.futures
 import importlib
 import logging
 import re
@@ -32,10 +31,8 @@ try:
 
     _USING_RE2 = True
 except ImportError:
-    _re_engine = re  # type: ignore[assignment]
+    _re_engine = None  # type: ignore[assignment]
     _USING_RE2 = False
-
-REGEX_EVAL_TIMEOUT_SECONDS = 5
 
 _udf_detectors_enabled = False
 
@@ -62,6 +59,10 @@ _MASKS_APPLIED_COUNTER = _METER.create_counter(
 _UDF_ERRORS_COUNTER = _METER.create_counter(
     "fortifyroot.safety.udf_errors",
     description="Number of safety UDF load or execution errors.",
+)
+_REGEX_RULES_SKIPPED_COUNTER = _METER.create_counter(
+    "fortifyroot.safety.regex_rules_skipped",
+    description="Number of regex safety rules skipped before evaluation.",
 )
 
 SDK_LANGUAGE_PYTHON = "PYTHON"
@@ -163,6 +164,21 @@ def _compile_rule(rule: SafetyRule, default_action: str) -> CompiledSafetyRule |
     udf_detector = None
 
     if isinstance(rule.matcher, RegexMatcher):
+        if not _USING_RE2 or _re_engine is None:
+            logger.error(
+                "Skipping regex safety rule because google-re2 is unavailable; "
+                "regex-based safety masking is degraded: %s",
+                rule.name,
+            )
+            _REGEX_RULES_SKIPPED_COUNTER.add(
+                1,
+                attributes={
+                    "reason": "re2_unavailable",
+                    "category": rule.category,
+                    "severity": rule.severity,
+                },
+            )
+            return None
         if len(rule.matcher.pattern) > MAX_REGEX_PATTERN_LENGTH:
             logger.warning(
                 "Skipping safety rule with oversized regex: %s",
@@ -171,7 +187,7 @@ def _compile_rule(rule: SafetyRule, default_action: str) -> CompiledSafetyRule |
             return None
         try:
             regex = _re_engine.compile(rule.matcher.pattern)
-        except (re.error, Exception):
+        except Exception:
             logger.warning("Skipping safety rule with invalid regex: %s", rule.name)
             return None
     elif isinstance(rule.matcher, StringListMatcher):
@@ -246,30 +262,26 @@ def _safe_finditer(
     pattern: re.Pattern[str],
     text: str,
     rule_name: str,
-) -> list[re.Match[str]]:
-    """Return all matches for *pattern* against *text*.
+) -> Iterable[re.Match[str]]:
+    """Return a lazy match iterator for *pattern* against *text*.
 
-    When ``re2`` is available the call is direct (re2 has built-in
-    backtracking protection).  With stdlib ``re`` the evaluation is
-    delegated to a thread so we can enforce a timeout.
+    Regex safety rules are compiled only when google-re2 is available.  This
+    fallback branch is retained as a defense-in-depth guard for tests and
+    unexpected runtime mutation, but it never executes untrusted stdlib regexes.
     """
     if _USING_RE2:
-        return list(pattern.finditer(text))
+        return pattern.finditer(text)
 
-    def _do_finditer() -> list[re.Match[str]]:
-        return list(pattern.finditer(text))
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(_do_finditer)
-        try:
-            return future.result(timeout=REGEX_EVAL_TIMEOUT_SECONDS)
-        except concurrent.futures.TimeoutError:
-            logger.warning(
-                "Regex evaluation timed out after %ds for rule %s; returning empty findings",
-                REGEX_EVAL_TIMEOUT_SECONDS,
-                rule_name,
-            )
-            raise _RegexTimeoutError() from None
+    logger.error(
+        "Skipping regex evaluation for rule %s because google-re2 is unavailable; "
+        "regex-based safety masking is degraded",
+        rule_name,
+    )
+    _REGEX_RULES_SKIPPED_COUNTER.add(
+        1,
+        attributes={"reason": "re2_unavailable_runtime"},
+    )
+    raise _RegexTimeoutError() from None
 
 
 def _evaluate_rule(
