@@ -42,6 +42,10 @@ _CONFIG_FETCH_FAILURE_COUNTER = _METER.create_counter(
     "fortifyroot.safety.config_fetch_failures",
     description="Number of FortifyRoot safety config fetch failures.",
 )
+_EMPTY_SNAPSHOT_START_COUNTER = _METER.create_counter(
+    "fortifyroot.safety.empty_snapshot_starts",
+    description="Number of SDK starts that registered safety handlers without a loaded config snapshot.",
+)
 
 MAX_CONFIG_RESPONSE_BYTES = 1_048_576  # 1 MB
 DEFAULT_CONFIG_POLL_INTERVAL_SECONDS = 60
@@ -49,7 +53,7 @@ DEFAULT_STREAM_HOLDBACK_CHARS = 128
 API_KEY_HEADER = "X-API-Key"
 REQUEST_TIMEOUT_SECONDS = 5
 FORTIFYROOT_API_BASE_URL = "https://api.fortifyroot.com"
-LOCAL_FORTIFYROOT_DEV_HOSTS = {"localhost", "host.docker.internal"}
+LOCAL_FORTIFYROOT_DEV_HOSTS = {"localhost"}
 FORTIFYROOT_API_HOST_SUFFIX = "api.fortifyroot.com"
 AUTH_HTTP_STATUS_CODES = {401, 403}
 
@@ -341,7 +345,11 @@ class SafetyRuntime:
                 return
 
         if initial:
-            logger.warning(
+            _EMPTY_SNAPSHOT_START_COUNTER.add(
+                1,
+                attributes={"reason": exc.__class__.__name__},
+            )
+            logger.error(
                 "Initial FortifyRoot safety config fetch failed; starting with empty safety snapshot: %s",
                 exc,
             )

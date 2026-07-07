@@ -75,7 +75,7 @@ This table lists the launch-supported instrumentation exposed through `fortifyro
 | LangGraph | via `Instruments.LANGCHAIN` | install with app | Covered through LangChain/OpenAI launch path | Yes | Yes | Provider-dependent | Same supported path as LangChain |
 | LlamaIndex | `Instruments.LLAMA_INDEX` | `llamaindex` | `llama-index >=0.14.12,<0.15.0` | Yes | Yes | Yes | Prompt + completion, including streaming paths |
 
-For provider-role behavior, routed providers such as OpenRouter, LiteLLM, Bedrock, Azure OpenAI, and planned/mapper-supported providers, see [Provider Support](docs/PROVIDERS.md). That document is the source of truth for what is launch-certified versus planned.
+For provider-role behavior, routed providers such as OpenRouter, LiteLLM, Bedrock, Azure OpenAI, and planned/mapper-supported providers, see [Provider Support](https://github.com/FortifyRoot/ocelle-py/blob/main/docs/PROVIDERS.md). That document is the source of truth for what is launch-certified versus planned.
 
 ## Runtime Safety
 
@@ -217,4 +217,4 @@ Safety rules can still run when configured; content tracing controls what is exp
 
 Apache License, Version 2.0.
 
-FortifyRoot Ocelle includes code derived from [OpenLLMetry](https://github.com/traceloop/openllmetry) and `traceloop-sdk` by Traceloop, licensed under the Apache License, Version 2.0. The license text and attribution are retained in [LICENSE](LICENSE).
+FortifyRoot Ocelle includes code derived from [OpenLLMetry](https://github.com/traceloop/openllmetry) and `traceloop-sdk` by Traceloop, licensed under the Apache License, Version 2.0. The license text and attribution are retained in [LICENSE](https://github.com/FortifyRoot/ocelle-py/blob/main/LICENSE).

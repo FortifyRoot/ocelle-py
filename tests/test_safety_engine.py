@@ -829,6 +829,50 @@ def test_compile_snapshot_skips_oversized_regex_patterns_and_caps_regex_matches(
     assert result.overall_action == SafetyDecision.ALLOW.value
 
 
+def test_regex_match_cap_does_not_materialize_all_matches():
+    class FakeMatch:
+        def __init__(self, index: int):
+            self._index = index
+
+        def start(self):
+            return self._index
+
+        def end(self):
+            return self._index + 1
+
+    class FakePattern:
+        def __init__(self):
+            self.requested = 0
+
+        def finditer(self, text):
+            del text
+            for index in range(safety_engine.MAX_REGEX_MATCHES + 1):
+                self.requested += 1
+                if self.requested > safety_engine.MAX_REGEX_MATCHES:
+                    raise AssertionError("regex evaluator pulled past the match cap")
+                yield FakeMatch(index)
+
+    pattern = FakePattern()
+    rule = CompiledSafetyRule(
+        name="near_universal",
+        category="SECRET",
+        severity="LOW",
+        action="MASK",
+        regex=pattern,
+        list_values=(),
+        list_ignore_case=False,
+        udf_detector=None,
+    )
+
+    findings = safety_engine._evaluate_rule(
+        rule,
+        "x" * (safety_engine.MAX_REGEX_MATCHES + 1),
+    )
+
+    assert len(findings) == safety_engine.MAX_REGEX_MATCHES
+    assert pattern.requested == safety_engine.MAX_REGEX_MATCHES
+
+
 def test_engine_records_rule_evaluation_mask_and_udf_error_metrics():
     rules_counter = mock.Mock()
     findings_counter = mock.Mock()
@@ -1280,28 +1324,69 @@ class TestUdfDetectorGuard:
 # ---- D-18: ReDoS residual - re2 with timeout fallback ----
 
 
-class TestRegexTimeoutFallback:
-    """Tests for _safe_finditer and the re2/stdlib fallback logic."""
+class TestRegexRe2Requirement:
+    """Tests for the ReDoS-safe google-re2 requirement."""
 
-    def test_safe_finditer_returns_matches_with_stdlib_re(self):
-        """_safe_finditer should return matches when using stdlib re."""
-        import re
+    def test_compile_snapshot_skips_regex_rules_when_re2_is_unavailable(self, caplog):
+        """Regex rules are skipped instead of falling back to unsafe stdlib re."""
+        payload = {
+            "config_profile": {
+                "id": "cfg-no-re2",
+                "version": 1,
+                "etag": "etag-no-re2",
+                "config": {
+                    "safety_config": {
+                        "enabled": True,
+                        "default_action": "MASK",
+                        "rules": [
+                            {
+                                "name": "email",
+                                "category": "PII",
+                                "severity": "HIGH",
+                                "enabled": True,
+                                "regex": r"[a-z]+@[a-z]+\.com",
+                            },
+                            {
+                                "name": "secret_word",
+                                "category": "SECRET",
+                                "severity": "HIGH",
+                                "enabled": True,
+                                "list": {"values": ["secret"], "ignore_case": True},
+                            },
+                        ],
+                    }
+                },
+            }
+        }
 
-        from fortifyroot._internal.safety.engine import _safe_finditer
+        parsed = parse_sdk_config_response(payload)
 
-        pattern = re.compile(r"\d+")
-        matches = _safe_finditer(pattern, "abc 123 def 456", "test_rule")
-        assert len(matches) == 2
-        assert matches[0].group() == "123"
-        assert matches[1].group() == "456"
+        with (
+            caplog.at_level(logging.ERROR),
+            mock.patch("fortifyroot._internal.safety.engine._USING_RE2", False),
+            mock.patch("fortifyroot._internal.safety.engine._re_engine", None),
+            mock.patch(
+                "fortifyroot._internal.safety.engine._REGEX_RULES_SKIPPED_COUNTER"
+            ) as skipped_counter,
+        ):
+            snapshot = compile_snapshot(parsed.config_profile)
 
-    def test_safe_finditer_returns_empty_on_timeout(self, caplog):
-        """_safe_finditer should raise _RegexTimeoutError on timeout and log a warning."""
-        import concurrent.futures
+        assert [rule.name for rule in snapshot.rules] == ["secret_word"]
+        assert any("regex-based safety masking is degraded" in record.message for record in caplog.records)
+        skipped_counter.add.assert_called_once_with(
+            1,
+            attributes={
+                "reason": "re2_unavailable",
+                "category": "PII",
+                "severity": "HIGH",
+            },
+        )
+
+    def test_safe_finditer_refuses_stdlib_regex_when_re2_is_unavailable(self, caplog):
+        """_safe_finditer raises without executing stdlib regex patterns."""
         import re
 
         from fortifyroot._internal.safety.engine import (
-            REGEX_EVAL_TIMEOUT_SECONDS,
             _RegexTimeoutError,
             _safe_finditer,
         )
@@ -1309,23 +1394,20 @@ class TestRegexTimeoutFallback:
         pattern = re.compile(r"\d+")
 
         with (
-            caplog.at_level(logging.WARNING),
+            caplog.at_level(logging.ERROR),
             mock.patch("fortifyroot._internal.safety.engine._USING_RE2", False),
             mock.patch(
-                "fortifyroot._internal.safety.engine.concurrent.futures.ThreadPoolExecutor"
-            ) as mock_pool_cls,
+                "fortifyroot._internal.safety.engine._REGEX_RULES_SKIPPED_COUNTER"
+            ) as skipped_counter,
         ):
-            mock_pool = mock.MagicMock()
-            mock_pool_cls.return_value.__enter__ = mock.Mock(return_value=mock_pool)
-            mock_pool_cls.return_value.__exit__ = mock.Mock(return_value=False)
-            mock_future = mock.Mock()
-            mock_future.result.side_effect = concurrent.futures.TimeoutError()
-            mock_pool.submit.return_value = mock_future
-
             with pytest.raises(_RegexTimeoutError):
                 _safe_finditer(pattern, "abc 123", "slow_rule")
 
-        assert any("timed out" in record.message for record in caplog.records)
+        assert any("regex-based safety masking is degraded" in record.message for record in caplog.records)
+        skipped_counter.add.assert_called_once_with(
+            1,
+            attributes={"reason": "re2_unavailable_runtime"},
+        )
 
     def test_evaluate_rule_returns_empty_on_regex_timeout(self):
         """D-18: When regex evaluation times out, _evaluate_rule returns empty findings."""
@@ -1361,13 +1443,6 @@ class TestRegexTimeoutFallback:
         # google-re2 is a required dependency; re2 must be active.
         assert _USING_RE2 is True
         assert _re_engine is re2
-
-    def test_regex_eval_timeout_constant_exists(self):
-        """REGEX_EVAL_TIMEOUT_SECONDS should be 5."""
-        from fortifyroot._internal.safety.engine import REGEX_EVAL_TIMEOUT_SECONDS
-
-        assert REGEX_EVAL_TIMEOUT_SECONDS == 5
-
 
 # ---- D-20: No match count cap for string list matcher ----
 

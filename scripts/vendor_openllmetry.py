@@ -581,7 +581,14 @@ def get_git_info(ol_repo: Path) -> dict:
     """Get git commit info from OpenLLMetry repository."""
     import subprocess
 
-    info = {"commit": "unknown", "branch": "unknown", "tag": "unknown"}
+    info = {
+        "commit": "unknown",
+        "branch": "unknown",
+        "tag": "unknown",
+        "base_tag": "unknown",
+        "dirty": False,
+        "dirty_files": [],
+    }
 
     try:
         result = subprocess.run(
@@ -603,7 +610,24 @@ def get_git_info(ol_repo: Path) -> dict:
             cwd=ol_repo, capture_output=True, text=True
         )
         if result.returncode == 0:
-            info["tag"] = result.stdout.strip()
+            tag = result.stdout.strip()
+            info["tag"] = tag
+            info["base_tag"] = tag
+
+        result = subprocess.run(
+            ['git', 'status', '--porcelain'],
+            cwd=ol_repo, capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            dirty_files = [
+                line[3:]
+                for line in result.stdout.splitlines()
+                if len(line) > 3
+            ]
+            info["dirty"] = bool(dirty_files)
+            info["dirty_files"] = dirty_files
+            if dirty_files:
+                info["tag"] = "dirty-working-tree"
     except FileNotFoundError:
         pass
 
@@ -623,6 +647,9 @@ def write_manifest(vendor_root: Path, ol_repo: Path, vendored_packages: List[str
         "git_commit": git_info["commit"],
         "git_branch": git_info["branch"],
         "git_tag": git_info["tag"],
+        "git_base_tag": git_info["base_tag"],
+        "git_dirty": git_info["dirty"],
+        "git_dirty_files": git_info["dirty_files"],
         "instrumentation_package_policy": {
             f"opentelemetry-instrumentation-{pkg.replace('_', '-')}": should_vendor
             for pkg, should_vendor in sorted(OL_INSTRUMENTATION_PACKAGES.items())

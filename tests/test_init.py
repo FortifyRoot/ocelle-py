@@ -728,7 +728,7 @@ class TestInitOptionalPaths:
             os.environ,
             {
                 "FORTIFYROOT_LOGGING_ENABLED": "true",
-                "FORTIFYROOT_LOGGING_ENDPOINT": "grpc://logs.example.com:4317",
+                "FORTIFYROOT_LOGGING_ENDPOINT": "grpc://localhost:4317",
             },
             clear=False,
         ):
@@ -754,7 +754,7 @@ class TestInitOptionalPaths:
                 )
 
         logging_exporter_cls.assert_called_once_with(
-            endpoint="logs.example.com:4317",
+            endpoint="localhost:4317",
             headers={"Authorization": "Bearer fr-key"},
             insecure=True,
         )
@@ -1097,12 +1097,50 @@ class TestNormalizeHttpOtlpEndpoint:
 class TestMetricsExporterSchemes:
     """Tests for _init_default_metrics_exporter scheme branches."""
 
-    def test_grpc_scheme_creates_insecure_grpc_metrics_exporter(self):
-        """Test that grpc:// scheme creates an insecure gRPC metrics exporter."""
+    def test_local_grpc_scheme_creates_insecure_grpc_metrics_exporter(self):
+        """Test that grpc:// is allowed for local development endpoints."""
         from fortifyroot.ocelle import init
 
         default_processor = mock.Mock()
         created_metrics_exporter = mock.Mock()
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FORTIFYROOT_METRICS_ENABLED": "true",
+                "FORTIFYROOT_METRICS_ENDPOINT": "grpc://localhost:4317",
+            },
+            clear=False,
+        ):
+            with (
+                mock.patch(
+                    "fortifyroot.core.Traceloop.get_default_span_processor",
+                    return_value=default_processor,
+                ),
+                mock.patch("fortifyroot.core.Traceloop.init"),
+                mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+                mock.patch(
+                    "opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter",
+                    return_value=created_metrics_exporter,
+                ) as metric_exporter_cls,
+            ):
+                init(
+                    app_name="fortifyroot-test",
+                    api_key="fr-key",
+                )
+
+        metric_exporter_cls.assert_called_once_with(
+            endpoint="localhost:4317",
+            headers={"Authorization": "Bearer fr-key"},
+            insecure=True,
+            preferred_temporality=_EXPECTED_TEMPORALITY,
+        )
+
+    def test_remote_grpc_scheme_is_rejected_for_metrics_exporter(self):
+        """Test that plaintext gRPC is rejected for remote metrics endpoints."""
+        from fortifyroot.ocelle import init
+
+        default_processor = mock.Mock()
 
         with mock.patch.dict(
             os.environ,
@@ -1119,29 +1157,18 @@ class TestMetricsExporterSchemes:
                 ),
                 mock.patch("fortifyroot.core.Traceloop.init"),
                 mock.patch("fortifyroot.core.configure_global_safety_runtime"),
-                mock.patch(
-                    "opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter",
-                    return_value=created_metrics_exporter,
-                ) as metric_exporter_cls,
             ):
-                init(
-                    app_name="fortifyroot-test",
-                    api_key="fr-key",
-                )
+                with pytest.raises(ValueError, match="grpc:// OTLP export is insecure"):
+                    init(
+                        app_name="fortifyroot-test",
+                        api_key="fr-key",
+                    )
 
-        metric_exporter_cls.assert_called_once_with(
-            endpoint="metrics.example.com:4317",
-            headers={"Authorization": "Bearer fr-key"},
-            insecure=True,
-            preferred_temporality=_EXPECTED_TEMPORALITY,
-        )
-
-    def test_unknown_scheme_creates_insecure_grpc_metrics_exporter(self):
-        """Test that an unknown scheme falls back to insecure gRPC metrics exporter."""
+    def test_unknown_scheme_rejected_for_metrics_exporter(self):
+        """Test that unknown schemes fail fast instead of falling back to gRPC."""
         from fortifyroot.ocelle import init
 
         default_processor = mock.Mock()
-        created_metrics_exporter = mock.Mock()
 
         with mock.patch.dict(
             os.environ,
@@ -1158,22 +1185,12 @@ class TestMetricsExporterSchemes:
                 ),
                 mock.patch("fortifyroot.core.Traceloop.init"),
                 mock.patch("fortifyroot.core.configure_global_safety_runtime"),
-                mock.patch(
-                    "opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter",
-                    return_value=created_metrics_exporter,
-                ) as metric_exporter_cls,
             ):
-                init(
-                    app_name="fortifyroot-test",
-                    api_key="fr-key",
-                )
-
-        metric_exporter_cls.assert_called_once_with(
-            endpoint="custom://metrics.example.com:4317",
-            headers={"Authorization": "Bearer fr-key"},
-            insecure=True,
-            preferred_temporality=_EXPECTED_TEMPORALITY,
-        )
+                with pytest.raises(ValueError, match="Unsupported OTLP exporter endpoint scheme"):
+                    init(
+                        app_name="fortifyroot-test",
+                        api_key="fr-key",
+                    )
 
 
 class TestLoggingExporterSchemes:
@@ -1221,12 +1238,11 @@ class TestLoggingExporterSchemes:
             insecure=False,
         )
 
-    def test_unknown_scheme_creates_insecure_grpc_logging_exporter(self):
-        """Test that an unknown scheme falls back to insecure gRPC logging exporter."""
+    def test_unknown_scheme_rejected_for_logging_exporter(self):
+        """Test that unknown schemes fail fast instead of falling back to gRPC."""
         from fortifyroot.ocelle import init
 
         default_processor = mock.Mock()
-        created_logging_exporter = mock.Mock()
 
         with mock.patch.dict(
             os.environ,
@@ -1244,28 +1260,91 @@ class TestLoggingExporterSchemes:
                 mock.patch("fortifyroot.core.Traceloop.init"),
                 mock.patch("fortifyroot.core.configure_global_safety_runtime"),
                 mock.patch(
-                    "opentelemetry.exporter.otlp.proto.grpc._log_exporter.OTLPLogExporter",
-                    return_value=created_logging_exporter,
-                ) as logging_exporter_cls,
-                mock.patch(
                     "fortifyroot.core._init_default_metrics_exporter",
                     return_value=mock.Mock(),
                 ),
             ):
-                init(
-                    app_name="fortifyroot-test",
-                    api_key="fr-key",
-                )
-
-        logging_exporter_cls.assert_called_once_with(
-            endpoint="custom://logs.example.com:4317",
-            headers={"Authorization": "Bearer fr-key"},
-            insecure=True,
-        )
+                with pytest.raises(ValueError, match="Unsupported OTLP exporter endpoint scheme"):
+                    init(
+                        app_name="fortifyroot-test",
+                        api_key="fr-key",
+                    )
 
 
 class TestValidateDefaultExportAuth:
     """Tests for _validate_default_export_auth edge cases."""
+
+    def test_rejects_plaintext_http_for_remote_trace_endpoint(self):
+        """Default trace export must not send bearer auth over remote HTTP."""
+        from fortifyroot.ocelle import init
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FORTIFYROOT_METRICS_ENABLED": "false",
+                "FORTIFYROOT_LOGGING_ENABLED": "false",
+            },
+            clear=False,
+        ):
+            with (
+                mock.patch("fortifyroot.core.Traceloop.get_default_span_processor"),
+                mock.patch("fortifyroot.core.Traceloop.init"),
+                mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+            ):
+                with pytest.raises(ValueError, match="http:// OTLP export is insecure"):
+                    init(
+                        app_name="fortifyroot-test",
+                        api_endpoint="http://api.fortifyroot.com",
+                        api_key="fr-key",
+                    )
+
+    def test_rejects_plaintext_http_for_remote_metrics_endpoint(self):
+        """Per-signal metrics endpoint must not silently downgrade to HTTP."""
+        from fortifyroot.ocelle import init
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FORTIFYROOT_METRICS_ENABLED": "true",
+                "FORTIFYROOT_LOGGING_ENABLED": "false",
+                "FORTIFYROOT_METRICS_ENDPOINT": "http://metrics.example.com:4318",
+            },
+            clear=False,
+        ):
+            with (
+                mock.patch("fortifyroot.core.Traceloop.get_default_span_processor"),
+                mock.patch("fortifyroot.core.Traceloop.init"),
+                mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+            ):
+                with pytest.raises(ValueError, match="http:// OTLP export is insecure"):
+                    init(
+                        app_name="fortifyroot-test",
+                        api_key="fr-key",
+                    )
+
+    def test_rejects_endpoint_userinfo(self):
+        """Endpoint URLs must not carry credentials in userinfo."""
+        from fortifyroot.ocelle import init
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "FORTIFYROOT_METRICS_ENABLED": "false",
+                "FORTIFYROOT_LOGGING_ENABLED": "false",
+            },
+            clear=False,
+        ):
+            with (
+                mock.patch("fortifyroot.core.Traceloop.get_default_span_processor"),
+                mock.patch("fortifyroot.core.Traceloop.init"),
+                mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+            ):
+                with pytest.raises(ValueError, match="must not include username or password"):
+                    init(
+                        app_name="fortifyroot-test",
+                        api_endpoint="https://user:secret@api.fortifyroot.com",
+                        api_key="fr-key",
+                    )
 
     def test_requires_auth_for_managed_fortifyroot_logging_endpoint(self):
         """Test that FortifyRoot Ocelle logging export requires auth."""
@@ -1413,6 +1492,30 @@ class TestAllowUdfDetectors:
                 )
 
         assert safety_engine._udf_detectors_enabled is True
+
+    def test_init_without_udf_detectors_disables_previous_opt_in(self):
+        """Reinitializing with defaults must restore the safe UDF setting."""
+        from fortifyroot.ocelle import init
+        from fortifyroot._internal.safety import engine as safety_engine
+
+        with (
+            mock.patch("fortifyroot.core.Traceloop.get_default_span_processor", return_value=mock.Mock()),
+            mock.patch("fortifyroot.core.Traceloop.init"),
+            mock.patch("fortifyroot.core.configure_global_safety_runtime"),
+        ):
+            init(
+                app_name="fortifyroot-test",
+                api_key="fr-key",
+                allow_udf_detectors=True,
+            )
+            assert safety_engine._udf_detectors_enabled is True
+
+            init(
+                app_name="fortifyroot-test",
+                api_key="fr-key",
+            )
+
+        assert safety_engine._udf_detectors_enabled is False
 
 
 class TestSetAssociationProperties:
