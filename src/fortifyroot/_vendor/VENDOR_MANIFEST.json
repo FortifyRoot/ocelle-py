@@ -1,10 +1,10 @@
 {
-  "vendored_at": "2026-07-06T21:20:43.609893",
+  "vendored_at": "2026-08-17T19:10:07.715156",
   "openllmetry_version": "0.52.6",
-  "git_commit": "ea31a61a6518",
+  "git_commit": "55d7ea06823d",
   "git_branch": "HEAD",
-  "git_tag": "fr-v0.52.6.34",
-  "git_base_tag": "fr-v0.52.6.34",
+  "git_tag": "fr-v0.52.6.35",
+  "git_base_tag": "fr-v0.52.6.35",
   "git_dirty": false,
   "git_dirty_files": [],
   "instrumentation_package_policy": {
