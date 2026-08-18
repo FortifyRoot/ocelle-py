@@ -24,6 +24,7 @@ from opentelemetry.sdk._logs.export import LogExporter
 from opentelemetry.propagators.textmap import TextMapPropagator
 
 from fortifyroot._vendor.tracer.sdk import Traceloop
+from fortifyroot._vendor.tracer.sdk.exporters.headers import grpc_metadata_headers
 
 from fortifyroot._internal.constants import (
     FORTIFYROOT_SDK_LANGUAGE,
@@ -427,7 +428,7 @@ def _init_default_metrics_exporter(
                 MetricExporter,
                 GRPCMetricExporter(
                     endpoint=grpc_endpoint,
-                    headers=headers,
+                    headers=grpc_metadata_headers(headers),
                     insecure=insecure,
                     preferred_temporality=preferred_temporality,
                 ),
@@ -442,7 +443,7 @@ def _init_default_metrics_exporter(
                 MetricExporter,
                 GRPCMetricExporter(
                     endpoint=grpc_endpoint,
-                    headers=headers,
+                    headers=grpc_metadata_headers(headers),
                     insecure=insecure,
                     preferred_temporality=preferred_temporality,
                 ),
@@ -457,7 +458,7 @@ def _init_default_metrics_exporter(
                 MetricExporter,
                 GRPCMetricExporter(
                     endpoint=grpc_endpoint,
-                    headers=headers,
+                    headers=grpc_metadata_headers(headers),
                     insecure=insecure,
                     preferred_temporality=preferred_temporality,
                 ),
@@ -495,7 +496,7 @@ def _init_default_logging_exporter(
                 LogExporter,
                 GRPCLogExporter(
                     endpoint=grpc_endpoint,
-                    headers=headers,
+                    headers=grpc_metadata_headers(headers),
                     insecure=insecure,
                 ),
             )
@@ -509,7 +510,7 @@ def _init_default_logging_exporter(
                 LogExporter,
                 GRPCLogExporter(
                     endpoint=grpc_endpoint,
-                    headers=headers,
+                    headers=grpc_metadata_headers(headers),
                     insecure=insecure,
                 ),
             )
@@ -523,7 +524,7 @@ def _init_default_logging_exporter(
                 LogExporter,
                 GRPCLogExporter(
                     endpoint=grpc_endpoint,
-                    headers=headers,
+                    headers=grpc_metadata_headers(headers),
                     insecure=insecure,
                 ),
             )

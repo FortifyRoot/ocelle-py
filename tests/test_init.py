@@ -712,7 +712,7 @@ class TestInitOptionalPaths:
 
         metric_exporter_cls.assert_called_once_with(
             endpoint="metrics.example.com:4317",
-            headers={"Authorization": "Bearer fr-key"},
+            headers={"authorization": "Bearer fr-key"},
             insecure=False,
             preferred_temporality=_EXPECTED_TEMPORALITY,
         )
@@ -755,7 +755,7 @@ class TestInitOptionalPaths:
 
         logging_exporter_cls.assert_called_once_with(
             endpoint="localhost:4317",
-            headers={"Authorization": "Bearer fr-key"},
+            headers={"authorization": "Bearer fr-key"},
             insecure=True,
         )
         _, kwargs = traceloop_init_mock.call_args
@@ -1131,7 +1131,7 @@ class TestMetricsExporterSchemes:
 
         metric_exporter_cls.assert_called_once_with(
             endpoint="localhost:4317",
-            headers={"Authorization": "Bearer fr-key"},
+            headers={"authorization": "Bearer fr-key"},
             insecure=True,
             preferred_temporality=_EXPECTED_TEMPORALITY,
         )
@@ -1234,7 +1234,7 @@ class TestLoggingExporterSchemes:
 
         logging_exporter_cls.assert_called_once_with(
             endpoint="logs.example.com:4317",
-            headers={"Authorization": "Bearer fr-key"},
+            headers={"authorization": "Bearer fr-key"},
             insecure=False,
         )
 
